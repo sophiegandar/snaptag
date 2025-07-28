@@ -1,0 +1,54 @@
+# Dependencies
+node_modules/
+client/node_modules/
+extension/node_modules/
+
+# Production builds
+client/build/
+client/dist/
+
+# Environment variables (contains sensitive Dropbox tokens)
+.env
+.env.local
+.env.production
+
+# Database files
+server/data/*.db
+server/data/*.db-*
+
+# Temporary files
+temp/
+*.tmp
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Test setup files (contain tokens)
+test-dropbox-connection.js
+setup-dropbox-refresh.js
+DROPBOX-SETUP.md
+
+# Keep deployment examples but not actual env files
+!deployment.env.example 

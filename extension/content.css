@@ -1,0 +1,44 @@
+/* SnapTag Content Script Styles */
+/* This CSS is injected into web pages to style SnapTag elements */
+
+/* Styles for image highlighting when saving */
+[data-snaptag-active] img:hover {
+  transition: filter 0.2s ease;
+}
+
+[data-snaptag-active] img:hover {
+  filter: brightness(1.1);
+}
+
+/* Visual feedback for saved images */
+.snaptag-saving {
+  position: relative;
+}
+
+.snaptag-saving::after {
+  content: "Saving to SnapTag...";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(34, 197, 94, 0.9);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 10000;
+  animation: fadeInOut 2s ease-in-out;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+}
+
+/* Minimal styles to ensure SnapTag doesn't interfere with page layout */
+[data-snaptag-active] {
+  /* No additional styles needed for now */
+} 
