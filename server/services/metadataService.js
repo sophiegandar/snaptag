@@ -1,8 +1,16 @@
 const exiftool = require('node-exiftool');
 const ep = new exiftool.ExiftoolProcess();
-const sharp = require('sharp');
 const fs = require('fs').promises;
 const path = require('path');
+
+// Optional sharp dependency with fallback
+let sharp = null;
+try {
+  sharp = require('sharp');
+  console.log('✅ Sharp image processing available');
+} catch (error) {
+  console.log('⚠️  Sharp not available - using fallback mode for image processing');
+}
 
 class MetadataService {
   constructor() {
@@ -186,6 +194,11 @@ class MetadataService {
 
   async optimizeImage(imagePath, options = {}) {
     try {
+      if (!sharp) {
+        console.log('⚠️  Sharp not available - returning original image path');
+        return imagePath; // Return original if sharp not available
+      }
+
       const {
         maxWidth = 2048,
         maxHeight = 2048,
@@ -206,12 +219,18 @@ class MetadataService {
       return outputPath;
     } catch (error) {
       console.error('Error optimizing image:', error);
-      throw new Error(`Failed to optimize image: ${error.message}`);
+      console.log('⚠️  Falling back to original image');
+      return imagePath; // Fallback to original
     }
   }
 
   async generateThumbnail(imagePath, options = {}) {
     try {
+      if (!sharp) {
+        console.log('⚠️  Sharp not available - returning original image for thumbnail');
+        return imagePath; // Return original if sharp not available
+      }
+
       const {
         width = 300,
         height = 300,
@@ -235,13 +254,31 @@ class MetadataService {
       return thumbnailPath;
     } catch (error) {
       console.error('Error generating thumbnail:', error);
-      throw new Error(`Failed to generate thumbnail: ${error.message}`);
+      console.log('⚠️  Falling back to original image for thumbnail');
+      return imagePath; // Fallback to original
     }
   }
 
   // Auto-tagging using basic image analysis
   async generateAutoTags(imagePath) {
     try {
+      if (!sharp) {
+        console.log('⚠️  Sharp not available - generating basic auto tags from file info');
+        const tags = [];
+        
+        // Basic tags from file extension
+        const ext = path.extname(imagePath).toLowerCase();
+        if (ext === '.jpg' || ext === '.jpeg') {
+          tags.push('format-jpeg');
+        } else if (ext === '.png') {
+          tags.push('format-png');
+        } else if (ext === '.webp') {
+          tags.push('format-webp');
+        }
+        
+        return tags;
+      }
+
       const metadata = await sharp(imagePath).metadata();
       const tags = [];
 
