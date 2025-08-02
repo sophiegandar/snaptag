@@ -10,6 +10,7 @@ const ImageGallery = () => {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('grid');
   const [currentFilters, setCurrentFilters] = useState({});
+  const [lastErrorTime, setLastErrorTime] = useState(0);
 
   useEffect(() => {
     loadImages();
@@ -20,6 +21,8 @@ const ImageGallery = () => {
       setLoading(true);
       setCurrentFilters(searchFilters);
       
+      console.log('🔍 Loading images with filters:', searchFilters);
+      
       const response = await fetch('/api/images/search', {
         method: 'POST',
         headers: {
@@ -28,13 +31,24 @@ const ImageGallery = () => {
         body: JSON.stringify(searchFilters)
       });
       
-      if (!response.ok) throw new Error('Failed to load images');
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API Response not OK:', response.status, errorText);
+        throw new Error(`API Error: ${response.status} - ${errorText}`);
+      }
       
       const data = await response.json();
+      console.log('✅ Images loaded successfully:', data.length, 'images');
       setImages(data);
     } catch (error) {
-      console.error('Error loading images:', error);
-      toast.error('Failed to load images');
+      console.error('❌ Error loading images:', error);
+      
+      // Prevent duplicate error toasts (max 1 per 2 seconds)
+      const now = Date.now();
+      if (now - lastErrorTime > 2000) {
+        toast.error('Failed to load images');
+        setLastErrorTime(now);
+      }
     } finally {
       setLoading(false);
     }
@@ -47,6 +61,15 @@ const ImageGallery = () => {
   const clearFilters = () => {
     setCurrentFilters({});
     loadImages({});
+  };
+
+  const handleTagClick = (tagName) => {
+    // Add clicked tag to current filters
+    const newFilters = {
+      ...currentFilters,
+      tags: [...(currentFilters.tags || []), tagName]
+    };
+    handleAdvancedSearch(newFilters);
   };
 
   const deleteImage = async (imageId, imageName) => {
@@ -125,7 +148,7 @@ const ImageGallery = () => {
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">No images found</h3>
           <p className="text-gray-500">
-            {searchTerm || tagFilter 
+            {Object.keys(currentFilters).length > 0
               ? 'Try adjusting your search terms or filters'
               : 'Upload some images to get started'
             }

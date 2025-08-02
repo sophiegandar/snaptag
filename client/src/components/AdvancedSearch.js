@@ -15,6 +15,7 @@ import {
 
 const AdvancedSearch = ({ onSearch, initialFilters = {} }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [filters, setFilters] = useState({
     searchTerm: '',
     tags: [],
@@ -61,16 +62,25 @@ const AdvancedSearch = ({ onSearch, initialFilters = {} }) => {
   useEffect(() => {
     loadAvailableTags();
     loadAvailableSources();
+    // Mark as initialized and trigger initial search
+    setTimeout(() => {
+      setIsInitialized(true);
+      // Trigger one initial search after component is ready
+      onSearch(filters);
+    }, 100);
   }, []);
 
   useEffect(() => {
+    // Only trigger search after component is initialized
+    if (!isInitialized) return;
+    
     // Trigger search when filters change (with debounce)
     const timeoutId = setTimeout(() => {
       handleSearch();
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [filters]);
+  }, [filters, isInitialized]);
 
   const loadAvailableTags = async () => {
     try {
