@@ -4,12 +4,14 @@ nixPkgs = ["nodejs-18_x", "exiftool"]
 [phases.install]
 cmds = [
   "npm ci --only=production --prefer-offline || npm ci --only=production --no-optional",
-  "cd client && npm ci --only=production",
-  "cd client && npm run build"
+  "cd client && npm ci --only=production"
 ]
 
 [phases.build]
-cmds = ["echo 'Build complete'"]
+cmds = [
+  "cd client && npm run build",
+  "echo 'Client build complete'"
+]
 
 [start]
 cmd = "npm start" 

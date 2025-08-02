@@ -24,10 +24,10 @@ app.use(cors({
   credentials: true
 }));
 
-// Rate limiting
+// Rate limiting (more generous for development)
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  windowMs: 1 * 60 * 1000, // 1 minute window
+  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // 1000 requests per minute in dev, 100 in prod
 });
 app.use(limiter);
 
@@ -62,6 +62,27 @@ databaseService.init();
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
+// Development database reset endpoint
+app.post('/api/dev/reset-database', async (req, res) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({ error: 'Not allowed in production' });
+  }
+  
+  try {
+    // Clear all images and related data
+    await databaseService.run('DELETE FROM focused_tags');
+    await databaseService.run('DELETE FROM image_tags');
+    await databaseService.run('DELETE FROM images');
+    await databaseService.run('DELETE FROM tags WHERE id NOT IN (SELECT DISTINCT tag_id FROM image_tags)');
+    
+    console.log('🗑️  Database cleared for development');
+    res.json({ message: 'Database reset successfully', cleared: true });
+  } catch (error) {
+    console.error('❌ Error resetting database:', error);
+    res.status(500).json({ error: 'Failed to reset database' });
+  }
 });
 
 // Get all images with tags
