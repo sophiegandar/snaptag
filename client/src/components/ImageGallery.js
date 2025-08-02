@@ -23,7 +23,7 @@ const ImageGallery = () => {
       
       console.log('🔍 Loading images with filters:', searchFilters);
       
-      const response = await fetch('/api/images/search', {
+      const response = await fetch('http://localhost:3001/api/images/search', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -78,7 +78,7 @@ const ImageGallery = () => {
     }
 
     try {
-      const response = await fetch(`/api/images/${imageId}`, {
+      const response = await fetch(`http://localhost:3001/api/images/${imageId}`, {
         method: 'DELETE'
       });
 

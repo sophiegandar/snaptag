@@ -15,7 +15,6 @@ import {
 
 const AdvancedSearch = ({ onSearch, initialFilters = {} }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
   const [filters, setFilters] = useState({
     searchTerm: '',
     tags: [],
@@ -62,29 +61,13 @@ const AdvancedSearch = ({ onSearch, initialFilters = {} }) => {
   useEffect(() => {
     loadAvailableTags();
     loadAvailableSources();
-    // Mark as initialized and trigger initial search
-    setTimeout(() => {
-      setIsInitialized(true);
-      // Trigger one initial search after component is ready
-      onSearch(filters);
-    }, 100);
   }, []);
 
-  useEffect(() => {
-    // Only trigger search after component is initialized
-    if (!isInitialized) return;
-    
-    // Trigger search when filters change (with debounce)
-    const timeoutId = setTimeout(() => {
-      handleSearch();
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [filters, isInitialized]);
+  // Removed auto-search - searches now only happen on explicit user action
 
   const loadAvailableTags = async () => {
     try {
-      const response = await fetch('/api/tags');
+      const response = await fetch('http://localhost:3001/api/tags');
       const tags = await response.json();
       setAvailableTags(tags.map(tag => ({ ...tag, selected: false })));
     } catch (error) {
@@ -94,7 +77,7 @@ const AdvancedSearch = ({ onSearch, initialFilters = {} }) => {
 
   const loadAvailableSources = async () => {
     try {
-      const response = await fetch('/api/images/sources');
+      const response = await fetch('http://localhost:3001/api/images/sources');
       const sources = await response.json();
       setAvailableSources(sources || []);
     } catch (error) {
