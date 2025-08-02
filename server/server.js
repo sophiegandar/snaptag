@@ -5,7 +5,9 @@ const rateLimit = require('express-rate-limit');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs').promises;
-require('dotenv').config();
+console.log('🔍 Server working directory:', process.cwd());
+console.log('🔍 Looking for .env at:', require('path').resolve('../.env'));
+require('dotenv').config({ path: require('path').resolve('../.env') });
 
 const dropboxService = require('./services/dropboxService');
 const metadataService = require('./services/metadataService');
