@@ -9,11 +9,10 @@
     "server": "nodemon server/server.js",
     "client": "cd client && npm start",
     "install-all": "npm install && cd client && npm install && cd ../extension && npm install",
-    "build": "cd client && npm run build",
+    "build": "cd client && npm run build && mkdir -p server/data temp",
     "docker:build": "docker-compose build",
     "docker:up": "docker-compose up -d",
-    "railway:build": "cd client && npm run build",
-    "railway:start": "NODE_ENV=production npm start"
+    "postinstall": "cd client && npm install"
   },
   "dependencies": {
     "cors": "^2.8.5",

@@ -5,13 +5,18 @@ const querystring = require('querystring');
 
 class DropboxService {
   constructor() {
+    // Use environment variables from .env file (no hardcoded fallbacks)
     this.currentAccessToken = process.env.DROPBOX_ACCESS_TOKEN;
     this.refreshToken = process.env.DROPBOX_REFRESH_TOKEN;
     this.appKey = process.env.DROPBOX_APP_KEY;
     this.appSecret = process.env.DROPBOX_APP_SECRET;
     
+    // For Dropbox Business teams, specify which team member to operate as
+    this.selectUser = process.env.DROPBOX_SELECT_USER;
+    
     this.dbx = new Dropbox({ 
       accessToken: this.currentAccessToken,
+      // selectUser: this.selectUser, // Temporarily disabled - permission issue
       fetch: fetch // Use global fetch in Node.js 18+
     });
 
@@ -19,6 +24,7 @@ class DropboxService {
     console.log(`   Has Access Token: ${!!this.currentAccessToken}`);
     console.log(`   Has Refresh Token: ${!!this.refreshToken}`);
     console.log(`   Has App Credentials: ${!!(this.appKey && this.appSecret)}`);
+    console.log(`   Team Member: ${this.selectUser || 'None'}`);
   }
 
   async refreshAccessToken() {
@@ -54,6 +60,7 @@ class DropboxService {
       // Update the Dropbox client with new token
       this.dbx = new Dropbox({ 
         accessToken: this.currentAccessToken,
+        // selectUser: this.selectUser, // Temporarily disabled - permission issue
         fetch: fetch
       });
 

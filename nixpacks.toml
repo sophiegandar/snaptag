@@ -1,17 +1,19 @@
 [phases.setup]
-nixPkgs = ["nodejs-18_x", "exiftool"]
+nixPkgs = ["nodejs-18_x", "exiftool", "vips"]
 
 [phases.install]
 cmds = [
-  "npm ci --only=production --prefer-offline || npm ci --only=production --no-optional",
-  "cd client && npm ci --only=production"
+  "npm ci --only=production --prefer-offline --no-audit",
+  "cd client && npm ci --only=production --no-audit"
 ]
 
 [phases.build]
 cmds = [
   "cd client && npm run build",
-  "echo 'Client build complete'"
+  "mkdir -p server/data",
+  "mkdir -p temp",
+  "echo 'Build complete - data directories created'"
 ]
 
 [start]
-cmd = "npm start" 
+cmd = "NODE_ENV=production node server/server.js" 

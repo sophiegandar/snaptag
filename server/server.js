@@ -5,16 +5,11 @@ const rateLimit = require('express-rate-limit');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs').promises;
-console.log('🔍 Server working directory:', process.cwd());
-console.log('🔍 Looking for .env at:', require('path').resolve('../.env'));
-require('dotenv').config({ path: require('path').resolve('../.env') });
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const dropboxService = require('./services/dropboxService');
 const metadataService = require('./services/metadataService');
 const databaseService = require('./services/databaseService');
-const batchProcessingService = require('./services/batchProcessingService');
-const filenameGeneratorService = require('./services/filenameGeneratorService');
-const professionalWorkflowService = require('./services/professionalWorkflowService');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -26,10 +21,10 @@ app.use(cors({
   credentials: true
 }));
 
-// Rate limiting (more generous for development)
+// Rate limiting
 const limiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute window
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // 1000 requests per minute in dev, 100 in prod
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
 });
 app.use(limiter);
 
@@ -66,27 +61,6 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Development database reset endpoint
-app.post('/api/dev/reset-database', async (req, res) => {
-  if (process.env.NODE_ENV === 'production') {
-    return res.status(403).json({ error: 'Not allowed in production' });
-  }
-  
-  try {
-    // Clear all images and related data
-    await databaseService.run('DELETE FROM focused_tags');
-    await databaseService.run('DELETE FROM image_tags');
-    await databaseService.run('DELETE FROM images');
-    await databaseService.run('DELETE FROM tags WHERE id NOT IN (SELECT DISTINCT tag_id FROM image_tags)');
-    
-    console.log('🗑️  Database cleared for development');
-    res.json({ message: 'Database reset successfully', cleared: true });
-  } catch (error) {
-    console.error('❌ Error resetting database:', error);
-    res.status(500).json({ error: 'Failed to reset database' });
-  }
-});
-
 // Get all images with tags
 app.get('/api/images', async (req, res) => {
   try {
@@ -109,6 +83,19 @@ app.get('/api/images', async (req, res) => {
   } catch (error) {
     console.error('Error fetching images:', error);
     res.status(500).json({ error: 'Failed to fetch images' });
+  }
+});
+
+// Get available image sources (must be before /api/images/:id route)
+app.get('/api/images/sources', async (req, res) => {
+  try {
+    console.log('📊 Getting available image sources...');
+    const sources = await databaseService.getImageSources();
+    console.log(`✅ Found ${sources.length} unique sources`);
+    res.json(sources);
+  } catch (error) {
+    console.error('Error fetching image sources:', error);
+    res.status(500).json({ error: 'Failed to fetch image sources' });
   }
 });
 
@@ -250,6 +237,57 @@ app.get('/api/tags', async (req, res) => {
   }
 });
 
+// Search images with filters (POST endpoint for frontend)
+app.post('/api/images/search', async (req, res) => {
+  try {
+    const searchFilters = req.body;
+    const { searchTerm, tags, sources, dateRange } = searchFilters;
+    
+    console.log('🔍 Searching images with filters:', searchFilters);
+    
+    // Use existing search functionality but with POST body filters
+    const images = await databaseService.searchImages(searchTerm, tags);
+    
+    // Filter by sources if specified
+    let filteredImages = images;
+    if (sources && sources.length > 0) {
+      filteredImages = images.filter(image => {
+        return sources.some(source => 
+          image.source_url && image.source_url.includes(source)
+        );
+      });
+    }
+    
+    // Filter by date range if specified
+    if (dateRange && (dateRange.start || dateRange.end)) {
+      filteredImages = filteredImages.filter(image => {
+        const imageDate = new Date(image.upload_date);
+        if (dateRange.start && imageDate < new Date(dateRange.start)) return false;
+        if (dateRange.end && imageDate > new Date(dateRange.end)) return false;
+        return true;
+      });
+    }
+    
+    // Generate temporary Dropbox URLs for each image
+    console.log(`🔗 Generating temporary URLs for ${filteredImages.length} images...`);
+    for (const image of filteredImages) {
+      try {
+        image.url = await dropboxService.getTemporaryLink(image.dropbox_path);
+        console.log(`✅ Generated URL for ${image.filename}`);
+      } catch (error) {
+        console.error(`❌ Failed to generate URL for ${image.filename}:`, error.message);
+        image.url = null; // Set to null if failed
+      }
+    }
+    
+    console.log(`✅ Search completed: ${filteredImages.length} images found`);
+    res.json(filteredImages);
+  } catch (error) {
+    console.error('Error searching images:', error);
+    res.status(500).json({ error: 'Failed to search images' });
+  }
+});
+
 // Get system statistics
 app.get('/api/images/stats', async (req, res) => {
   try {
@@ -261,326 +299,8 @@ app.get('/api/images/stats', async (req, res) => {
   }
 });
 
-// Advanced search endpoint
-app.post('/api/images/search', async (req, res) => {
-  try {
-    const filters = req.body;
-    console.log('🔍 Advanced search with filters:', filters);
-    
-    const images = await databaseService.advancedSearchImages(filters);
-    res.json(images);
-  } catch (error) {
-    console.error('Error in advanced search:', error);
-    res.status(500).json({ error: 'Failed to search images' });
-  }
-});
-
-// Get available source websites
-app.get('/api/images/sources', async (req, res) => {
-  try {
-    const sources = await databaseService.getImageSources();
-    res.json(sources);
-  } catch (error) {
-    console.error('Error fetching sources:', error);
-    res.status(500).json({ error: 'Failed to fetch sources' });
-  }
-});
-
-// ==== PROFESSIONAL WORKFLOW ENDPOINTS ====
-
-// Analyze image for InDesign workflow
-app.post('/api/workflow/analyze-indesign/:imageId', async (req, res) => {
-  try {
-    const { imageId } = req.params;
-    const options = req.body;
-    
-    const image = await databaseService.getImageById(imageId);
-    if (!image) {
-      return res.status(404).json({ error: 'Image not found' });
-    }
-
-    // Use database metadata instead of downloading file
-    const analysisOptions = { ...options, imageData: image };
-    const analysis = await professionalWorkflowService.optimizeForInDesign(image.dropbox_path, analysisOptions);
-    analysis.imageInfo = {
-      id: image.id,
-      filename: image.filename,
-      title: image.title
-    };
-    
-    res.json(analysis);
-  } catch (error) {
-    console.error('Error analyzing for InDesign:', error);
-    res.status(500).json({ error: 'Failed to analyze image for InDesign' });
-  }
-});
-
-// Analyze image for ArchiCAD workflow
-app.post('/api/workflow/analyze-archicad/:imageId', async (req, res) => {
-  try {
-    const { imageId } = req.params;
-    const options = req.body;
-    
-    const image = await databaseService.getImageById(imageId);
-    if (!image) {
-      return res.status(404).json({ error: 'Image not found' });
-    }
-
-    // Use database metadata instead of downloading file
-    const analysisOptions = { ...options, imageData: image };
-    const analysis = await professionalWorkflowService.optimizeForArchiCAD(image.dropbox_path, analysisOptions);
-    analysis.imageInfo = {
-      id: image.id,
-      filename: image.filename,
-      title: image.title
-    };
-    
-    res.json(analysis);
-  } catch (error) {
-    console.error('Error analyzing for ArchiCAD:', error);
-    res.status(500).json({ error: 'Failed to analyze image for ArchiCAD' });
-  }
-});
-
-// Generate professional filename for image
-app.post('/api/workflow/generate-filename/:imageId', async (req, res) => {
-  try {
-    const { imageId } = req.params;
-    const options = req.body;
-    
-    const image = await databaseService.getImageById(imageId);
-    if (!image) {
-      return res.status(404).json({ error: 'Image not found' });
-    }
-
-    const metadata = {
-      title: image.title,
-      description: image.description,
-      tags: image.tags || [],
-      originalName: image.original_name,
-      filename: image.filename
-    };
-
-    const professionalFilename = professionalWorkflowService.generateProfessionalFilename(metadata, options);
-    
-    res.json({
-      originalFilename: image.filename,
-      professionalFilename: professionalFilename,
-      metadata: metadata,
-      options: options
-    });
-  } catch (error) {
-    console.error('Error generating professional filename:', error);
-    res.status(500).json({ error: 'Failed to generate professional filename' });
-  }
-});
-
-// Batch analyze all images for workflow optimization
-app.post('/api/workflow/batch-analyze', async (req, res) => {
-  try {
-    const { workflow = 'both', imageIds = [] } = req.body;
-    
-    // Get images to analyze
-    let images;
-    if (imageIds.length > 0) {
-      images = await Promise.all(imageIds.map(id => databaseService.getImageById(id)));
-      images = images.filter(Boolean);
-    } else {
-      images = await databaseService.getAllImages();
-    }
-
-    const analyses = [];
-    
-    for (const image of images.slice(0, 10)) { // Limit to 10 for demo
-      try {
-        const imageAnalysis = { imageId: image.id, filename: image.filename };
-
-        if (workflow === 'indesign' || workflow === 'both') {
-          imageAnalysis.indesign = await professionalWorkflowService.optimizeForInDesign(
-            image.dropbox_path, 
-            { imageData: image }
-          );
-        }
-
-        if (workflow === 'archicad' || workflow === 'both') {
-          imageAnalysis.archicad = await professionalWorkflowService.optimizeForArchiCAD(
-            image.dropbox_path, 
-            { imageData: image }
-          );
-        }
-
-        analyses.push(imageAnalysis);
-        
-      } catch (error) {
-        console.error(`Error analyzing image ${image.id}:`, error);
-        analyses.push({
-          imageId: image.id,
-          filename: image.filename,
-          error: error.message
-        });
-      }
-    }
-
-    // Generate workflow report
-    const allOptimizations = analyses.flatMap(a => [a.indesign, a.archicad].filter(Boolean));
-    const report = professionalWorkflowService.generateWorkflowReport(allOptimizations);
-
-    res.json({
-      analyses: analyses,
-      report: report,
-      summary: {
-        totalAnalyzed: analyses.length,
-        workflows: workflow,
-        timestamp: new Date().toISOString()
-      }
-    });
-
-  } catch (error) {
-    console.error('Error in batch workflow analysis:', error);
-    res.status(500).json({ error: 'Failed to perform batch workflow analysis' });
-  }
-});
-
-// ==== BATCH PROCESSING ENDPOINTS ====
-
-// Start batch metadata update for all images
-app.post('/api/batch/metadata-update', async (req, res) => {
-  try {
-    const jobId = await batchProcessingService.startBatchMetadataUpdate();
-    res.json({ 
-      success: true, 
-      jobId,
-      message: 'Batch metadata update started'
-    });
-  } catch (error) {
-    console.error('Error starting batch metadata update:', error);
-    res.status(500).json({ error: 'Failed to start batch metadata update' });
-  }
-});
-
-// Start batch tag application
-app.post('/api/batch/apply-tags', async (req, res) => {
-  try {
-    const { imageIds, tags } = req.body;
-    
-    if (!imageIds || !Array.isArray(imageIds) || imageIds.length === 0) {
-      return res.status(400).json({ error: 'imageIds array is required' });
-    }
-    
-    if (!tags || !Array.isArray(tags) || tags.length === 0) {
-      return res.status(400).json({ error: 'tags array is required' });
-    }
-
-    const jobId = await batchProcessingService.startBatchTagApplication(imageIds, tags);
-    res.json({ 
-      success: true, 
-      jobId,
-      message: `Batch tag application started for ${imageIds.length} images`
-    });
-  } catch (error) {
-    console.error('Error starting batch tag application:', error);
-    res.status(500).json({ error: 'Failed to start batch tag application' });
-  }
-});
-
-// Start missing metadata restoration
-app.post('/api/batch/restore-metadata', async (req, res) => {
-  try {
-    const jobId = await batchProcessingService.startMissingMetadataUpdate();
-    res.json({ 
-      success: true, 
-      jobId,
-      message: 'Missing metadata restoration started'
-    });
-  } catch (error) {
-    console.error('Error starting metadata restoration:', error);
-    res.status(500).json({ error: 'Failed to start metadata restoration' });
-  }
-});
-
-// Get job status
-app.get('/api/batch/jobs/:jobId', async (req, res) => {
-  try {
-    const { jobId } = req.params;
-    const status = batchProcessingService.getJobStatus(parseInt(jobId));
-    
-    if (!status) {
-      return res.status(404).json({ error: 'Job not found' });
-    }
-
-    res.json(status);
-  } catch (error) {
-    console.error('Error fetching job status:', error);
-    res.status(500).json({ error: 'Failed to fetch job status' });
-  }
-});
-
-// Get all jobs
-app.get('/api/batch/jobs', async (req, res) => {
-  try {
-    const jobs = batchProcessingService.getAllJobs();
-    res.json(jobs);
-  } catch (error) {
-    console.error('Error fetching jobs:', error);
-    res.status(500).json({ error: 'Failed to fetch jobs' });
-  }
-});
-
-// Cancel a job
-app.delete('/api/batch/jobs/:jobId', async (req, res) => {
-  try {
-    const { jobId } = req.params;
-    const cancelled = batchProcessingService.cancelJob(parseInt(jobId));
-    
-    if (!cancelled) {
-      return res.status(404).json({ error: 'Job not found or cannot be cancelled' });
-    }
-
-    res.json({ success: true, message: 'Job cancelled' });
-  } catch (error) {
-    console.error('Error cancelling job:', error);
-    res.status(500).json({ error: 'Failed to cancel job' });
-  }
-});
-
-// Batch tag application to all images with a filter
-app.post('/api/batch/tag-all', async (req, res) => {
-  try {
-    const { tags, filter } = req.body;
-    
-    if (!tags || !Array.isArray(tags) || tags.length === 0) {
-      return res.status(400).json({ error: 'tags array is required' });
-    }
-
-    // Get images based on filter
-    let images;
-    if (filter && filter.searchTerm) {
-      images = await databaseService.searchImages(filter.searchTerm);
-    } else {
-      images = await databaseService.getAllImages();
-    }
-
-    const imageIds = images.map(img => img.id);
-    
-    if (imageIds.length === 0) {
-      return res.status(400).json({ error: 'No images found matching criteria' });
-    }
-
-    const jobId = await batchProcessingService.startBatchTagApplication(imageIds, tags);
-    res.json({ 
-      success: true, 
-      jobId,
-      message: `Batch tag application started for ${imageIds.length} images`,
-      affectedImages: imageIds.length
-    });
-  } catch (error) {
-    console.error('Error starting batch tag all:', error);
-    res.status(500).json({ error: 'Failed to start batch tag all' });
-  }
-});
-
 // Helper functions
-async function processAndUploadImage({ filePath, originalName, tags, title, description, focusedTags, sourceUrl }) {
+async function processAndUploadImage({ filePath, originalName, tags, title, description, focusedTags }) {
   console.log('🏷️ Adding metadata to image...');
   // Add metadata to image
   const processedImagePath = await metadataService.addMetadataToImage(filePath, {
@@ -591,24 +311,12 @@ async function processAndUploadImage({ filePath, originalName, tags, title, desc
   });
   console.log('✅ Metadata added, processed image:', processedImagePath);
 
-  // Get existing filenames to avoid duplicates
-  const existingImages = await databaseService.getAllImages();
-  const existingFilenames = existingImages.map(img => img.filename);
-
-  // Generate smart filename
-  console.log('🧠 Generating smart filename...');
-  const filename = await filenameGeneratorService.generateFilename({
-    originalName,
-    sourceUrl,
-    title,
-    description,
-    tags,
-    existingFilenames
-  });
-  
+  // Generate unique filename
+  const timestamp = Date.now();
+  const ext = path.extname(originalName);
+  const filename = `${timestamp}-${path.basename(originalName, ext)}${ext}`;
   const dropboxFolder = serverSettings.dropboxFolder || process.env.DROPBOX_FOLDER || '/SnapTag';
   const dropboxPath = `${dropboxFolder}/${filename}`;
-  console.log('📂 Smart filename generated:', filename);
   console.log('📂 Dropbox path:', dropboxPath);
 
   console.log('☁️ Uploading to Dropbox...');
@@ -669,8 +377,7 @@ async function saveImageFromUrl({ imageUrl, tags, title, description, focusedTag
       tags,
       title,
       description,
-      focusedTags,
-      sourceUrl
+      focusedTags
     });
 
     console.log('💾 Adding source URL to database...');
