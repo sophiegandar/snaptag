@@ -3,8 +3,8 @@ nixPkgs = ["nodejs-18_x", "exiftool", "vips"]
 
 [phases.install]
 cmds = [
-  "npm ci --only=production --prefer-offline --no-audit",
-  "cd client && npm ci --only=production --no-audit"
+  "npm ci --prefer-offline --no-audit",
+  "cd client && npm ci --prefer-offline --no-audit"
 ]
 
 [phases.build]

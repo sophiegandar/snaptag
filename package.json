@@ -11,8 +11,7 @@
     "install-all": "npm install && cd client && npm install && cd ../extension && npm install",
     "build": "cd client && npm run build && mkdir -p server/data temp",
     "docker:build": "docker-compose build",
-    "docker:up": "docker-compose up -d",
-    "postinstall": "cd client && npm install"
+    "docker:up": "docker-compose up -d"
   },
   "dependencies": {
     "cors": "^2.8.5",
