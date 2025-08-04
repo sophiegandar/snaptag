@@ -70,7 +70,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (info.srcUrl) {
       console.log('✅ Found image URL:', info.srcUrl);
       handleImageSave(info.srcUrl, tab);
-    } else if (info.linkUrl && (info.linkUrl.match(/\.(jpg|jpeg|png|gif|bmp|webp)$/i))) {
+    } else if (info.linkUrl && (info.linkUrl.match(/\.(jpg|jpeg|png|gif|bmp|tiff|tif|webp|heic|heif|svg|avif|jp2|j2k|jpx|jpm|tga|targa)$/i))) {
       console.log('✅ Found image link:', info.linkUrl);
       handleImageSave(info.linkUrl, tab);
     } else {
@@ -299,7 +299,7 @@ function findImageAtClick(info) {
   
   // 3. Look for images in links
   document.querySelectorAll('a[href]').forEach(link => {
-    if (link.href.match(/\.(jpg|jpeg|png|gif|bmp|webp)$/i)) {
+    if (link.href.match(/\.(jpg|jpeg|png|gif|bmp|tiff|tif|webp|heic|heif|svg|avif|jp2|j2k|jpx|jpm|tga|targa)$/i)) {
       images.push(link.href);
     }
   });

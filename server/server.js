@@ -39,9 +39,16 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024 // 10MB limit
   },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|bmp|tiff|webp/;
+    const allowedTypes = /jpeg|jpg|png|gif|bmp|tiff|tif|webp|heic|heif|svg|avif|jp2|j2k|jpx|jpm|tga|targa/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
+    const mimetype = allowedTypes.test(file.mimetype) || 
+                     file.mimetype.includes('image/') || // Catch newer MIME types
+                     file.mimetype.includes('heic') ||
+                     file.mimetype.includes('heif') ||
+                     file.mimetype.includes('avif') ||
+                     file.mimetype.includes('svg') ||
+                     file.mimetype.includes('jp2') ||
+                     file.mimetype.includes('targa');
     
     if (mimetype && extname) {
       return cb(null, true);
