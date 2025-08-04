@@ -3,16 +3,22 @@ nixPkgs = ["nodejs-18_x", "exiftool", "vips"]
 
 [phases.install]
 cmds = [
+  "echo 'Listing files to debug...'",
+  "ls -la",
+  "ls -la client/",
+  "ls -la client/public/ || echo 'client/public not found'",
   "npm ci --prefer-offline --no-audit",
   "cd client && npm ci --prefer-offline --no-audit"
 ]
 
 [phases.build]
 cmds = [
+  "echo 'Before build - checking client structure:'",
+  "ls -la client/public/ || echo 'client/public missing before build'",
+  "cat client/public/index.html || echo 'index.html missing'",
   "cd client && npm run build",
-  "mkdir -p server/data",
-  "mkdir -p temp",
-  "echo 'Build complete - data directories created'"
+  "mkdir -p server/data temp",
+  "echo 'Build complete'"
 ]
 
 [start]
