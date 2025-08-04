@@ -4,9 +4,8 @@
 
 ### **Your SnapTag App URL:**
 ```
-https://your-railway-app.railway.app
+https://snaptag.up.railway.app
 ```
-*(Replace with your actual Railway URL)*
 
 ---
 
@@ -22,7 +21,7 @@ https://your-railway-app.railway.app
 
 #### **Step 2: Configure Server URL**
 1. Right-click SnapTag extension icon → "Options" (or extension popup)
-2. Set **Server URL** to: `https://your-railway-app.railway.app`
+2. Set **Server URL** to: `https://snaptag.up.railway.app`
 3. Save settings
 
 #### **Step 3: Test Installation**
@@ -41,7 +40,7 @@ https://your-railway-app.railway.app
 4. **Image saves** to Dropbox + appears in web app
 
 ### **Managing Images:**
-1. **Open web app**: `https://your-railway-app.railway.app`
+1. **Open web app**: `https://snaptag.up.railway.app`
 2. **View all images** saved by the team
 3. **Search by tags**, source, or keywords
 4. **Add more tags** to existing images

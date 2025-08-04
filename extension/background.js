@@ -131,7 +131,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ 
         success: true, 
         settings: {
-          serverUrl: result.snaptagServer || 'https://your-railway-app.railway.app',
+          serverUrl: result.snaptagServer || 'https://snaptag.up.railway.app',
           defaultTags: result.defaultTags || []
         }
       });
