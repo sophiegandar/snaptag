@@ -115,7 +115,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === 'openSnapTagApp') {
-    chrome.tabs.create({ url: 'http://localhost:3000' });
+    // Get server URL from settings and open the web app
+    getSettings().then(settings => {
+      // Railway serves web app from the same domain as API
+      const appUrl = settings.serverUrl.includes('localhost') 
+        ? 'http://localhost:3000'  // Local development
+        : settings.serverUrl;      // Production (Railway serves web app from root)
+      chrome.tabs.create({ url: appUrl });
+    });
     sendResponse({ success: true });
   }
 
@@ -124,7 +131,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ 
         success: true, 
         settings: {
-          serverUrl: result.snaptagServer || 'http://localhost:3001',
+          serverUrl: result.snaptagServer || 'https://your-railway-app.railway.app',
           defaultTags: result.defaultTags || []
         }
       });
