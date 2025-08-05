@@ -462,6 +462,26 @@ let serverSettings = {
 // Reload settings from environment on startup
 console.log('📁 Current Dropbox folder setting:', serverSettings.dropboxFolder);
 
+// Debug endpoint to check environment variables (remove in production)
+app.get('/api/debug/env', (req, res) => {
+  try {
+    const debugInfo = {
+      dropboxFolder: process.env.DROPBOX_FOLDER,
+      hasAccessToken: !!process.env.DROPBOX_ACCESS_TOKEN,
+      accessTokenPreview: process.env.DROPBOX_ACCESS_TOKEN ? process.env.DROPBOX_ACCESS_TOKEN.substring(0, 20) + '...' : 'NOT_SET',
+      selectUser: process.env.DROPBOX_SELECT_USER,
+      serverSettings: serverSettings,
+      nodeEnv: process.env.NODE_ENV
+    };
+    
+    console.log('🔍 Debug info requested:', debugInfo);
+    res.json(debugInfo);
+  } catch (error) {
+    console.error('Debug endpoint error:', error);
+    res.status(500).json({ error: 'Debug failed' });
+  }
+});
+
 // GET settings
 app.get('/api/settings', (req, res) => {
   try {
