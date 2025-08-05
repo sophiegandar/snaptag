@@ -598,9 +598,9 @@ async function saveImageFromUrl({ imageUrl, tags, title, description, focusedTag
       focusedTags
     });
 
-    console.log('💾 Adding source URL to database...');
-    // Add source URL to database
-    await databaseService.updateImageSource(result.id, sourceUrl);
+    console.log('💾 Adding image URL to database...');
+    // Add image URL to database for duplicate detection
+    await databaseService.updateImageSource(result.id, imageUrl);
 
     console.log('🎉 Image save completed successfully');
     return result;
