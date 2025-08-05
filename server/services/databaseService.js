@@ -224,33 +224,65 @@ class DatabaseService {
       
       console.log('📊 Initial query setup complete');
 
+      // Smart search in content (case-insensitive)
       if (searchTerm && searchTerm.trim()) {
-        conditions.push(`(
-          i.title LIKE ? OR 
-          i.description LIKE ? OR 
-          i.filename LIKE ? OR 
-          i.original_name LIKE ?
-        )`);
-        const searchPattern = `%${searchTerm.trim()}%`;
-        params.push(searchPattern, searchPattern, searchPattern, searchPattern);
+        const searchWords = searchTerm.trim().split(/\s+/);
+        const contentConditions = [];
+        
+        // Search for exact phrase in content (case-insensitive)
+        contentConditions.push('LOWER(i.title) LIKE LOWER(?)');
+        contentConditions.push('LOWER(i.description) LIKE LOWER(?)');
+        contentConditions.push('LOWER(i.filename) LIKE LOWER(?)');
+        contentConditions.push('LOWER(i.original_name) LIKE LOWER(?)');
+        const exactPattern = `%${searchTerm.trim()}%`;
+        params.push(exactPattern, exactPattern, exactPattern, exactPattern);
+        
+        // Search for individual words in content
+        searchWords.forEach(word => {
+          if (word.length > 2) {
+            contentConditions.push('LOWER(i.title) LIKE LOWER(?)');
+            contentConditions.push('LOWER(i.description) LIKE LOWER(?)');
+            contentConditions.push('LOWER(i.filename) LIKE LOWER(?)');
+            contentConditions.push('LOWER(i.original_name) LIKE LOWER(?)');
+            const wordPattern = `%${word}%`;
+            params.push(wordPattern, wordPattern, wordPattern, wordPattern);
+          }
+        });
+        
+        // Search in tags (both regular and focused, case-insensitive)
+        // Exact phrase in tags
+        contentConditions.push('LOWER(t.name) LIKE LOWER(?)');
+        contentConditions.push('LOWER(ft.tag_name) LIKE LOWER(?)');
+        params.push(exactPattern, exactPattern);
+        
+        // Individual words in tags
+        searchWords.forEach(word => {
+          if (word.length > 2) {
+            contentConditions.push('LOWER(t.name) LIKE LOWER(?)');
+            contentConditions.push('LOWER(ft.tag_name) LIKE LOWER(?)');
+            const wordPattern = `%${word}%`;
+            params.push(wordPattern, wordPattern);
+          }
+        });
+        
+        if (contentConditions.length > 0) {
+          conditions.push(`(${contentConditions.join(' OR ')})`);
+        }
       }
 
+      // Tag filter (case-insensitive)
       if (tagFilter) {
-        // Handle both string and array formats for tagFilter
         const tagArray = Array.isArray(tagFilter) ? tagFilter : tagFilter.split(',');
-        // Filter out empty tags
         const validTags = tagArray.filter(tag => tag && tag.toString().trim());
         
         if (validTags.length > 0) {
-          // Search both regular tags and focused tags
-          const regularTagConditions = validTags.map(() => 't.name LIKE ?').join(' OR ');
-          const focusedTagConditions = validTags.map(() => 'ft.tag_name LIKE ?').join(' OR ');
+          const regularTagConditions = validTags.map(() => 'LOWER(t.name) LIKE LOWER(?)').join(' OR ');
+          const focusedTagConditions = validTags.map(() => 'LOWER(ft.tag_name) LIKE LOWER(?)').join(' OR ');
           
           conditions.push(`(${regularTagConditions} OR ${focusedTagConditions})`);
           
-          // Add parameters for both regular and focused tag searches
-          validTags.forEach(tag => params.push(`%${tag.toString().trim()}%`)); // for regular tags
-          validTags.forEach(tag => params.push(`%${tag.toString().trim()}%`)); // for focused tags
+          validTags.forEach(tag => params.push(`%${tag.toString().trim()}%`));
+          validTags.forEach(tag => params.push(`%${tag.toString().trim()}%`));
         }
       }
 
