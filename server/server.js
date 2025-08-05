@@ -460,7 +460,7 @@ app.post('/api/cleanup/single-letter-tags', async (req, res) => {
     // Find all single-letter tags
     const singleLetterTags = await databaseService.all(`
       SELECT id, name FROM tags 
-      WHERE LENGTH(name) = 1 AND name REGEXP '^[a-zA-Z]$'
+      WHERE LENGTH(name) = 1 AND name ~ '^[a-zA-Z]$'
     `);
     
     console.log(`🔍 Found ${singleLetterTags.length} single-letter tags to remove`);
@@ -469,9 +469,9 @@ app.post('/api/cleanup/single-letter-tags', async (req, res) => {
     for (const tag of singleLetterTags) {
       try {
         // Remove tag associations
-        await databaseService.run('DELETE FROM image_tags WHERE tag_id = ?', [tag.id]);
+        await databaseService.run('DELETE FROM image_tags WHERE tag_id = $1', [tag.id]);
         // Remove the tag itself
-        await databaseService.run('DELETE FROM tags WHERE id = ?', [tag.id]);
+        await databaseService.run('DELETE FROM tags WHERE id = $1', [tag.id]);
         console.log(`🗑️ Removed tag: "${tag.name}"`);
         removedCount++;
       } catch (error) {

@@ -457,6 +457,10 @@ class PostgresService {
     }
   }
 
+  async updateImageSource(imageId, sourceUrl) {
+    await this.query('UPDATE images SET source_url = $1 WHERE id = $2', [sourceUrl, imageId]);
+  }
+
   async deleteImage(id) {
     await this.query('DELETE FROM images WHERE id = $1', [id]);
   }
