@@ -236,9 +236,15 @@ class DatabaseService {
         const validTags = tagArray.filter(tag => tag && tag.toString().trim());
         
         if (validTags.length > 0) {
-          const tagConditions = validTags.map(() => 't.name LIKE ?').join(' OR ');
-          conditions.push(`(${tagConditions})`);
-          validTags.forEach(tag => params.push(`%${tag.toString().trim()}%`));
+          // Search both regular tags and focused tags
+          const regularTagConditions = validTags.map(() => 't.name LIKE ?').join(' OR ');
+          const focusedTagConditions = validTags.map(() => 'ft.tag_name LIKE ?').join(' OR ');
+          
+          conditions.push(`(${regularTagConditions} OR ${focusedTagConditions})`);
+          
+          // Add parameters for both regular and focused tag searches
+          validTags.forEach(tag => params.push(`%${tag.toString().trim()}%`)); // for regular tags
+          validTags.forEach(tag => params.push(`%${tag.toString().trim()}%`)); // for focused tags
         }
       }
 
