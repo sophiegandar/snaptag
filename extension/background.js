@@ -153,7 +153,7 @@ async function handleImageSave(imageUrl, tab, metadata = {}) {
   
   try {
     const settings = await getSettings();
-    const serverUrl = settings.serverUrl || 'http://localhost:3001';
+    const serverUrl = settings.serverUrl;
     console.log('⚙️ Using server URL:', serverUrl);
 
     // Get additional metadata from tab
@@ -324,7 +324,7 @@ function getSettings() {
   return new Promise((resolve) => {
     chrome.storage.sync.get(['snaptagServer', 'defaultTags'], (result) => {
       resolve({
-        serverUrl: result.snaptagServer || 'http://localhost:3001',
+        serverUrl: result.snaptagServer || 'https://snaptag.up.railway.app',
         defaultTags: result.defaultTags || []
       });
     });
