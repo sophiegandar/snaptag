@@ -201,6 +201,8 @@ class DatabaseService {
 
   async searchImages(searchTerm, tagFilter) {
     try {
+      console.log('🔍 DatabaseService.searchImages called with:', { searchTerm, tagFilter });
+      
       let query = `
         SELECT DISTINCT i.*, 
                GROUP_CONCAT(DISTINCT t.name) AS tag_names,
@@ -213,6 +215,8 @@ class DatabaseService {
 
       const params = [];
       const conditions = [];
+      
+      console.log('📊 Initial query setup complete');
 
       if (searchTerm) {
         conditions.push(`(
@@ -242,7 +246,11 @@ class DatabaseService {
         ORDER BY i.upload_date DESC
       `;
 
+      console.log('📊 Final query:', query);
+      console.log('📊 Query params:', params);
+
       const images = await this.all(query, params);
+      console.log('📊 Database returned:', images.length, 'raw results');
 
       // Get focused tags for each image
       for (const image of images) {
@@ -250,9 +258,11 @@ class DatabaseService {
         image.tags = image.tag_names ? image.tag_names.split(',') : [];
       }
 
+      console.log('📊 Processed results:', images.length, 'images with tags');
       return images;
     } catch (error) {
-      console.error('Error searching images:', error);
+      console.error('❌ Error searching images:', error);
+      console.error('❌ Error stack:', error.stack);
       throw error;
     }
   }

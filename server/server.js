@@ -308,9 +308,12 @@ app.post('/api/images/search', async (req, res) => {
     const { searchTerm, tags, sources, dateRange } = searchFilters;
     
     console.log('🔍 Searching images with filters:', searchFilters);
+    console.log('🔍 Search parameters:', { searchTerm, tags, sources, dateRange });
     
     // Use existing search functionality but with POST body filters
+    console.log('📊 Calling searchImages with:', { searchTerm, tags });
     const images = await databaseService.searchImages(searchTerm, tags);
+    console.log('📊 Raw search results:', images.length, 'images found');
     
     // Filter by sources if specified
     let filteredImages = images;
@@ -347,8 +350,14 @@ app.post('/api/images/search', async (req, res) => {
     console.log(`✅ Search completed: ${filteredImages.length} images found`);
     res.json(filteredImages);
   } catch (error) {
-    console.error('Error searching images:', error);
-    res.status(500).json({ error: 'Failed to search images' });
+    console.error('❌ Error searching images:', error);
+    console.error('❌ Error stack:', error.stack);
+    console.error('❌ Error details:', {
+      message: error.message,
+      name: error.name,
+      code: error.code
+    });
+    res.status(500).json({ error: 'Failed to search images: ' + error.message });
   }
 });
 
