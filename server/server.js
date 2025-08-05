@@ -15,6 +15,9 @@ const { generateFileHash } = require('./utils/fileHash');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust proxy for Railway deployment
+app.set('trust proxy', 1);
+
 // Security middleware with custom CSP for Dropbox images
 app.use(helmet({
   contentSecurityPolicy: {
