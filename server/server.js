@@ -96,10 +96,13 @@ app.get('/api/images', async (req, res) => {
     console.log(`🔗 Generating temporary URLs for ${images.length} images...`);
     for (const image of images) {
       try {
+        console.log(`🔗 Generating URL for: ${image.dropbox_path}`);
         image.url = await dropboxService.getTemporaryLink(image.dropbox_path);
-        console.log(`✅ Generated URL for ${image.filename}`);
+        console.log(`✅ Generated URL for ${image.filename}: ${image.url ? 'success' : 'null'}`);
       } catch (error) {
         console.error(`❌ Failed to generate URL for ${image.filename}:`, error.message);
+        console.error(`❌ Dropbox path: ${image.dropbox_path}`);
+        console.error(`❌ Error details:`, error);
         image.url = null; // Set to null if failed
       }
     }
@@ -273,20 +276,32 @@ app.put('/api/images/:id/tags', async (req, res) => {
 app.delete('/api/images/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    console.log(`🗑️ Attempting to delete image with ID: ${id}`);
     
     const image = await databaseService.getImageById(id);
-    if (image) {
-      // Delete from Dropbox
-      await dropboxService.deleteFile(image.dropbox_path);
-      
-      // Delete from database
-      await databaseService.deleteImage(id);
+    if (!image) {
+      console.log(`❌ Image with ID ${id} not found in database`);
+      return res.status(404).json({ error: 'Image not found' });
     }
+    
+    console.log(`📂 Deleting from Dropbox: ${image.dropbox_path}`);
+    try {
+      await dropboxService.deleteFile(image.dropbox_path);
+      console.log(`✅ Deleted from Dropbox successfully`);
+    } catch (dropboxError) {
+      console.error(`❌ Failed to delete from Dropbox:`, dropboxError.message);
+      // Continue with database deletion even if Dropbox fails
+    }
+    
+    console.log(`🗄️ Deleting from database...`);
+    await databaseService.deleteImage(id);
+    console.log(`✅ Deleted from database successfully`);
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Error deleting image:', error);
-    res.status(500).json({ error: 'Failed to delete image' });
+    console.error('❌ Error deleting image:', error);
+    console.error('❌ Error stack:', error.stack);
+    res.status(500).json({ error: `Failed to delete image: ${error.message}` });
   }
 });
 
