@@ -124,6 +124,17 @@ app.get('/api/images/sources', async (req, res) => {
   }
 });
 
+// Get system statistics (must be before /api/images/:id route)
+app.get('/api/images/stats', async (req, res) => {
+  try {
+    const stats = await databaseService.getImageStats();
+    res.json(stats);
+  } catch (error) {
+    console.error('Error fetching stats:', error);
+    res.status(500).json({ error: 'Failed to fetch stats' });
+  }
+});
+
 // Get single image by ID
 app.get('/api/images/:id', async (req, res) => {
   try {
@@ -327,16 +338,7 @@ app.post('/api/images/search', async (req, res) => {
   }
 });
 
-// Get system statistics
-app.get('/api/images/stats', async (req, res) => {
-  try {
-    const stats = await databaseService.getImageStats();
-    res.json(stats);
-  } catch (error) {
-    console.error('Error fetching stats:', error);
-    res.status(500).json({ error: 'Failed to fetch stats' });
-  }
-});
+
 
 // Sync database with Dropbox folder contents
 app.post('/api/sync/dropbox', async (req, res) => {

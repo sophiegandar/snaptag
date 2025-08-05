@@ -226,9 +226,11 @@ class DatabaseService {
       }
 
       if (tagFilter) {
-        const tagConditions = tagFilter.split(',').map(() => 't.name LIKE ?').join(' OR ');
+        // Handle both string and array formats for tagFilter
+        const tagArray = Array.isArray(tagFilter) ? tagFilter : tagFilter.split(',');
+        const tagConditions = tagArray.map(() => 't.name LIKE ?').join(' OR ');
         conditions.push(`(${tagConditions})`);
-        tagFilter.split(',').forEach(tag => params.push(`%${tag.trim()}%`));
+        tagArray.forEach(tag => params.push(`%${tag.toString().trim()}%`));
       }
 
       if (conditions.length > 0) {
