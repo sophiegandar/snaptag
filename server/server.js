@@ -10,6 +10,7 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const dropboxService = require('./services/dropboxService');
 const metadataService = require('./services/metadataService');
 const databaseService = require('./services/databaseService');
+const { generateFileHash } = require('./utils/fileHash');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -183,6 +184,20 @@ app.post('/api/images/save-from-url', async (req, res) => {
       return res.status(400).json({ error: 'Image URL is required' });
     }
 
+    // Check for duplicate by URL first (fastest check)
+    console.log('🔍 Checking for duplicate by URL:', imageUrl);
+    const existingByUrl = await databaseService.checkDuplicateByUrl(imageUrl);
+    
+    if (existingByUrl) {
+      console.log('♻️ Duplicate found by URL:', existingByUrl.filename);
+      return res.json({
+        ...existingByUrl,
+        duplicate: true,
+        message: 'Image already exists',
+        url: await dropboxService.getTemporaryLink(existingByUrl.dropbox_path)
+      });
+    }
+
     console.log('🔄 Starting image save from URL:', imageUrl);
     const result = await saveImageFromUrl({
       imageUrl,
@@ -346,6 +361,11 @@ async function processAndUploadImage({ filePath, originalName, tags, title, desc
     throw new Error(`Processed image file is empty: ${processedImagePath}`);
   }
 
+  // Generate file hash for duplicate detection
+  console.log('🔒 Generating file hash...');
+  const fileHash = await generateFileHash(processedImagePath);
+  console.log('✅ File hash generated:', fileHash.substring(0, 16) + '...');
+
   // Generate unique filename
   const timestamp = Date.now();
   const ext = path.extname(originalName);
@@ -373,7 +393,8 @@ async function processAndUploadImage({ filePath, originalName, tags, title, desc
     focused_tags: focusedTags,
     upload_date: new Date().toISOString(),
     file_size: uploadResult.size,
-    dropbox_id: uploadResult.id
+    dropbox_id: uploadResult.id,
+    file_hash: fileHash
   };
 
   const imageId = await databaseService.saveImage(imageData);

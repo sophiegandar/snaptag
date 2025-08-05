@@ -23,6 +23,9 @@ class DatabaseService {
       // Create tables
       await this.createTables();
       
+      // Run database migrations
+      await this.migrateDatabaseSchema();
+      
       console.log(`Database initialized: ${this.dbPath}`);
     } catch (error) {
       console.error('Database initialization error:', error);
@@ -47,6 +50,7 @@ class DatabaseService {
         width INTEGER,
         height INTEGER,
         mime_type TEXT,
+        file_hash TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
@@ -94,6 +98,8 @@ class DatabaseService {
     // Create indexes for better performance
     await this.run('CREATE INDEX IF NOT EXISTS idx_images_dropbox_path ON images(dropbox_path)');
     await this.run('CREATE INDEX IF NOT EXISTS idx_images_upload_date ON images(upload_date)');
+    await this.run('CREATE INDEX IF NOT EXISTS idx_images_source_url ON images(source_url)');
+    await this.run('CREATE INDEX IF NOT EXISTS idx_images_file_hash ON images(file_hash)');
     await this.run('CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name)');
     await this.run('CREATE INDEX IF NOT EXISTS idx_image_tags_image ON image_tags(image_id)');
     await this.run('CREATE INDEX IF NOT EXISTS idx_image_tags_tag ON image_tags(tag_id)');
@@ -102,21 +108,38 @@ class DatabaseService {
     console.log('Database tables created successfully');
   }
 
+  async migrateDatabaseSchema() {
+    try {
+      // Check if file_hash column exists, if not add it
+      const tableInfo = await this.all(`PRAGMA table_info(images)`);
+      const hasFileHash = tableInfo.some(column => column.name === 'file_hash');
+      
+      if (!hasFileHash) {
+        console.log('📊 Adding file_hash column to images table...');
+        await this.run(`ALTER TABLE images ADD COLUMN file_hash TEXT`);
+        await this.run(`CREATE INDEX IF NOT EXISTS idx_images_file_hash ON images(file_hash)`);
+        console.log('✅ Database schema updated with file_hash column');
+      }
+    } catch (error) {
+      console.error('❌ Error migrating database schema:', error);
+    }
+  }
+
   async saveImage(imageData) {
     try {
       const {
         filename, original_name, dropbox_path, dropbox_id, title, description,
-        upload_date, file_size, source_url, width, height, mime_type, tags, focused_tags
+        upload_date, file_size, source_url, width, height, mime_type, file_hash, tags, focused_tags
       } = imageData;
 
       // Insert image
       const imageResult = await this.run(`
         INSERT INTO images (
           filename, original_name, dropbox_path, dropbox_id, title, description,
-          upload_date, file_size, source_url, width, height, mime_type
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          upload_date, file_size, source_url, width, height, mime_type, file_hash
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [filename, original_name, dropbox_path, dropbox_id, title, description,
-          upload_date, file_size, source_url, width, height, mime_type]);
+          upload_date, file_size, source_url, width, height, mime_type, file_hash]);
 
       const imageId = imageResult.lastID;
 
@@ -575,6 +598,39 @@ class DatabaseService {
         }
       });
     });
+  }
+
+  // Duplicate detection methods
+  async checkDuplicateByUrl(sourceUrl) {
+    if (!sourceUrl) return null;
+    
+    return await this.get(`
+      SELECT id, filename, original_name, created_at, dropbox_path
+      FROM images 
+      WHERE source_url = ?
+      ORDER BY created_at DESC
+      LIMIT 1
+    `, [sourceUrl]);
+  }
+
+  async checkDuplicateByHash(fileHash) {
+    if (!fileHash) return null;
+    
+    return await this.get(`
+      SELECT id, filename, original_name, created_at, dropbox_path
+      FROM images 
+      WHERE file_hash = ?
+      ORDER BY created_at DESC
+      LIMIT 1
+    `, [fileHash]);
+  }
+
+  async updateImageHash(imageId, fileHash) {
+    await this.run(`
+      UPDATE images 
+      SET file_hash = ?
+      WHERE id = ?
+    `, [fileHash, imageId]);
   }
 
   close() {

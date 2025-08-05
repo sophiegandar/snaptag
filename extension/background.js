@@ -186,10 +186,34 @@ async function handleImageSave(imageUrl, tab, metadata = {}) {
     }
 
     const result = await response.json();
-    console.log('✅ Image saved successfully:', result);
-    console.log('🎉 Success! Image saved:', result.filename);
-
-    return result;
+    
+    if (result.duplicate) {
+      console.log('♻️ Duplicate image found:', result.filename);
+      console.log('📅 Originally saved:', result.created_at);
+      
+      // Show duplicate notification instead of success
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'icons/icon48.png',
+        title: 'SnapTag - Duplicate Image',
+        message: `This image was already saved as "${result.original_name}" on ${new Date(result.created_at).toLocaleDateString()}`
+      });
+      
+      return result;
+    } else {
+      console.log('✅ Image saved successfully:', result);
+      console.log('🎉 Success! Image saved:', result.filename);
+      
+      // Show success notification
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'icons/icon48.png',
+        title: 'SnapTag - Image Saved',
+        message: `Image saved as "${result.filename}"`
+      });
+      
+      return result;
+    }
   } catch (error) {
     console.error('❌ Error saving image:', error);
     console.error('💥 Failed to save image:', error.message);
