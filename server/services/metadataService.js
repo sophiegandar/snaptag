@@ -104,21 +104,58 @@ class MetadataService {
   }
 
   async updateImageMetadata(imagePath, newMetadata) {
-    // Simplified version for batch processing - skip file download/upload for now
-    // TODO: Fix Dropbox SDK download issue for full metadata embedding
+    // Full implementation - download, update metadata, and re-upload
+    const dropboxService = require('./dropboxService');
+    const fs = require('fs').promises;
+    const tempPath = `temp/update-${Date.now()}-${path.basename(imagePath)}`;
+    
     try {
-      console.log(`📝 Simulating metadata update for: ${imagePath}`);
+      console.log(`📝 Updating metadata for: ${imagePath}`);
       console.log(`   Tags: ${newMetadata.tags ? newMetadata.tags.join(', ') : 'none'}`);
-      console.log(`   Title: ${newMetadata.title || 'none'}`);
-      console.log(`   Description: ${newMetadata.description || 'none'}`);
       console.log(`   Focused Tags: ${newMetadata.focusedTags ? newMetadata.focusedTags.length : 0}`);
       
-      // For now, just log that we would update the metadata
-      // In a production system, you'd want to fix the download issue
-      console.log(`✅ Metadata update simulated for: ${imagePath}`);
+      // Download file from Dropbox
+      console.log(`📥 Downloading file for metadata update...`);
+      await dropboxService.downloadFile(imagePath, tempPath);
+      
+      // Combine regular tags with focused tag names for searchability
+      let allTags = [...(newMetadata.tags || [])];
+      if (newMetadata.focusedTags && newMetadata.focusedTags.length > 0) {
+        const focusedTagNames = newMetadata.focusedTags.map(ft => ft.tag_name || ft.name).filter(Boolean);
+        allTags = [...allTags, ...focusedTagNames];
+      }
+      
+      // Remove duplicates
+      allTags = [...new Set(allTags)];
+      
+      // Update metadata with all tags (regular + focused)
+      await this.addMetadataToImage(tempPath, {
+        tags: allTags,
+        title: newMetadata.title,
+        description: newMetadata.description,
+        focusedTags: newMetadata.focusedTags
+      });
+      
+      // Re-upload to Dropbox with updated metadata
+      console.log(`📤 Re-uploading file with embedded metadata...`);
+      await dropboxService.uploadFile(tempPath, imagePath);
+      
+      // Clean up temp file
+      await fs.unlink(tempPath);
+      
+      console.log(`✅ Metadata successfully embedded in: ${imagePath}`);
+      console.log(`🔍 Tags now searchable in Dropbox: ${allTags.join(', ')}`);
       return true;
     } catch (error) {
-      console.error('Error simulating metadata update:', error);
+      console.error('❌ Error updating metadata:', error);
+      
+      // Clean up temp file if it exists
+      try {
+        await fs.unlink(tempPath);
+      } catch (cleanupError) {
+        // Ignore cleanup errors
+      }
+      
       throw new Error(`Failed to update metadata: ${error.message}`);
     }
   }
