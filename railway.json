@@ -7,6 +7,16 @@
   "deploy": {
     "numReplicas": 1,
     "sleepApplication": false,
-    "restartPolicyType": "ON_FAILURE"
+    "restartPolicyType": "ON_FAILURE",
+    "volumes": [
+      {
+        "name": "snaptag-data",
+        "mountPath": "/app/server/data"
+      },
+      {
+        "name": "snaptag-temp",
+        "mountPath": "/app/temp"
+      }
+    ]
   }
 } 

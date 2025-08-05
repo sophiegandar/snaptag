@@ -38,8 +38,10 @@ RUN npm run build
 # Return to app directory
 WORKDIR /app
 
-# Create required directories
-RUN mkdir -p server/data temp
+# Create required directories with proper permissions
+RUN mkdir -p server/data temp && \
+    chmod 755 server/data temp && \
+    chown -R node:node server/data temp
 
 # Remove dev dependencies to reduce image size
 RUN npm prune --production && cd client && npm prune --production
