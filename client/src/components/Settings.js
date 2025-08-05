@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, TestTube, Check, AlertCircle, RefreshCw, Database, Droplets, Settings as SettingsIcon, Trash2 } from 'lucide-react';
+import { Save, TestTube, Check, AlertCircle, RefreshCw, Database, Droplets, Settings as SettingsIcon } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 const Settings = () => {
@@ -19,10 +19,8 @@ const Settings = () => {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [cleaning, setCleaning] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState(null);
   const [syncStatus, setSyncStatus] = useState(null);
-  const [cleanupStatus, setCleanupStatus] = useState(null);
   const [stats, setStats] = useState({});
 
   useEffect(() => {
@@ -159,39 +157,6 @@ const Settings = () => {
       console.error('Dropbox sync error:', error);
     } finally {
       setSyncing(false);
-    }
-  };
-
-  const cleanupSingleLetterTags = async () => {
-    try {
-      setCleaning(true);
-      setCleanupStatus(null);
-      
-      const serverUrl = settings.serverUrl || 'http://localhost:3001';
-      const response = await fetch(`${serverUrl}/api/cleanup/single-letter-tags`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (response.ok) {
-        const result = await response.json();
-        setCleanupStatus('success');
-        toast.success(`Cleanup completed! Removed ${result.removedTags} single-letter tags`);
-        
-        // Reload stats to show updated numbers
-        loadStats();
-      } else {
-        const error = await response.json();
-        throw new Error(error.error || 'Cleanup failed');
-      }
-    } catch (error) {
-      setCleanupStatus('error');
-      toast.error(`Cleanup failed: ${error.message}`);
-      console.error('Tag cleanup error:', error);
-    } finally {
-      setCleaning(false);
     }
   };
 
@@ -374,20 +339,7 @@ const Settings = () => {
               Sync with Dropbox
             </button>
 
-            <button
-              onClick={cleanupSingleLetterTags}
-              disabled={cleaning || !settings.serverUrl}
-              className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 disabled:opacity-50"
-            >
-              {cleaning ? (
-                <RefreshCw className="h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="h-4 w-4" />
-              )}
-              Clean Letter Tags
-            </button>
-
-            {(connectionStatus || syncStatus || cleanupStatus) && (
+            {(connectionStatus || syncStatus) && (
               <div className="flex gap-2">
                 {connectionStatus && (
                   <div className={`flex items-center gap-2 px-3 py-2 rounded-md ${
@@ -419,23 +371,6 @@ const Settings = () => {
                     )}
                     <span className="text-sm font-medium">
                       {syncStatus === 'success' ? 'Synced' : 'Sync Failed'}
-                    </span>
-                  </div>
-                )}
-                
-                {cleanupStatus && (
-                  <div className={`flex items-center gap-2 px-3 py-2 rounded-md ${
-                    cleanupStatus === 'success' 
-                      ? 'bg-orange-100 text-orange-800' 
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {cleanupStatus === 'success' ? (
-                      <Trash2 className="h-4 w-4" />
-                    ) : (
-                      <AlertCircle className="h-4 w-4" />
-                    )}
-                    <span className="text-sm font-medium">
-                      {cleanupStatus === 'success' ? 'Cleaned' : 'Cleanup Failed'}
                     </span>
                   </div>
                 )}
