@@ -203,6 +203,12 @@ class DatabaseService {
     try {
       console.log('🔍 DatabaseService.searchImages called with:', { searchTerm, tagFilter });
       
+      // Debug: Show all tags in database
+      const allTags = await this.all('SELECT * FROM tags');
+      const allFocusedTags = await this.all('SELECT * FROM focused_tags');
+      console.log('📊 All regular tags in DB:', allTags.map(t => `"${t.name}"`).join(', '));
+      console.log('📊 All focused tags in DB:', allFocusedTags.map(t => `"${t.tag_name}"`).join(', '));
+      
       let query = `
         SELECT DISTINCT i.*, 
                GROUP_CONCAT(DISTINCT t.name) AS tag_names,
@@ -262,6 +268,11 @@ class DatabaseService {
 
       const images = await this.all(query, params);
       console.log('📊 Database returned:', images.length, 'raw results');
+      
+      // Debug: Show what tags each image actually has
+      for (const image of images) {
+        console.log(`📊 Image ${image.id}: regular tags = "${image.tag_names}", focused_tag_count = ${image.focused_tag_count}`);
+      }
 
       // Get focused tags for each image
       for (const image of images) {
