@@ -279,30 +279,7 @@ class DatabaseService {
   }
 
   async getAllImages() {
-    try {
-      const images = await this.all(`
-        SELECT i.*, 
-               GROUP_CONCAT(DISTINCT t.name) AS tag_names,
-               COUNT(DISTINCT ft.id) AS focused_tag_count
-        FROM images i
-        LEFT JOIN image_tags it ON i.id = it.image_id
-        LEFT JOIN tags t ON it.tag_id = t.id
-        LEFT JOIN focused_tags ft ON i.id = ft.image_id
-        GROUP BY i.id
-        ORDER BY i.upload_date DESC
-      `);
-
-      // Get focused tags for each image
-      for (const image of images) {
-        image.focused_tags = await this.getFocusedTags(image.id);
-        image.tags = image.tag_names ? image.tag_names.split(',') : [];
-      }
-
-      return images;
-    } catch (error) {
-      console.error('Error getting all images:', error);
-      throw error;
-    }
+    return this.all('SELECT * FROM images ORDER BY created_at DESC');
   }
 
   async getImageTags(imageId) {

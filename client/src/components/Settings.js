@@ -18,7 +18,9 @@ const Settings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState(null);
+  const [syncStatus, setSyncStatus] = useState(null);
   const [stats, setStats] = useState({});
 
   useEffect(() => {
@@ -122,6 +124,39 @@ const Settings = () => {
       toast.error(`Connection test failed: ${error.message}`);
     } finally {
       setTesting(false);
+    }
+  };
+
+  const syncWithDropbox = async () => {
+    try {
+      setSyncing(true);
+      setSyncStatus(null);
+      
+      const serverUrl = settings.serverUrl || 'http://localhost:3001';
+      const response = await fetch(`${serverUrl}/api/sync/dropbox`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        setSyncStatus('success');
+        toast.success(`Sync completed! Added ${result.stats.addedToDatabase} images to database`);
+        
+        // Reload stats to show updated numbers
+        loadStats();
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || 'Sync failed');
+      }
+    } catch (error) {
+      setSyncStatus('error');
+      toast.error(`Sync failed: ${error.message}`);
+      console.error('Dropbox sync error:', error);
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -291,20 +326,54 @@ const Settings = () => {
               Test Connection
             </button>
 
-            {connectionStatus && (
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-md ${
-                connectionStatus === 'success' 
-                  ? 'bg-green-100 text-green-800' 
-                  : 'bg-red-100 text-red-800'
-              }`}>
-                {connectionStatus === 'success' ? (
-                  <Check className="h-4 w-4" />
-                ) : (
-                  <AlertCircle className="h-4 w-4" />
+            <button
+              onClick={syncWithDropbox}
+              disabled={syncing || !settings.serverUrl}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50"
+            >
+              {syncing ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <Database className="h-4 w-4" />
+              )}
+              Sync with Dropbox
+            </button>
+
+            {(connectionStatus || syncStatus) && (
+              <div className="flex gap-2">
+                {connectionStatus && (
+                  <div className={`flex items-center gap-2 px-3 py-2 rounded-md ${
+                    connectionStatus === 'success' 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {connectionStatus === 'success' ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4" />
+                    )}
+                    <span className="text-sm font-medium">
+                      {connectionStatus === 'success' ? 'Connected' : 'Failed'}
+                    </span>
+                  </div>
                 )}
-                <span className="text-sm font-medium">
-                  {connectionStatus === 'success' ? 'Connected' : 'Failed'}
-                </span>
+                
+                {syncStatus && (
+                  <div className={`flex items-center gap-2 px-3 py-2 rounded-md ${
+                    syncStatus === 'success' 
+                      ? 'bg-blue-100 text-blue-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {syncStatus === 'success' ? (
+                      <Database className="h-4 w-4" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4" />
+                    )}
+                    <span className="text-sm font-medium">
+                      {syncStatus === 'success' ? 'Synced' : 'Sync Failed'}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </div>

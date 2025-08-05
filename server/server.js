@@ -338,6 +338,92 @@ app.get('/api/images/stats', async (req, res) => {
   }
 });
 
+// Sync database with Dropbox folder contents
+app.post('/api/sync/dropbox', async (req, res) => {
+  try {
+    console.log('🔄 Starting Dropbox folder sync...');
+    
+    const folderPath = process.env.DROPBOX_FOLDER || '/ARCHIER Team Folder/Support/Production/SnapTag';
+    console.log('📂 Scanning folder:', folderPath);
+    
+    // Get all images from Dropbox folder
+    const dropboxFiles = await dropboxService.listFiles(folderPath, false);
+    console.log('📊 Found', dropboxFiles.length, 'files in Dropbox');
+    
+    // Filter for image files only
+    const imageExtensions = /\.(jpg|jpeg|png|gif|webp|heic|heif|svg|tiff|avif|jp2|tga)$/i;
+    const imageFiles = dropboxFiles.filter(file => 
+      file['.tag'] === 'file' && imageExtensions.test(file.name)
+    );
+    
+    console.log('📊 Found', imageFiles.length, 'image files');
+    
+    // Get all images currently in database
+    const dbImages = await databaseService.getAllImages();
+    const dbFilenames = new Set(dbImages.map(img => img.filename));
+    
+    console.log('📊 Database has', dbImages.length, 'images');
+    
+    // Find images in Dropbox but not in database
+    const missingImages = imageFiles.filter(file => !dbFilenames.has(file.name));
+    
+    console.log('🔍 Found', missingImages.length, 'images not in database');
+    
+    // Add missing images to database with basic metadata
+    let addedCount = 0;
+    for (const file of missingImages) {
+      try {
+        console.log('➕ Adding to database:', file.name);
+        
+        // Generate basic metadata for orphaned file
+        const imageData = {
+          filename: file.name,
+          original_name: file.name,
+          title: `Synced: ${file.name}`,
+          description: 'Image found in Dropbox folder during sync',
+          dropbox_path: `${folderPath}/${file.name}`,
+          file_size: file.size,
+          source_url: null,
+          tags: 'synced,orphaned', // Mark as synced
+          focused_tags: []
+        };
+        
+        const imageId = await databaseService.saveImage(imageData);
+        console.log('✅ Added image ID:', imageId);
+        addedCount++;
+        
+      } catch (error) {
+        console.error('❌ Failed to add', file.name, ':', error.message);
+      }
+    }
+    
+    console.log('✅ Sync completed');
+    console.log('📊 Summary:');
+    console.log('   Dropbox images:', imageFiles.length);
+    console.log('   Database images before:', dbImages.length);
+    console.log('   Added to database:', addedCount);
+    console.log('   Database images after:', dbImages.length + addedCount);
+    
+    res.json({
+      success: true,
+      message: 'Dropbox folder synced successfully',
+      stats: {
+        dropboxImages: imageFiles.length,
+        databaseImagesBefore: dbImages.length,
+        addedToDatabase: addedCount,
+        databaseImagesAfter: dbImages.length + addedCount
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Dropbox sync failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to sync with Dropbox folder: ' + error.message 
+    });
+  }
+});
+
 // Helper functions
 async function processAndUploadImage({ filePath, originalName, tags, title, description, focusedTags }) {
   console.log('🏷️ Adding metadata to image...');
