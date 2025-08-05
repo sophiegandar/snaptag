@@ -53,7 +53,7 @@ https://snaptag.up.railway.app
 ### **Shared Dropbox Folder:**
 All team images save to:
 ```
-/ARCHIER Team Folder/Support/Production/Snaptag/
+/ARCHIER Team Folder/Support/Production/SnapTag/
 ```
 
 ### **Shared Web Interface:**

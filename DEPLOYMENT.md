@@ -30,7 +30,7 @@ DROPBOX_ACCESS_TOKEN=your_token_here
 DROPBOX_REFRESH_TOKEN=your_refresh_token_here  
 DROPBOX_APP_KEY=your_app_key_here
 DROPBOX_APP_SECRET=your_app_secret_here
-DROPBOX_FOLDER=/ARCHIER Team Folder/Support/Production/Snaptag
+DROPBOX_FOLDER=/ARCHIER Team Folder/Support/Production/SnapTag
 ```
 
 4. **Add Custom Domain** (optional)
