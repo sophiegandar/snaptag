@@ -229,8 +229,32 @@ class DropboxService {
   async getTemporaryLink(dropboxPath) {
     return this.executeWithRetry(async (dropboxPath) => {
       try {
-        const response = await this.dbx.filesGetTemporaryLink({ path: dropboxPath });
-        return response.result.link;
+        console.log('🔗 Getting temporary link with Path-Root header for team folder access');
+        
+        // Use raw HTTP request with Path-Root header for team folder access
+        const pathRootHeader = JSON.stringify({
+          '.tag': 'root',
+          'root': this.rootNamespaceId
+        });
+        
+        const response = await fetch('https://api.dropboxapi.com/2/files/get_temporary_link', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this.currentAccessToken}`,
+            'Dropbox-API-Path-Root': pathRootHeader,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ path: dropboxPath })
+        });
+
+        if (!response.ok) {
+          const error = await response.text();
+          throw new Error(`HTTP ${response.status}: ${error}`);
+        }
+
+        const result = await response.json();
+        console.log('✅ Temporary link generated for team folder file');
+        return result.link;
       } catch (error) {
         console.error('❌ Error getting temporary link:', error);
         throw new Error(`Failed to get temporary link: ${error.message}`);
@@ -241,15 +265,38 @@ class DropboxService {
   async listFiles(folderPath = '/SnapTag', recursive = false) {
     return this.executeWithRetry(async (folderPath, recursive) => {
       try {
-        const response = await this.dbx.filesListFolder({
-          path: folderPath,
-          recursive,
-          include_media_info: true,
-          include_deleted: false,
-          include_has_explicit_shared_members: false
+        console.log('📂 Listing files with Path-Root header for team folder access');
+        
+        // Use raw HTTP request with Path-Root header for team folder access
+        const pathRootHeader = JSON.stringify({
+          '.tag': 'root',
+          'root': this.rootNamespaceId
+        });
+        
+        const response = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this.currentAccessToken}`,
+            'Dropbox-API-Path-Root': pathRootHeader,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            path: folderPath,
+            recursive,
+            include_media_info: true,
+            include_deleted: false,
+            include_has_explicit_shared_members: false
+          })
         });
 
-        return response.result.entries;
+        if (!response.ok) {
+          const error = await response.text();
+          throw new Error(`HTTP ${response.status}: ${error}`);
+        }
+
+        const result = await response.json();
+        console.log('✅ File list retrieved from team folder');
+        return result.entries;
       } catch (error) {
         console.error('❌ Error listing files:', error);
         throw new Error(`Failed to list files: ${error.message}`);
