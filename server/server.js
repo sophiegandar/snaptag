@@ -323,7 +323,9 @@ async function processAndUploadImage({ filePath, originalName, tags, title, desc
   const ext = path.extname(originalName);
   const filename = `${timestamp}-${path.basename(originalName, ext)}${ext}`;
   const dropboxFolder = serverSettings.dropboxFolder || process.env.DROPBOX_FOLDER || '/SnapTag';
-  const dropboxPath = `${dropboxFolder}/${filename}`;
+  // Ensure dropboxFolder starts with '/' for Dropbox API compatibility
+  const normalizedFolder = dropboxFolder.startsWith('/') ? dropboxFolder : `/${dropboxFolder}`;
+  const dropboxPath = `${normalizedFolder}/${filename}`;
   console.log('📂 Dropbox path:', dropboxPath);
 
   console.log('☁️ Uploading to Dropbox...');
