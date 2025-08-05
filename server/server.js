@@ -14,8 +14,22 @@ const databaseService = require('./services/databaseService');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Security middleware
-app.use(helmet());
+// Security middleware with custom CSP for Dropbox images
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https://*.dropboxusercontent.com", "https://*.dropbox.com", "https:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+}));
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:3000',
   credentials: true
