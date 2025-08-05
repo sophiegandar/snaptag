@@ -250,14 +250,14 @@ class DatabaseService {
         });
         
         // Search in tags (both regular and focused, case-insensitive)
-        // Exact phrase in tags
+        // Exact phrase in tags - ALWAYS include this
         contentConditions.push('LOWER(t.name) LIKE LOWER(?)');
         contentConditions.push('LOWER(ft.tag_name) LIKE LOWER(?)');
         params.push(exactPattern, exactPattern);
         
-        // Individual words in tags
+        // Individual words in tags - include ALL words, not just length > 2
         searchWords.forEach(word => {
-          if (word.length > 2) {
+          if (word.length > 1) { // Changed from > 2 to > 1
             contentConditions.push('LOWER(t.name) LIKE LOWER(?)');
             contentConditions.push('LOWER(ft.tag_name) LIKE LOWER(?)');
             const wordPattern = `%${word}%`;
@@ -266,6 +266,8 @@ class DatabaseService {
         });
         
         if (contentConditions.length > 0) {
+          console.log('📊 Content conditions count:', contentConditions.length);
+          console.log('📊 Sample content conditions:', contentConditions.slice(0, 6));
           conditions.push(`(${contentConditions.join(' OR ')})`);
         }
       }
