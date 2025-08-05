@@ -237,21 +237,35 @@ app.put('/api/images/:id/tags', async (req, res) => {
     const { id } = req.params;
     const { tags, focusedTags } = req.body;
 
+    console.log(`🏷️ Updating tags for image ${id}:`, { tags, focusedTags });
+
+    // Update database first
     await databaseService.updateImageTags(id, tags, focusedTags);
+    console.log('✅ Database tags updated successfully');
     
-    // Update metadata in Dropbox file
+    // Try to update metadata in Dropbox file (non-blocking)
     const image = await databaseService.getImageById(id);
     if (image) {
-      await metadataService.updateImageMetadata(image.dropbox_path, {
-        tags,
-        focusedTags
-      });
+      try {
+        console.log('📝 Attempting to embed metadata in Dropbox file...');
+        await metadataService.updateImageMetadata(image.dropbox_path, {
+          tags,
+          focusedTags,
+          title: image.title,
+          description: image.description
+        });
+        console.log('✅ Metadata embedding completed');
+      } catch (metadataError) {
+        // Don't fail the whole request if metadata embedding fails
+        console.error('⚠️ Metadata embedding failed (non-critical):', metadataError.message);
+        console.log('✅ Tags saved to database successfully (metadata embedding can be retried later)');
+      }
     }
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Error updating tags:', error);
-    res.status(500).json({ error: 'Failed to update tags' });
+    console.error('❌ Error updating tags:', error);
+    res.status(500).json({ error: 'Failed to update tags: ' + error.message });
   }
 });
 

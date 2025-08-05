@@ -114,9 +114,24 @@ class MetadataService {
       console.log(`   Tags: ${newMetadata.tags ? newMetadata.tags.join(', ') : 'none'}`);
       console.log(`   Focused Tags: ${newMetadata.focusedTags ? newMetadata.focusedTags.length : 0}`);
       
+      // Ensure temp directory exists
+      const tempDir = 'temp';
+      try {
+        await fs.mkdir(tempDir, { recursive: true });
+      } catch (mkdirError) {
+        // Directory might already exist, ignore
+      }
+      
       // Download file from Dropbox
       console.log(`📥 Downloading file for metadata update...`);
       await dropboxService.downloadFile(imagePath, tempPath);
+      
+      // Verify file was downloaded
+      const stats = await fs.stat(tempPath);
+      if (stats.size === 0) {
+        throw new Error('Downloaded file is empty');
+      }
+      console.log(`✅ File downloaded successfully (${stats.size} bytes)`);
       
       // Combine regular tags with focused tag names for searchability
       let allTags = [...(newMetadata.tags || [])];
@@ -125,14 +140,16 @@ class MetadataService {
         allTags = [...allTags, ...focusedTagNames];
       }
       
-      // Remove duplicates
-      allTags = [...new Set(allTags)];
+      // Remove duplicates and filter out empty tags
+      allTags = [...new Set(allTags.filter(tag => tag && tag.trim()))];
+      
+      console.log(`🏷️ Final tags to embed: ${allTags.join(', ')}`);
       
       // Update metadata with all tags (regular + focused)
       await this.addMetadataToImage(tempPath, {
         tags: allTags,
-        title: newMetadata.title,
-        description: newMetadata.description,
+        title: newMetadata.title || '',
+        description: newMetadata.description || '',
         focusedTags: newMetadata.focusedTags
       });
       
@@ -148,6 +165,7 @@ class MetadataService {
       return true;
     } catch (error) {
       console.error('❌ Error updating metadata:', error);
+      console.error('❌ Error details:', error.stack);
       
       // Clean up temp file if it exists
       try {
