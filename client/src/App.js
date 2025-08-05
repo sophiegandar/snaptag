@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
-import { Search, Upload, Image as ImageIcon, Tag, Settings as SettingsIcon, Zap, FileText } from 'lucide-react';
+import { Search, Upload, Tag, Settings as SettingsIcon, Zap, FileText } from 'lucide-react';
 
 import ImageGallery from './components/ImageGallery';
 import ImageUpload from './components/ImageUpload';
@@ -24,7 +24,11 @@ function App() {
             <div className="flex justify-between h-16">
               <div className="flex items-center">
                 <Link to="/" className="flex items-center space-x-2">
-                  <ImageIcon className="h-8 w-8 text-blue-600" />
+                  <img 
+                    src="/snaptag_logo_vector.png" 
+                    alt="SnapTag Logo" 
+                    className="h-8 w-8"
+                  />
                   <span className="text-xl font-bold text-gray-900">SnapTag</span>
                 </Link>
               </div>
