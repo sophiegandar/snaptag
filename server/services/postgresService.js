@@ -461,6 +461,31 @@ class PostgresService {
     await this.query('DELETE FROM images WHERE id = $1', [id]);
   }
 
+  // Duplicate detection methods
+  async checkDuplicateByUrl(sourceUrl) {
+    if (!sourceUrl) return null;
+    
+    return await this.get(`
+      SELECT id, filename, original_name, created_at, dropbox_path
+      FROM images 
+      WHERE source_url = $1
+      ORDER BY created_at DESC
+      LIMIT 1
+    `, [sourceUrl]);
+  }
+
+  async checkDuplicateByHash(fileHash) {
+    if (!fileHash) return null;
+    
+    return await this.get(`
+      SELECT id, filename, original_name, created_at, dropbox_path
+      FROM images 
+      WHERE file_hash = $1
+      ORDER BY created_at DESC
+      LIMIT 1
+    `, [fileHash]);
+  }
+
   async close() {
     if (this.pool) {
       await this.pool.end();
