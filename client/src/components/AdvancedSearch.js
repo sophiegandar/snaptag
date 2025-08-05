@@ -12,6 +12,7 @@ import {
   ChevronUp,
   Sliders
 } from 'lucide-react';
+import { apiCall } from '../utils/apiConfig';
 
 const AdvancedSearch = ({ onSearch, initialFilters = {} }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -67,7 +68,7 @@ const AdvancedSearch = ({ onSearch, initialFilters = {} }) => {
 
   const loadAvailableTags = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/tags');
+      const response = await apiCall('/api/tags');
       const tags = await response.json();
       setAvailableTags(tags.map(tag => ({ ...tag, selected: false })));
     } catch (error) {
@@ -77,7 +78,7 @@ const AdvancedSearch = ({ onSearch, initialFilters = {} }) => {
 
   const loadAvailableSources = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/images/sources');
+      const response = await apiCall('/api/images/sources');
       const sources = await response.json();
       setAvailableSources(sources || []);
     } catch (error) {

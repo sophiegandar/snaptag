@@ -3,6 +3,7 @@ import { Search, Filter, Grid, List, Trash2, Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import AdvancedSearch from './AdvancedSearch';
+import { apiCall } from '../utils/apiConfig';
 
 const ImageGallery = () => {
   const navigate = useNavigate();
@@ -23,7 +24,7 @@ const ImageGallery = () => {
       
       console.log('🔍 Loading images with filters:', searchFilters);
       
-      const response = await fetch('http://localhost:3001/api/images/search', {
+      const response = await apiCall('/api/images/search', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -78,7 +79,7 @@ const ImageGallery = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/images/${imageId}`, {
+      const response = await apiCall(`/api/images/${imageId}`, {
         method: 'DELETE'
       });
 
