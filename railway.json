@@ -10,10 +10,6 @@
     "restartPolicyType": "ON_FAILURE",
     "volumes": [
       {
-        "name": "snaptag-data",
-        "mountPath": "/app/server/data"
-      },
-      {
         "name": "snaptag-temp",
         "mountPath": "/app/temp"
       }

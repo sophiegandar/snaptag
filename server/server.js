@@ -9,8 +9,11 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const dropboxService = require('./services/dropboxService');
 const metadataService = require('./services/metadataService');
-const databaseService = require('./services/databaseService');
+const PostgresService = require('./services/postgresService');
 const { generateFileHash } = require('./utils/fileHash');
+
+// Initialize PostgreSQL service
+const databaseService = new PostgresService();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -686,7 +689,34 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-app.listen(PORT, () => {
-  console.log(`SnapTag server running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-}); 
+// Initialize database and start server
+async function startServer() {
+  try {
+    // Initialize PostgreSQL database
+    await databaseService.init();
+    
+    app.listen(PORT, () => {
+      console.log(`SnapTag server running on port ${PORT}`);
+      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log('✅ PostgreSQL database connected and initialized');
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+// Handle graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  await databaseService.close();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  console.log('SIGINT received, shutting down gracefully');
+  await databaseService.close();
+  process.exit(0);
+});
+
+startServer(); 
