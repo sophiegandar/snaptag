@@ -2,6 +2,7 @@ const { Dropbox } = require('dropbox');
 const fs = require('fs').promises;
 const https = require('https');
 const querystring = require('querystring');
+const fetch = require('node-fetch'); // Add fetch for raw HTTP requests
 
 class DropboxService {
   constructor() {
@@ -10,6 +11,10 @@ class DropboxService {
     this.refreshToken = process.env.DROPBOX_REFRESH_TOKEN;
     this.appKey = process.env.DROPBOX_APP_KEY;
     this.appSecret = process.env.DROPBOX_APP_SECRET;
+    
+    // ROOT NAMESPACE ID - CRITICAL FOR TEAM FOLDER ACCESS
+    // This ensures files go to shared team folder, not personal space
+    this.rootNamespaceId = process.env.DROPBOX_ROOT_NAMESPACE_ID || '3266276627';
     
     // For Dropbox Business teams, specify which team member to operate as
     this.selectUser = process.env.DROPBOX_SELECT_USER;
@@ -24,6 +29,7 @@ class DropboxService {
     console.log(`   Has Access Token: ${!!this.currentAccessToken}`);
     console.log(`   Has Refresh Token: ${!!this.refreshToken}`);
     console.log(`   Has App Credentials: ${!!(this.appKey && this.appSecret)}`);
+    console.log(`   Root Namespace ID: ${this.rootNamespaceId} (for team folder access)`);
     console.log(`   Team Member: ${this.selectUser || 'None'}`);
   }
 
@@ -137,15 +143,39 @@ class DropboxService {
           throw new Error(`File is empty: ${localFilePath}`);
         }
         
-        const response = await this.dbx.filesUpload({
-          path: dropboxPath,
-          contents: fileBuffer,
-          mode: 'add',
-          autorename: true
+        console.log('🎯 Using Path-Root header for team folder access');
+        console.log('   Root Namespace ID:', this.rootNamespaceId);
+        
+        // Use raw HTTP request with Path-Root header for team folder access
+        const pathRootHeader = JSON.stringify({
+          '.tag': 'root',
+          'root': this.rootNamespaceId
+        });
+        
+        const response = await fetch('https://content.dropboxapi.com/2/files/upload', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this.currentAccessToken}`,
+            'Dropbox-API-Arg': JSON.stringify({
+              path: dropboxPath,
+              mode: 'add',
+              autorename: true
+            }),
+            'Dropbox-API-Path-Root': pathRootHeader,
+            'Content-Type': 'application/octet-stream'
+          },
+          body: fileBuffer
         });
 
+        if (!response.ok) {
+          const error = await response.text();
+          throw new Error(`HTTP ${response.status}: ${error}`);
+        }
+
+        const result = await response.json();
         console.log(`📤 File uploaded to Dropbox: ${dropboxPath}`);
-        return response.result;
+        console.log('✅ Using team folder access - file accessible to all team members!');
+        return result;
       } catch (error) {
         console.error('❌ Error uploading to Dropbox:', error);
         throw new Error(`Failed to upload file to Dropbox: ${error.message}`);
