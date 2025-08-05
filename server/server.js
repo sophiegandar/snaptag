@@ -323,6 +323,11 @@ app.get('/api/images/stats', async (req, res) => {
 // Helper functions
 async function processAndUploadImage({ filePath, originalName, tags, title, description, focusedTags }) {
   console.log('🏷️ Adding metadata to image...');
+  
+  // Check file size before processing
+  const statsBefore = await fs.stat(filePath);
+  console.log('📊 File size before metadata processing:', statsBefore.size, 'bytes');
+  
   // Add metadata to image
   const processedImagePath = await metadataService.addMetadataToImage(filePath, {
     tags,
@@ -331,6 +336,15 @@ async function processAndUploadImage({ filePath, originalName, tags, title, desc
     focusedTags
   });
   console.log('✅ Metadata added, processed image:', processedImagePath);
+  
+  // Check file size after processing
+  const statsAfter = await fs.stat(processedImagePath);
+  console.log('📊 File size after metadata processing:', statsAfter.size, 'bytes');
+  
+  // Check if file is empty
+  if (statsAfter.size === 0) {
+    throw new Error(`Processed image file is empty: ${processedImagePath}`);
+  }
 
   // Generate unique filename
   const timestamp = Date.now();

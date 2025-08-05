@@ -129,7 +129,13 @@ class DropboxService {
   async uploadFile(localFilePath, dropboxPath) {
     return this.executeWithRetry(async (localFilePath, dropboxPath) => {
       try {
+        console.log('📖 Reading file for upload:', localFilePath);
         const fileBuffer = await fs.readFile(localFilePath);
+        console.log('📊 File buffer size:', fileBuffer.length, 'bytes');
+        
+        if (fileBuffer.length === 0) {
+          throw new Error(`File is empty: ${localFilePath}`);
+        }
         
         const response = await this.dbx.filesUpload({
           path: dropboxPath,
