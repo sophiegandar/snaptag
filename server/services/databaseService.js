@@ -159,7 +159,7 @@ class DatabaseService {
       await this.run(`
         INSERT INTO focused_tags (image_id, tag_name, x_coordinate, y_coordinate, width, height)
         VALUES (?, ?, ?, ?, ?, ?)
-      `, [imageId, focusedTag.tag, focusedTag.x, focusedTag.y, focusedTag.width || null, focusedTag.height || null]);
+      `, [imageId, focusedTag.tag_name, focusedTag.x_coordinate, focusedTag.y_coordinate, focusedTag.width || null, focusedTag.height || null]);
     }
   }
 
