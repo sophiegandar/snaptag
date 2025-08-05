@@ -79,9 +79,6 @@ const upload = multer({
   }
 });
 
-// Initialize database
-databaseService.init();
-
 // Routes
 
 // Health check
@@ -692,6 +689,13 @@ if (process.env.NODE_ENV === 'production') {
 // Initialize database and start server
 async function startServer() {
   try {
+    // Debug environment variables
+    console.log('🔍 Environment Check:');
+    console.log('DATABASE_URL:', process.env.DATABASE_URL ? '✅ Set' : '❌ Missing');
+    console.log('DROPBOX_ACCESS_TOKEN:', process.env.DROPBOX_ACCESS_TOKEN ? '✅ Set' : '❌ Missing');
+    console.log('DROPBOX_FOLDER:', process.env.DROPBOX_FOLDER || '❌ Missing');
+    console.log('NODE_ENV:', process.env.NODE_ENV || 'development');
+    
     // Initialize PostgreSQL database
     await databaseService.init();
     
@@ -702,6 +706,7 @@ async function startServer() {
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);
+    console.error('❌ Error details:', error.message);
     process.exit(1);
   }
 }
