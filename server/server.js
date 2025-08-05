@@ -385,7 +385,10 @@ app.post('/api/sync/dropbox', async (req, res) => {
           file_size: file.size,
           source_url: null,
           tags: 'synced,orphaned', // Mark as synced
-          focused_tags: []
+          focused_tags: [],
+          upload_date: new Date().toISOString(), // Add required upload_date
+          created_at: new Date().toISOString(),  // Add created_at
+          updated_at: new Date().toISOString()   // Add updated_at
         };
         
         const imageId = await databaseService.saveImage(imageData);
