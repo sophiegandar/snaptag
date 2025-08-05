@@ -386,7 +386,7 @@ app.post('/api/sync/dropbox', async (req, res) => {
           dropbox_path: `${folderPath}/${file.name}`,
           file_size: file.size,
           source_url: null,
-          tags: 'synced,orphaned', // Mark as synced
+          tags: ['synced', 'orphaned'], // Mark as synced - use array format
           focused_tags: [],
           upload_date: new Date().toISOString(), // Add required upload_date
           created_at: new Date().toISOString(),  // Add created_at
@@ -425,6 +425,49 @@ app.post('/api/sync/dropbox', async (req, res) => {
     res.status(500).json({ 
       success: false, 
       error: 'Failed to sync with Dropbox folder: ' + error.message 
+    });
+  }
+});
+
+// Clean up single-letter tags (utility endpoint)
+app.post('/api/cleanup/single-letter-tags', async (req, res) => {
+  try {
+    console.log('🧹 Cleaning up single-letter tags...');
+    
+    // Find all single-letter tags
+    const singleLetterTags = await databaseService.all(`
+      SELECT id, name FROM tags 
+      WHERE LENGTH(name) = 1 AND name REGEXP '^[a-zA-Z]$'
+    `);
+    
+    console.log(`🔍 Found ${singleLetterTags.length} single-letter tags to remove`);
+    
+    let removedCount = 0;
+    for (const tag of singleLetterTags) {
+      try {
+        // Remove tag associations
+        await databaseService.run('DELETE FROM image_tags WHERE tag_id = ?', [tag.id]);
+        // Remove the tag itself
+        await databaseService.run('DELETE FROM tags WHERE id = ?', [tag.id]);
+        console.log(`🗑️ Removed tag: "${tag.name}"`);
+        removedCount++;
+      } catch (error) {
+        console.error(`❌ Failed to remove tag "${tag.name}":`, error.message);
+      }
+    }
+    
+    console.log(`✅ Cleanup completed: removed ${removedCount} single-letter tags`);
+    
+    res.json({
+      success: true,
+      message: `Cleaned up ${removedCount} single-letter tags`,
+      removedTags: removedCount
+    });
+  } catch (error) {
+    console.error('❌ Tag cleanup failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to clean up tags: ' + error.message 
     });
   }
 });

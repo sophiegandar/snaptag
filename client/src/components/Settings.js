@@ -19,8 +19,10 @@ const Settings = () => {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState(null);
   const [syncStatus, setSyncStatus] = useState(null);
+  const [cleanupStatus, setCleanupStatus] = useState(null);
   const [stats, setStats] = useState({});
 
   useEffect(() => {
