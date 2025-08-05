@@ -218,23 +218,28 @@ class DatabaseService {
       
       console.log('📊 Initial query setup complete');
 
-      if (searchTerm) {
+      if (searchTerm && searchTerm.trim()) {
         conditions.push(`(
           i.title LIKE ? OR 
           i.description LIKE ? OR 
           i.filename LIKE ? OR 
           i.original_name LIKE ?
         )`);
-        const searchPattern = `%${searchTerm}%`;
+        const searchPattern = `%${searchTerm.trim()}%`;
         params.push(searchPattern, searchPattern, searchPattern, searchPattern);
       }
 
       if (tagFilter) {
         // Handle both string and array formats for tagFilter
         const tagArray = Array.isArray(tagFilter) ? tagFilter : tagFilter.split(',');
-        const tagConditions = tagArray.map(() => 't.name LIKE ?').join(' OR ');
-        conditions.push(`(${tagConditions})`);
-        tagArray.forEach(tag => params.push(`%${tag.toString().trim()}%`));
+        // Filter out empty tags
+        const validTags = tagArray.filter(tag => tag && tag.toString().trim());
+        
+        if (validTags.length > 0) {
+          const tagConditions = validTags.map(() => 't.name LIKE ?').join(' OR ');
+          conditions.push(`(${tagConditions})`);
+          validTags.forEach(tag => params.push(`%${tag.toString().trim()}%`));
+        }
       }
 
       if (conditions.length > 0) {
