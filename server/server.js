@@ -649,13 +649,25 @@ app.post('/api/images/search', async (req, res) => {
       });
     }
     
-    // Generate temporary Dropbox URLs for each image
+    // Generate temporary Dropbox URLs for each image (with rate limiting)
     console.log(`🔗 Generating temporary URLs for ${filteredImages.length} images...`);
-    for (const image of filteredImages) {
+    for (let i = 0; i < filteredImages.length; i++) {
+      const image = filteredImages[i];
       try {
-        console.log(`🔗 Attempting to generate URL for ${image.filename} at path: ${image.dropbox_path}`);
+        console.log(`🔗 Attempting to generate URL for ${image.filename} (${i+1}/${filteredImages.length}) at path: ${image.dropbox_path}`);
         image.url = await dropboxService.getTemporaryLink(image.dropbox_path);
-        console.log(`✅ Generated URL for ${image.filename}: ${image.url ? 'SUCCESS' : 'EMPTY'}`);
+        
+        if (!image.url || image.url.length < 10) {
+          console.warn(`⚠️ Generated URL seems invalid for ${image.filename}: "${image.url}"`);
+          image.url = '/api/placeholder-image.jpg';
+        } else {
+          console.log(`✅ Generated valid URL for ${image.filename} (${image.url.length} chars)`);
+        }
+        
+        // Add small delay between requests to avoid rate limiting
+        if (i < filteredImages.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
+        }
       } catch (error) {
         console.error(`❌ Failed to generate URL for ${image.filename}:`, error.message);
         console.error(`❌ Error details:`, error);
