@@ -159,12 +159,19 @@ class DropboxService {
     try {
       return await operation.apply(this, args);
     } catch (error) {
-      // Check if it's an authentication error
-      if (error.status === 401 || (error.error && error.error.error_summary && error.error.error_summary.includes('invalid_access_token'))) {
+      // Check if it's an authentication error (multiple formats)
+      const isAuthError = 
+        error.status === 401 || 
+        (error.error && error.error.error_summary && error.error.error_summary.includes('invalid_access_token')) ||
+        (error.message && error.message.includes('HTTP 401')) ||
+        (error.message && error.message.includes('expired_access_token'));
+      
+      if (isAuthError) {
         console.log('🔄 Access token expired, attempting refresh...');
         
         try {
           await this.refreshAccessToken();
+          console.log('✅ Token refreshed, retrying operation...');
           // Retry the operation with the new token
           return await operation.apply(this, args);
         } catch (refreshError) {
