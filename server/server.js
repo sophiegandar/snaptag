@@ -10,10 +10,12 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const dropboxService = require('./services/dropboxService');
 const metadataService = require('./services/metadataService');
 const PostgresService = require('./services/postgresService');
+const FolderPathService = require('./services/folderPathService');
 const { generateFileHash } = require('./utils/fileHash');
 
-// Initialize PostgreSQL service
+// Initialize services
 const databaseService = new PostgresService();
+const folderPathService = new FolderPathService();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -592,6 +594,106 @@ app.post('/api/sync/dropbox', async (req, res) => {
   }
 });
 
+// Reorganize existing images into new folder structure
+app.post('/api/organize/folders', async (req, res) => {
+  try {
+    console.log('🗂️ Starting folder reorganization...');
+    
+    // Get all images from database
+    const images = await databaseService.getAllImages();
+    console.log(`📊 Found ${images.length} images to potentially reorganize`);
+    
+    let movedCount = 0;
+    let errorCount = 0;
+    
+    for (const image of images) {
+      try {
+        console.log(`📁 Processing image: ${image.filename}`);
+        
+        // Parse existing tags
+        const tags = Array.isArray(image.tags) ? image.tags : 
+                    typeof image.tags === 'string' ? image.tags.split(',').map(t => t.trim()) : [];
+        
+        if (tags.length === 0) {
+          console.log(`⚠️ Skipping ${image.filename} - no tags found`);
+          continue;
+        }
+        
+        // Generate new folder path based on tags
+        const baseDropboxFolder = serverSettings.dropboxFolder || process.env.DROPBOX_FOLDER || '/SnapTag';
+        const normalizedBaseFolder = baseDropboxFolder.startsWith('/') ? baseDropboxFolder : `/${baseDropboxFolder}`;
+        const newFolderPath = folderPathService.generateFolderPath(tags, normalizedBaseFolder);
+        
+        // Generate new filename from tags
+        const ext = path.extname(image.filename);
+        const timestamp = Date.now();
+        const newFilename = folderPathService.generateTagBasedFilename(tags, ext, timestamp);
+        const newDropboxPath = path.posix.join(newFolderPath, newFilename);
+        
+        // Check if the file is already in the correct location
+        if (image.dropbox_path === newDropboxPath) {
+          console.log(`✅ ${image.filename} already in correct location`);
+          continue;
+        }
+        
+        console.log(`🔄 Moving from: ${image.dropbox_path}`);
+        console.log(`🔄 Moving to: ${newDropboxPath}`);
+        
+        // Download the file from current location
+        const tempPath = `temp/reorganize-${Date.now()}-${image.filename}`;
+        await dropboxService.downloadFile(image.dropbox_path, tempPath);
+        
+        // Upload to new location
+        await dropboxService.uploadFile(tempPath, newDropboxPath);
+        
+        // Update database with new path and filename
+        await databaseService.query(
+          'UPDATE images SET dropbox_path = $1, filename = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
+          [newDropboxPath, newFilename, image.id]
+        );
+        
+        // Delete from old location
+        try {
+          await dropboxService.deleteFile(image.dropbox_path);
+          console.log(`✅ Deleted old file: ${image.dropbox_path}`);
+        } catch (deleteError) {
+          console.warn(`⚠️ Could not delete old file ${image.dropbox_path}:`, deleteError.message);
+        }
+        
+        // Clean up temp file
+        await fs.unlink(tempPath);
+        
+        movedCount++;
+        console.log(`✅ Successfully reorganized: ${image.filename}`);
+        
+      } catch (error) {
+        console.error(`❌ Error reorganizing ${image.filename}:`, error.message);
+        errorCount++;
+      }
+    }
+    
+    console.log('🗂️ Folder reorganization completed');
+    console.log(`📊 Summary: ${movedCount} moved, ${errorCount} errors`);
+    
+    res.json({
+      success: true,
+      message: 'Folder reorganization completed',
+      stats: {
+        totalImages: images.length,
+        movedImages: movedCount,
+        errors: errorCount
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Folder reorganization failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to reorganize folders: ' + error.message 
+    });
+  }
+});
+
 // Clean up single-letter tags (utility endpoint)
 app.post('/api/cleanup/single-letter-tags', async (req, res) => {
   try {
@@ -666,15 +768,19 @@ async function processAndUploadImage({ filePath, originalName, tags, title, desc
   const fileHash = await generateFileHash(processedImagePath);
   console.log('✅ File hash generated:', fileHash.substring(0, 16) + '...');
 
-  // Generate unique filename
+  // Generate folder path based on tags
+  const baseDropboxFolder = serverSettings.dropboxFolder || process.env.DROPBOX_FOLDER || '/SnapTag';
+  const normalizedBaseFolder = baseDropboxFolder.startsWith('/') ? baseDropboxFolder : `/${baseDropboxFolder}`;
+  const folderPath = folderPathService.generateFolderPath(tags, normalizedBaseFolder);
+  
+  // Generate filename from tags
   const timestamp = Date.now();
   const ext = path.extname(originalName);
-  const filename = `${timestamp}-${path.basename(originalName, ext)}${ext}`;
-  const dropboxFolder = serverSettings.dropboxFolder || process.env.DROPBOX_FOLDER || '/SnapTag';
-  // Ensure dropboxFolder starts with '/' for Dropbox API compatibility
-  const normalizedFolder = dropboxFolder.startsWith('/') ? dropboxFolder : `/${dropboxFolder}`;
-  const dropboxPath = `${normalizedFolder}/${filename}`;
-  console.log('📂 Dropbox path:', dropboxPath);
+  const filename = folderPathService.generateTagBasedFilename(tags, ext, timestamp);
+  
+  // Combine folder path and filename
+  const dropboxPath = path.posix.join(folderPath, filename);
+  console.log('📂 Final Dropbox path:', dropboxPath);
 
   console.log('☁️ Uploading to Dropbox...');
   // Upload to Dropbox

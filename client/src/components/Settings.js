@@ -19,8 +19,10 @@ const Settings = () => {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [organizing, setOrganizing] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState(null);
   const [syncStatus, setSyncStatus] = useState(null);
+  const [organizeStatus, setOrganizeStatus] = useState(null);
   const [stats, setStats] = useState({});
 
   useEffect(() => {
@@ -157,6 +159,43 @@ const Settings = () => {
       console.error('Dropbox sync error:', error);
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const organizeIntoFolders = async () => {
+    if (!window.confirm('This will reorganize all existing images into the new folder structure based on their tags. This process may take a while. Continue?')) {
+      return;
+    }
+    
+    try {
+      setOrganizing(true);
+      setOrganizeStatus(null);
+      
+      const serverUrl = settings.serverUrl || 'http://localhost:3001';
+      const response = await fetch(`${serverUrl}/api/organize/folders`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        setOrganizeStatus('success');
+        toast.success(`Reorganization completed! Moved ${result.stats.movedImages} images into new folder structure`);
+        
+        // Reload stats to show updated numbers
+        loadStats();
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || 'Reorganization failed');
+      }
+    } catch (error) {
+      setOrganizeStatus('error');
+      toast.error(`Reorganization failed: ${error.message}`);
+      console.error('Folder reorganization error:', error);
+    } finally {
+      setOrganizing(false);
     }
   };
 
@@ -310,6 +349,16 @@ const Settings = () => {
             <p className="text-xs text-gray-500 mt-1">
               Path in your Dropbox where images will be saved (e.g., /SnapTag, /Projects/Images)
             </p>
+            <div className="mt-2 p-3 bg-blue-50 rounded-md">
+              <h4 className="text-sm font-medium text-blue-900 mb-2">📁 Automatic Folder Organization</h4>
+              <div className="text-xs text-blue-800 space-y-1">
+                <p><strong>New images are automatically organized into:</strong></p>
+                <p>• Images with 'archier' tag → <code>/SnapTag/Archier/[Category]/</code></p>
+                <p>• Images without 'archier' tag → <code>/SnapTag/Precedents/[Category]/</code></p>
+                <p><strong>Categories:</strong> Facade, Finishes, Joinery, Lighting, Sanitary, Wet Areas</p>
+                <p><strong>Filenames:</strong> Generated from tags (e.g., <code>modern-glass-facade.jpg</code>)</p>
+              </div>
+            </div>
           </div>
 
           <div className="flex gap-3">
@@ -339,7 +388,20 @@ const Settings = () => {
               Sync with Dropbox
             </button>
 
-            {(connectionStatus || syncStatus) && (
+            <button
+              onClick={organizeIntoFolders}
+              disabled={organizing || !settings.serverUrl}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 disabled:opacity-50"
+            >
+              {organizing ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <SettingsIcon className="h-4 w-4" />
+              )}
+              Organize Folders
+            </button>
+
+            {(connectionStatus || syncStatus || organizeStatus) && (
               <div className="flex gap-2">
                 {connectionStatus && (
                   <div className={`flex items-center gap-2 px-3 py-2 rounded-md ${
@@ -371,6 +433,23 @@ const Settings = () => {
                     )}
                     <span className="text-sm font-medium">
                       {syncStatus === 'success' ? 'Synced' : 'Sync Failed'}
+                    </span>
+                  </div>
+                )}
+
+                {organizeStatus && (
+                  <div className={`flex items-center gap-2 px-3 py-2 rounded-md ${
+                    organizeStatus === 'success' 
+                      ? 'bg-purple-100 text-purple-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {organizeStatus === 'success' ? (
+                      <SettingsIcon className="h-4 w-4" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4" />
+                    )}
+                    <span className="text-sm font-medium">
+                      {organizeStatus === 'success' ? 'Organized' : 'Organization Failed'}
                     </span>
                   </div>
                 )}
