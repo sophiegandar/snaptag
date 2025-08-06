@@ -1,21 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Play, 
-  Pause, 
-  Square, 
-  RefreshCw, 
   Tag, 
-  Database, 
   CheckCircle, 
   XCircle, 
-  Clock,
-  AlertCircle,
   Plus
 } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { apiCall } from '../utils/apiConfig';
 
 const BatchProcessing = () => {
-  const [jobs, setJobs] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [newTagInput, setNewTagInput] = useState('');
   const [selectedImages, setSelectedImages] = useState([]);
@@ -23,27 +16,12 @@ const BatchProcessing = () => {
   const [showImageSelector, setShowImageSelector] = useState(false);
 
   useEffect(() => {
-    loadJobs();
     loadImages();
-    
-    // Poll for job updates every 2 seconds
-    const interval = setInterval(loadJobs, 2000);
-    return () => clearInterval(interval);
   }, []);
-
-  const loadJobs = async () => {
-    try {
-      const response = await fetch('/api/batch/jobs');
-      const jobsData = await response.json();
-      setJobs(jobsData);
-    } catch (error) {
-      console.error('Error loading jobs:', error);
-    }
-  };
 
   const loadImages = async () => {
     try {
-      const response = await fetch('/api/images');
+      const response = await apiCall('/api/images');
       const imagesData = await response.json();
       setImages(imagesData);
     } catch (error) {
@@ -51,51 +29,7 @@ const BatchProcessing = () => {
     }
   };
 
-  const startBatchMetadataUpdate = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch('/api/batch/metadata-update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
-      const result = await response.json();
-      if (result.success) {
-        toast.success(result.message);
-        loadJobs();
-      } else {
-        toast.error(result.error);
-      }
-    } catch (error) {
-      toast.error('Failed to start batch metadata update');
-      console.error('Error:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  const startMissingMetadataRestore = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch('/api/batch/restore-metadata', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
-      const result = await response.json();
-      if (result.success) {
-        toast.success(result.message);
-        loadJobs();
-      } else {
-        toast.error(result.error);
-      }
-    } catch (error) {
-      toast.error('Failed to start metadata restoration');
-      console.error('Error:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const applyTagsToSelected = async () => {
     if (selectedImages.length === 0) {
@@ -112,7 +46,7 @@ const BatchProcessing = () => {
     
     setIsLoading(true);
     try {
-      const response = await fetch('/api/batch/apply-tags', {
+      const response = await apiCall('/api/batch/apply-tags', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -127,7 +61,6 @@ const BatchProcessing = () => {
         setSelectedImages([]);
         setNewTagInput('');
         setShowImageSelector(false);
-        loadJobs();
       } else {
         toast.error(result.error);
       }
@@ -239,58 +172,22 @@ const BatchProcessing = () => {
         </p>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center mb-4">
-            <Database className="h-6 w-6 text-blue-500 mr-2" />
-            <h3 className="text-lg font-semibold">Update All Metadata</h3>
-          </div>
-          <p className="text-gray-600 mb-4">
-            Apply current tags and metadata to all images stored in Dropbox.
-          </p>
-          <button
-            onClick={startBatchMetadataUpdate}
-            disabled={isLoading}
-            className="w-full bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 disabled:opacity-50 flex items-center justify-center"
-          >
-            <Play className="h-4 w-4 mr-2" />
-            Start Update
-          </button>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center mb-4">
-            <RefreshCw className="h-6 w-6 text-green-500 mr-2" />
-            <h3 className="text-lg font-semibold">Restore Metadata</h3>
-          </div>
-          <p className="text-gray-600 mb-4">
-            Find and restore metadata from images that may have lost their tags.
-          </p>
-          <button
-            onClick={startMissingMetadataRestore}
-            disabled={isLoading}
-            className="w-full bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 disabled:opacity-50 flex items-center justify-center"
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Restore Missing
-          </button>
-        </div>
-
+      {/* Batch Tagging */}
+      <div className="max-w-2xl mx-auto mb-8">
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center mb-4">
             <Tag className="h-6 w-6 text-purple-500 mr-2" />
             <h3 className="text-lg font-semibold">Batch Tag Application</h3>
           </div>
           <p className="text-gray-600 mb-4">
-            Apply tags to multiple images at once.
+            Apply tags to multiple images at once. This will add tags to existing images without removing current tags.
           </p>
           <button
             onClick={() => setShowImageSelector(!showImageSelector)}
             className="w-full bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600 flex items-center justify-center"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Select Images
+            {showImageSelector ? 'Hide' : 'Show'} Image Selector
           </button>
         </div>
       </div>
@@ -376,89 +273,6 @@ const BatchProcessing = () => {
           </div>
         </div>
       )}
-
-      {/* Active Jobs */}
-      <div className="bg-white rounded-lg shadow-md">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Active Jobs</h2>
-        </div>
-        
-        <div className="p-6">
-          {jobs.length === 0 ? (
-            <div className="text-center py-8">
-              <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">No batch jobs running</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {jobs.map(job => (
-                <div key={job.id} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center">
-                      {getStatusIcon(job.status)}
-                      <span className="ml-2 font-medium">
-                        Job #{job.id} - {job.type.replace('_', ' ').toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm text-gray-500">
-                        {formatDuration(job.duration)}
-                      </span>
-                      {job.status === 'running' && (
-                        <button
-                          onClick={() => cancelJob(job.id)}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          <Square className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {job.progress && (
-                    <div className="mb-2">
-                      <div className="flex justify-between text-sm text-gray-600 mb-1">
-                        <span>Progress: {job.progress.completed}/{job.progress.total}</span>
-                        <span>Failed: {job.progress.failed}</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-blue-500 h-2 rounded-full transition-all"
-                          style={{
-                            width: `${job.progress.total > 0 ? (job.progress.completed / job.progress.total) * 100 : 0}%`
-                          }}
-                        />
-                      </div>
-                      {job.progress.current && (
-                        <p className="text-sm text-gray-500 mt-1">{job.progress.current}</p>
-                      )}
-                    </div>
-                  )}
-                  
-                  {job.error && (
-                    <div className="text-red-500 text-sm">{job.error}</div>
-                  )}
-                  
-                  {job.errors && job.errors.length > 0 && (
-                    <details className="mt-2">
-                      <summary className="text-sm text-gray-500 cursor-pointer">
-                        Show errors ({job.errors.length})
-                      </summary>
-                      <div className="mt-2 space-y-1">
-                        {job.errors.map((error, index) => (
-                          <div key={index} className="text-xs text-red-500">
-                            {error.filename || error.imageId}: {error.error}
-                          </div>
-                        ))}
-                      </div>
-                    </details>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 };

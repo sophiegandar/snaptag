@@ -428,6 +428,79 @@ app.delete('/api/tags/:id', async (req, res) => {
   }
 });
 
+// Batch apply tags to multiple images
+app.post('/api/batch/apply-tags', async (req, res) => {
+  try {
+    const { imageIds, tags } = req.body;
+    
+    if (!imageIds || !Array.isArray(imageIds) || imageIds.length === 0) {
+      return res.status(400).json({ error: 'Image IDs array is required' });
+    }
+    
+    if (!tags || !Array.isArray(tags) || tags.length === 0) {
+      return res.status(400).json({ error: 'Tags array is required' });
+    }
+    
+    console.log(`🏷️ Batch applying tags to ${imageIds.length} images:`, tags);
+    
+    let successCount = 0;
+    let errorCount = 0;
+    const errors = [];
+    
+    for (const imageId of imageIds) {
+      try {
+        // Get current image data
+        const image = await databaseService.getImageById(imageId);
+        if (!image) {
+          errors.push(`Image ${imageId} not found`);
+          errorCount++;
+          continue;
+        }
+        
+        // Get current tags
+        let currentTags = [];
+        if (Array.isArray(image.tags)) {
+          currentTags = image.tags;
+        } else if (typeof image.tags === 'string') {
+          currentTags = image.tags.split(',').map(t => t.trim()).filter(Boolean);
+        }
+        
+        // Merge with new tags (avoid duplicates)
+        const allTags = [...new Set([...currentTags, ...tags])];
+        
+        // Update tags in database
+        await databaseService.updateImageTags(imageId, allTags, image.focused_tags || []);
+        
+        console.log(`✅ Updated tags for image ${imageId}`);
+        successCount++;
+        
+      } catch (error) {
+        console.error(`❌ Error updating tags for image ${imageId}:`, error.message);
+        errors.push(`Image ${imageId}: ${error.message}`);
+        errorCount++;
+      }
+    }
+    
+    const message = `Batch tagging completed: ${successCount} successful, ${errorCount} errors`;
+    console.log(message);
+    
+    res.json({
+      success: true,
+      message,
+      stats: {
+        total: imageIds.length,
+        successful: successCount,
+        errors: errorCount,
+        errorDetails: errors
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Batch apply tags error:', error);
+    res.status(500).json({ error: 'Failed to apply tags: ' + error.message });
+  }
+});
+
 // Search images with filters (POST endpoint for frontend)
 app.post('/api/images/search', async (req, res) => {
   try {
