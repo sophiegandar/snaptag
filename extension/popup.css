@@ -20,7 +20,7 @@ body {
 
 /* Header */
 .header {
-  background: #3b82f6;
+  background: #000000;
   color: white;
   padding: 16px 20px;
   display: flex;
@@ -96,7 +96,7 @@ body {
 }
 
 .action-btn.primary {
-  background: #3b82f6;
+  background: #000000;
   color: white;
 }
 
@@ -136,7 +136,7 @@ body {
 }
 
 .tags-input:focus, .form-input:focus {
-  border-color: #3b82f6;
+  border-color: #000000;
 }
 
 .form-textarea {
@@ -153,13 +153,13 @@ body {
 }
 
 .form-textarea:focus {
-  border-color: #3b82f6;
+  border-color: #000000;
 }
 
 .add-tag-btn {
   width: 32px;
   height: 32px;
-  background: #3b82f6;
+  background: #000000;
   color: white;
   border: none;
   border-radius: 6px;
@@ -194,7 +194,7 @@ body {
 .tag-remove {
   background: none;
   border: none;
-  color: #6366f1;
+  color: #000000;
   cursor: pointer;
   padding: 0;
   width: 16px;
@@ -348,7 +348,7 @@ body {
 }
 
 .image-item.selected {
-  border-color: #3b82f6;
+  border-color: #000000;
 }
 
 .image-item img {
@@ -380,7 +380,7 @@ body {
 }
 
 .image-item.selected .image-item-overlay {
-  background: #3b82f6;
+  background: #000000;
 }
 
 .modal-footer {
@@ -414,7 +414,7 @@ body {
   width: 32px;
   height: 32px;
   border: 3px solid #e5e7eb;
-  border-top: 3px solid #3b82f6;
+  border-top: 3px solid #000000;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 12px;
