@@ -1,16 +1,14 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
-import { Search, Upload, Tag, Settings as SettingsIcon, Zap, FileText, AlertTriangle } from 'lucide-react';
+import { Search, Upload, Tag, Settings as SettingsIcon, FileText } from 'lucide-react';
 
 import ImageGallery from './components/ImageGallery';
 import ImageUpload from './components/ImageUpload';
 import ImageEditor from './components/ImageEditor';
 import TagManager from './components/TagManager';
 import Settings from './components/Settings';
-import BatchProcessing from './components/BatchProcessing';
 import ProfessionalWorkflow from './components/ProfessionalWorkflow';
-import Triage from './components/Triage';
 
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
@@ -59,21 +57,7 @@ function App() {
                   <span>Tags</span>
                 </Link>
                 
-                <Link
-                  to="/triage"
-                  className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
-                >
-                  <AlertTriangle className="h-4 w-4" />
-                  <span>Triage</span>
-                </Link>
-                
-                <Link
-                  to="/batch"
-                  className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
-                >
-                  <Zap className="h-4 w-4" />
-                  <span>Batch</span>
-                </Link>
+
                 
                 <Link
                   to="/workflow"
@@ -102,8 +86,6 @@ function App() {
                 <Route path="/upload" element={<ImageUpload />} />
                 <Route path="/image/:id" element={<ImageEditor />} />
                 <Route path="/tags" element={<TagManager />} />
-                <Route path="/triage" element={<Triage />} />
-                <Route path="/batch" element={<BatchProcessing />} />
                 <Route path="/workflow" element={<ProfessionalWorkflow />} />
                 <Route path="/settings" element={<Settings />} />
           </Routes>
