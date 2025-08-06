@@ -528,7 +528,13 @@ const ImageEditor = () => {
   // removeFocusedTag function moved up to avoid duplication
 
   const saveChanges = async () => {
+    console.log('🔧 DEBUG: saveChanges function called');
+    console.log('🔧 DEBUG: id =', id);
+    console.log('🔧 DEBUG: tags =', tags);
+    console.log('🔧 DEBUG: focusedTags =', focusedTags);
+    
     try {
+      console.log('🔧 DEBUG: Making API call to /api/images/' + id + '/tags');
       const response = await fetch(`/api/images/${id}/tags`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -538,11 +544,15 @@ const ImageEditor = () => {
         })
       });
 
+      console.log('🔧 DEBUG: Response status:', response.status);
+      console.log('🔧 DEBUG: Response ok:', response.ok);
+
       if (!response.ok) throw new Error('Failed to save changes');
       
       toast.success('Changes saved successfully');
       navigate('/');
     } catch (error) {
+      console.error('🔧 DEBUG: Error in saveChanges:', error);
       console.error('Error saving changes:', error);
       toast.error('Failed to save changes');
     }
