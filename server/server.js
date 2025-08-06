@@ -501,7 +501,7 @@ app.post('/api/batch/apply-tags', async (req, res) => {
         await databaseService.updateImageTags(imageId, allTags, image.focused_tags || []);
         
         // Check if folder reorganization is needed
-        const baseDropboxFolder = serverSettings.dropboxFolder || process.env.DROPBOX_FOLDER || '/SnapTag';
+        const baseDropboxFolder = serverSettings.dropboxFolder || process.env.DROPBOX_FOLDER || '/ARCHIER Team Folder/Support/Production/SnapTag';
         const normalizedBaseFolder = baseDropboxFolder.startsWith('/') ? baseDropboxFolder : `/${baseDropboxFolder}`;
         const newFolderPath = folderPathService.generateFolderPath(allTags, normalizedBaseFolder);
         const ext = path.extname(image.filename);
@@ -909,9 +909,9 @@ app.post('/api/organize/folders', async (req, res) => {
           continue;
         }
         
-        // Generate new folder path based on tags
-        const baseDropboxFolder = serverSettings.dropboxFolder || process.env.DROPBOX_FOLDER || '/SnapTag';
-        const normalizedBaseFolder = baseDropboxFolder.startsWith('/') ? baseDropboxFolder : `/${baseDropboxFolder}`;
+            // Generate new folder path based on tags
+    const baseDropboxFolder = serverSettings.dropboxFolder || process.env.DROPBOX_FOLDER || '/ARCHIER Team Folder/Support/Production/SnapTag';
+    const normalizedBaseFolder = baseDropboxFolder.startsWith('/') ? baseDropboxFolder : `/${baseDropboxFolder}`;
         const newFolderPath = folderPathService.generateFolderPath(tags, normalizedBaseFolder);
         
         // Generate new filename from tags
@@ -1058,9 +1058,9 @@ async function processAndUploadImage({ filePath, originalName, tags, title, desc
   const fileHash = await generateFileHash(processedImagePath);
   console.log('✅ File hash generated:', fileHash.substring(0, 16) + '...');
 
-  // Generate folder path based on tags
-  const baseDropboxFolder = serverSettings.dropboxFolder || process.env.DROPBOX_FOLDER || '/SnapTag';
-  const normalizedBaseFolder = baseDropboxFolder.startsWith('/') ? baseDropboxFolder : `/${baseDropboxFolder}`;
+      // Generate folder path based on tags
+    const baseDropboxFolder = serverSettings.dropboxFolder || process.env.DROPBOX_FOLDER || '/ARCHIER Team Folder/Support/Production/SnapTag';
+    const normalizedBaseFolder = baseDropboxFolder.startsWith('/') ? baseDropboxFolder : `/${baseDropboxFolder}`;
   const folderPath = folderPathService.generateFolderPath(tags, normalizedBaseFolder);
   
   // Generate filename from tags
@@ -1149,7 +1149,7 @@ async function saveImageFromUrl({ imageUrl, tags, title, description, focusedTag
 
 // Settings storage (in-memory for now, could be moved to database)
 let serverSettings = {
-  dropboxFolder: process.env.DROPBOX_FOLDER || '/SnapTag'
+      dropboxFolder: process.env.DROPBOX_FOLDER || '/ARCHIER Team Folder/Support/Production/SnapTag'
 };
 
 // Reload settings from environment on startup
@@ -1179,7 +1179,7 @@ app.get('/api/debug/env', (req, res) => {
 app.get('/api/settings', (req, res) => {
   try {
     // Always sync with current environment
-    serverSettings.dropboxFolder = process.env.DROPBOX_FOLDER || serverSettings.dropboxFolder || '/SnapTag';
+    serverSettings.dropboxFolder = process.env.DROPBOX_FOLDER || serverSettings.dropboxFolder || '/ARCHIER Team Folder/Support/Production/SnapTag';
     res.json(serverSettings);
   } catch (error) {
     console.error('Error retrieving settings:', error);
