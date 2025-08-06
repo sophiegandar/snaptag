@@ -187,28 +187,36 @@ class DropboxService {
   async downloadFile(dropboxPath, localFilePath) {
     return this.executeWithRetry(async (dropboxPath, localFilePath) => {
       try {
-        const response = await this.dbx.filesDownload({ path: dropboxPath });
+        console.log('📥 Downloading file with Path-Root header for team folder access');
         
-        // Handle different response formats from Dropbox SDK
-        let fileData;
-        if (response.result.fileBinary) {
-          fileData = response.result.fileBinary;
-        } else if (response.fileBinary) {
-          fileData = response.fileBinary;
-        } else if (response.result && typeof response.result === 'object') {
-          // Try to get buffer from the response
-          fileData = Buffer.from(await response.result.arrayBuffer());
-        } else {
-          throw new Error('Unable to extract file data from Dropbox response');
+        // Use raw HTTP request with Path-Root header for team folder access
+        const pathRootHeader = JSON.stringify({
+          '.tag': 'root',
+          'root': this.rootNamespaceId
+        });
+        
+        const response = await fetch('https://content.dropboxapi.com/2/files/download', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this.currentAccessToken}`,
+            'Dropbox-API-Arg': JSON.stringify({ path: dropboxPath }),
+            'Dropbox-API-Path-Root': pathRootHeader,
+            'Dropbox-API-Select-User': 'dbmid:AAA0PUrLqsZJolDDF_ziN_IPt74i1ti5Cy8'
+          }
+        });
+
+        if (!response.ok) {
+          const error = await response.text();
+          throw new Error(`HTTP ${response.status}: ${error}`);
         }
-        
-        await fs.writeFile(localFilePath, fileData);
-        console.log(`📥 File downloaded from Dropbox: ${dropboxPath}`);
+
+        const fileBuffer = await response.arrayBuffer();
+        await fs.writeFile(localFilePath, Buffer.from(fileBuffer));
+        console.log(`✅ File downloaded from Dropbox: ${dropboxPath}`);
         
         return localFilePath;
       } catch (error) {
         console.error('❌ Error downloading from Dropbox:', error);
-        console.error('❌ Response structure:', JSON.stringify(Object.keys(error.response || {}), null, 2));
         throw new Error(`Failed to download file from Dropbox: ${error.message}`);
       }
     }, dropboxPath, localFilePath);
