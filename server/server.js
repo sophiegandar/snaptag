@@ -433,6 +433,21 @@ app.post('/api/sync/dropbox', async (req, res) => {
         
         const imageId = await databaseService.saveImage(imageData);
         console.log('✅ Added image ID:', imageId);
+        
+        // Embed metadata in the Dropbox file for search functionality
+        try {
+          console.log('📝 Embedding metadata in synced file...');
+          await metadataService.updateImageMetadata(imageData.dropbox_path, {
+            tags: imageData.tags,
+            focusedTags: imageData.focused_tags,
+            title: imageData.title,
+            description: imageData.description
+          });
+          console.log('✅ Metadata embedded in synced file');
+        } catch (metadataError) {
+          console.error('⚠️ Failed to embed metadata in synced file (non-critical):', metadataError.message);
+        }
+        
         addedCount++;
         
       } catch (error) {
