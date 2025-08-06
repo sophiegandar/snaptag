@@ -236,6 +236,24 @@ body {
   object-fit: cover;
 }
 
+/* New image animation */
+.recent-image.new-image {
+  animation: slideInFromTop 0.5s ease-out;
+  border: 2px solid #22c55e;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.3);
+}
+
+@keyframes slideInFromTop {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .loading {
   text-align: center;
   color: #6b7280;

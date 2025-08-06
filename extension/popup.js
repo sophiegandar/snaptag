@@ -33,6 +33,16 @@ document.addEventListener('DOMContentLoaded', function() {
   // Initialize popup
   init();
 
+  // Listen for real-time updates from background script
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'imageAdded' && request.imageData) {
+      console.log('📥 Received new image from background:', request.imageData.filename);
+      // Add the new image to the recent images display
+      addImageToRecentImages(request.imageData);
+      sendResponse({ success: true });
+    }
+  });
+
   async function init() {
     try {
       // Load settings and default tags
@@ -354,6 +364,51 @@ document.addEventListener('DOMContentLoaded', function() {
     } catch (error) {
       console.error('Error loading recent images:', error);
       recentImagesDiv.innerHTML = '<div class="loading">Unable to load recent images</div>';
+    }
+  }
+
+  function addImageToRecentImages(imageData) {
+    try {
+      // Check if we already have this image (avoid duplicates)
+      const existingImage = recentImagesDiv.querySelector(`img[alt*="${imageData.filename}"]`);
+      if (existingImage) {
+        console.log('📝 Image already exists in recent images, skipping');
+        return;
+      }
+
+      // Clear "no images" message if present
+      const noImagesMessage = recentImagesDiv.querySelector('.loading');
+      if (noImagesMessage && noImagesMessage.textContent.includes('No images')) {
+        recentImagesDiv.innerHTML = '';
+      }
+
+      // Create new image element
+      const imageElement = document.createElement('div');
+      imageElement.className = 'recent-image new-image'; // Add 'new-image' class for animation
+      imageElement.innerHTML = `<img src="${imageData.url}" alt="${imageData.title || imageData.filename}" loading="lazy">`;
+      imageElement.addEventListener('click', () => {
+        chrome.tabs.create({ url: `${settings.serverUrl.replace('3001', '3000')}/image/${imageData.id}` });
+      });
+
+      // Add to the beginning of the list (most recent first)
+      recentImagesDiv.insertBefore(imageElement, recentImagesDiv.firstChild);
+
+      // Remove the 'new-image' class after animation
+      setTimeout(() => {
+        imageElement.classList.remove('new-image');
+      }, 1000);
+
+      // Keep only the 6 most recent images
+      const images = recentImagesDiv.querySelectorAll('.recent-image');
+      if (images.length > 6) {
+        for (let i = 6; i < images.length; i++) {
+          images[i].remove();
+        }
+      }
+
+      console.log('✅ Added new image to recent images display');
+    } catch (error) {
+      console.error('Error adding image to recent images:', error);
     }
   }
 

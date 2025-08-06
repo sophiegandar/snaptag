@@ -212,6 +212,20 @@ async function handleImageSave(imageUrl, tab, metadata = {}) {
         message: `Image saved as "${result.filename}"`
       });
       
+      // Send the saved image data to popup for real-time update
+      try {
+        chrome.runtime.sendMessage({
+          action: 'imageAdded',
+          imageData: result
+        }).catch(() => {
+          // Popup might not be open, ignore error
+          console.log('📝 Popup not open, skipping real-time update');
+        });
+      } catch (error) {
+        // Popup might not be open, ignore error
+        console.log('📝 Popup not open, skipping real-time update');
+      }
+      
       return result;
     }
   } catch (error) {
