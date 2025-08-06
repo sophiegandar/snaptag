@@ -327,8 +327,8 @@ app.put('/api/images/:id/tags', async (req, res) => {
       try {
         console.log('📝 Attempting to embed metadata in Dropbox file...');
         console.log('🔧 DEBUG: Calling metadataService.updateImageMetadata');
-        await metadataService.updateImageMetadata(image.dropbox_path, {
-          tags,
+      await metadataService.updateImageMetadata(image.dropbox_path, {
+        tags,
           focusedTags,
           title: image.title,
           description: image.description
@@ -838,10 +838,10 @@ async function startServer() {
     
     // Initialize PostgreSQL database
     await databaseService.init();
-    
-    app.listen(PORT, () => {
-      console.log(`SnapTag server running on port ${PORT}`);
-      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+
+app.listen(PORT, () => {
+  console.log(`SnapTag server running on port ${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log('✅ PostgreSQL database connected and initialized');
     });
   } catch (error) {

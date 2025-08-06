@@ -10,16 +10,29 @@ function createContextMenus() {
   chrome.contextMenus.removeAll(() => {
     console.log('🗑️ Cleared existing menus');
     
-    // Create individual image menu (simplified to show on all contexts for testing)
+    // Create individual image menu (target images specifically)
     chrome.contextMenus.create({
       id: 'saveToSnapTag',
       title: 'Save to SnapTag',
-      contexts: ['all']
+      contexts: ['image']
     }, () => {
       if (chrome.runtime.lastError) {
         console.error('❌ Error creating image context menu:', chrome.runtime.lastError);
       } else {
         console.log('✅ Individual image context menu created successfully');
+      }
+    });
+
+    // Create fallback menu for all contexts (when not directly on an image)
+    chrome.contextMenus.create({
+      id: 'saveToSnapTagFallback',
+      title: 'Save Image to SnapTag',
+      contexts: ['all']
+    }, () => {
+      if (chrome.runtime.lastError) {
+        console.error('❌ Error creating fallback context menu:', chrome.runtime.lastError);
+      } else {
+        console.log('✅ Fallback context menu created successfully');
       }
     });
 
@@ -58,23 +71,24 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   console.log('🖱️ Context menu clicked:', info.menuItemId);
   console.log('📋 Menu info:', info);
   
-    if (info.menuItemId === 'saveToSnapTag') {
+    if (info.menuItemId === 'saveToSnapTag' || info.menuItemId === 'saveToSnapTagFallback') {
     console.log('💾 Save to SnapTag clicked');
     console.log('🔍 Checking if this is an image...', {
       srcUrl: info.srcUrl,
       mediaType: info.mediaType,
-      linkUrl: info.linkUrl
+      linkUrl: info.linkUrl,
+      menuItemId: info.menuItemId
     });
     
-    // Check if we have an image URL to save
+    // Check if we have an image URL to save (this should work when right-clicking directly on images)
     if (info.srcUrl) {
-      console.log('✅ Found image URL:', info.srcUrl);
+      console.log('✅ Found image URL from context menu:', info.srcUrl);
       handleImageSave(info.srcUrl, tab);
     } else if (info.linkUrl && (info.linkUrl.match(/\.(jpg|jpeg|png|gif|bmp|tiff|tif|webp|heic|heif|svg|avif|jp2|j2k|jpx|jpm|tga|targa)$/i))) {
       console.log('✅ Found image link:', info.linkUrl);
       handleImageSave(info.linkUrl, tab);
     } else {
-      console.log('🔍 No obvious image found. Trying to find image at click location...');
+      console.log('🔍 No direct image URL found. Trying to find image at click location...');
       // Inject script to find image at click coordinates
       chrome.scripting.executeScript({
         target: { tabId: tab.id },
@@ -88,6 +102,13 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
         } else {
           console.log('❌ No image found even with advanced detection.');
           console.log('💡 Please try right-clicking directly on an image.');
+          // Show a notification to help the user
+          chrome.notifications.create({
+            type: 'basic',
+            iconUrl: 'icons/icon48.png',
+            title: 'SnapTag - No Image Found',
+            message: 'Please right-click directly on an image to save it.'
+          });
         }
       });
     }
@@ -299,67 +320,104 @@ function getAllPageImages() {
 
 // Function to be injected into page to find image at click location
 function findImageAtClick(info) {
-  console.log('🔍 Searching for image in page...');
+  console.log('🔍 Searching for image at click location...', info);
   
-  // Try to find images in various ways
+  // First, try to use the srcUrl if it was provided by the context menu
+  if (info.srcUrl && info.srcUrl.startsWith('http')) {
+    console.log('✅ Found image from context menu srcUrl:', info.srcUrl);
+    return info.srcUrl;
+  }
+  
+  // If no srcUrl, try to find the image at the click coordinates
+  let targetImage = null;
+  
+  // Try to find element at click position if coordinates are available
+  if (info.pageX !== undefined && info.pageY !== undefined) {
+    console.log(`🎯 Searching at click position: (${info.pageX}, ${info.pageY})`);
+    
+    // Get element at the exact click position
+    const elementAtClick = document.elementFromPoint(info.pageX, info.pageY);
+    
+    if (elementAtClick) {
+      console.log('🎯 Element at click:', elementAtClick.tagName);
+      
+      // Check if it's an image
+      if (elementAtClick.tagName === 'IMG' && elementAtClick.src) {
+        console.log('✅ Found img element at click position');
+        targetImage = elementAtClick.src;
+      } 
+      // Check if it has a background image
+      else {
+        const style = window.getComputedStyle(elementAtClick);
+        const bgImage = style.backgroundImage;
+        if (bgImage && bgImage !== 'none') {
+          const match = bgImage.match(/url\(['"]?(.*?)['"]?\)/);
+          if (match && match[1] && match[1].startsWith('http')) {
+            console.log('✅ Found background image at click position');
+            targetImage = match[1];
+          }
+        }
+        
+        // Check parent elements for images
+        let parent = elementAtClick.parentElement;
+        while (parent && !targetImage) {
+          if (parent.tagName === 'IMG' && parent.src) {
+            console.log('✅ Found img element in parent');
+            targetImage = parent.src;
+            break;
+          }
+          
+          const parentStyle = window.getComputedStyle(parent);
+          const parentBgImage = parentStyle.backgroundImage;
+          if (parentBgImage && parentBgImage !== 'none') {
+            const match = parentBgImage.match(/url\(['"]?(.*?)['"]?\)/);
+            if (match && match[1] && match[1].startsWith('http')) {
+              console.log('✅ Found background image in parent');
+              targetImage = match[1];
+              break;
+            }
+          }
+          parent = parent.parentElement;
+        }
+      }
+    }
+  }
+  
+  // If we found a target image, return it
+  if (targetImage) {
+    console.log('🎯 Target image found:', targetImage.substring(0, 60) + '...');
+    return targetImage;
+  }
+  
+  // Fallback: Look for images in the general area or the largest visible image
+  console.log('🔍 No specific image found, falling back to general search...');
   const images = [];
-  const backgroundImages = [];
   
-  // 1. Look for regular img tags (visible ones first)
+  // Look for all visible img tags
   const imgTags = Array.from(document.querySelectorAll('img'));
   console.log(`📷 Found ${imgTags.length} img tags`);
   
   imgTags.forEach((img, index) => {
     if (img.src && img.src.startsWith('http')) {
       const visible = img.offsetWidth > 0 && img.offsetHeight > 0;
-      console.log(`📷 Img ${index}: ${img.src.substring(0, 60)}... (visible: ${visible})`);
-      if (visible) {
-        images.unshift(img.src); // Put visible images first
-      } else {
-        images.push(img.src);
+      const area = img.offsetWidth * img.offsetHeight;
+      if (visible && area > 1000) { // Only consider reasonably sized images
+        images.push({ src: img.src, area: area });
       }
     }
   });
   
-  // 2. Look for background images in CSS (enhanced detection)
-  console.log('🎨 Scanning for background images...');
-  document.querySelectorAll('*').forEach((el, index) => {
-    const style = window.getComputedStyle(el);
-    const bgImage = style.backgroundImage;
-    if (bgImage && bgImage !== 'none') {
-      // Multiple URL patterns to catch different formats
-      const urlMatches = bgImage.match(/url\(['"]?(.*?)['"]?\)/g);
-      if (urlMatches) {
-        urlMatches.forEach(urlMatch => {
-          const match = urlMatch.match(/url\(['"]?(.*?)['"]?\)/);
-          if (match && match[1] && match[1].startsWith('http')) {
-            const visible = el.offsetWidth > 0 && el.offsetHeight > 0;
-            console.log(`🎨 Background image found: ${match[1].substring(0, 60)}... (visible: ${visible})`);
-            backgroundImages.push(match[1]);
-            if (visible) {
-              images.unshift(match[1]); // Put visible background images first
-            } else {
-              images.push(match[1]);
-            }
-          }
-        });
-      }
-    }
-  });
+  // Sort by area (largest first) and return the largest image
+  images.sort((a, b) => b.area - a.area);
   
-  // 3. Look for images in links
-  document.querySelectorAll('a[href]').forEach(link => {
-    if (link.href.match(/\.(jpg|jpeg|png|gif|bmp|tiff|tif|webp|heic|heif|svg|avif|jp2|j2k|jpx|jpm|tga|targa)$/i)) {
-      images.push(link.href);
-    }
-  });
+  console.log(`📸 Found ${images.length} candidate images`);
+  if (images.length > 0) {
+    console.log('📋 Returning largest image:', images[0].src.substring(0, 60) + '...');
+    return images[0].src;
+  }
   
-  console.log(`📸 Total images found: ${images.length}`);
-  console.log(`🎨 Background images found: ${backgroundImages.length}`);
-  console.log('📋 All images:', images.slice(0, 5)); // Show first 5
-  
-  // Return the first valid image found (prioritizing visible ones)
-  return images.length > 0 ? images[0] : null;
+  console.log('❌ No suitable images found');
+  return null;
 }
 
 // Get settings from storage
