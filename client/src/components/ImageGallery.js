@@ -18,6 +18,10 @@ const ImageGallery = () => {
   const [showUntagged, setShowUntagged] = useState(true);
   const [selectedUntagged, setSelectedUntagged] = useState([]);
   const [quickTags, setQuickTags] = useState('');
+  
+  // Gallery selection state
+  const [selectedGalleryImages, setSelectedGalleryImages] = useState([]);
+  const [galleryQuickTags, setGalleryQuickTags] = useState('');
 
   useEffect(() => {
     loadImages();
@@ -176,6 +180,83 @@ const ImageGallery = () => {
       }
     } catch (error) {
       console.error('Error applying quick tags:', error);
+      toast.error('Failed to apply tags');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Gallery selection functions
+  const toggleGalleryImageSelection = (imageId) => {
+    setSelectedGalleryImages(prev => 
+      prev.includes(imageId) 
+        ? prev.filter(id => id !== imageId)
+        : [...prev, imageId]
+    );
+  };
+
+  const selectAllGalleryImages = () => {
+    setSelectedGalleryImages(images.map(img => img.id));
+  };
+
+  const clearGallerySelection = () => {
+    setSelectedGalleryImages([]);
+    setGalleryQuickTags('');
+  };
+
+  const applyGalleryQuickTags = async () => {
+    if (selectedGalleryImages.length === 0) {
+      toast.error('Please select at least one image');
+      return;
+    }
+
+    if (!galleryQuickTags.trim()) {
+      toast.error('Please enter at least one tag');
+      return;
+    }
+
+    const tags = galleryQuickTags.split(',').map(tag => tag.trim()).filter(Boolean);
+    
+    try {
+      setLoading(true);
+      const response = await apiCall('/api/batch/apply-tags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageIds: selectedGalleryImages,
+          tags: tags
+        })
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        toast.success(result.message);
+        
+        // Show additional info about duplicates if any
+        if (result.stats && result.stats.duplicateInfo && result.stats.duplicateInfo.length > 0) {
+          const duplicateCount = result.stats.duplicateInfo.length;
+          toast.info(`${duplicateCount} image(s) had duplicate tags that were skipped`, { autoClose: 5000 });
+        }
+        
+        // Show info about moved files if any
+        if (result.stats && result.stats.processedImages) {
+          const movedCount = result.stats.processedImages.filter(img => img.moved).length;
+          if (movedCount > 0) {
+            toast.info(`${movedCount} image(s) moved to new folder structure`, { autoClose: 5000 });
+          }
+        }
+        
+        // Refresh data
+        await loadImages(currentFilters);
+        await loadUntaggedImages();
+        
+        // Clear selections
+        clearGallerySelection();
+      } else {
+        toast.error(result.error);
+      }
+    } catch (error) {
+      console.error('Error applying gallery tags:', error);
       toast.error('Failed to apply tags');
     } finally {
       setLoading(false);
@@ -383,6 +464,49 @@ const ImageGallery = () => {
         </div>
       </div>
 
+      {/* Gallery Selection Bar */}
+      {selectedGalleryImages.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <span className="text-blue-800 font-medium">
+                {selectedGalleryImages.length} image{selectedGalleryImages.length !== 1 ? 's' : ''} selected
+              </span>
+              <input
+                type="text"
+                value={galleryQuickTags}
+                onChange={(e) => setGalleryQuickTags(e.target.value)}
+                placeholder="Add tags: archier, facade, glazing..."
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                style={{ width: '300px' }}
+              />
+              <button
+                onClick={applyGalleryQuickTags}
+                disabled={loading || !galleryQuickTags.trim()}
+                className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 disabled:opacity-50 flex items-center"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Apply Tags
+              </button>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={selectAllGalleryImages}
+                className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-md hover:bg-blue-200"
+              >
+                Select All
+              </button>
+              <button
+                onClick={clearGallerySelection}
+                className="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded-md hover:bg-gray-200"
+              >
+                Clear Selection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Image Grid/List */}
       {images.length === 0 ? (
         <div className="text-center py-12">
@@ -407,6 +531,8 @@ const ImageGallery = () => {
               onTagClick={handleTagClick}
               onDelete={deleteImage}
               onEdit={(id) => navigate(`/image/${id}`)}
+              isSelected={selectedGalleryImages.includes(image.id)}
+              onSelect={() => toggleGalleryImageSelection(image.id)}
             />
           ))}
         </div>
@@ -415,7 +541,7 @@ const ImageGallery = () => {
   );
 };
 
-const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit }) => {
+const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, onSelect }) => {
   const [imageUrl, setImageUrl] = useState('');
   const [imageError, setImageError] = useState(false);
 
@@ -439,7 +565,17 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit }) => {
 
   if (viewMode === 'list') {
     return (
-      <div className="bg-white p-4 rounded-lg shadow flex gap-4">
+      <div className={`bg-white p-4 rounded-lg shadow flex gap-4 ${isSelected ? 'ring-2 ring-blue-500' : ''}`}>
+        {/* Selection Checkbox */}
+        <div className="flex items-start pt-2">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={onSelect}
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
         {imageError ? (
           <div className="w-24 h-24 bg-gray-200 flex items-center justify-center rounded cursor-pointer" onClick={() => onEdit(image.id)}>
             <div className="text-center text-gray-500">
@@ -496,7 +632,17 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit }) => {
   }
 
   return (
-    <div className="image-card relative group">
+    <div className={`image-card relative group ${isSelected ? 'ring-2 ring-blue-500' : ''}`}>
+      {/* Selection Checkbox */}
+      <div className="absolute top-2 left-2 z-10">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={onSelect}
+          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded bg-white shadow"
+          onClick={(e) => e.stopPropagation()}
+        />
+      </div>
       <div className="relative">
         {imageError ? (
           <div className="w-full h-48 bg-gray-200 flex items-center justify-center cursor-pointer" onClick={() => onEdit(image.id)}>
