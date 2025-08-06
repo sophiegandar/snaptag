@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Grid, List, Trash2, Edit, RefreshCw, AlertTriangle, Tag, Plus, CheckCircle } from 'lucide-react';
+import { Search, Filter, Grid, List, Trash2, Edit, RefreshCw, AlertTriangle, Tag, Plus, CheckCircle, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import AdvancedSearch from './AdvancedSearch';
@@ -263,6 +263,56 @@ const ImageGallery = () => {
     }
   };
 
+  const downloadSelectedImages = async () => {
+    if (selectedGalleryImages.length === 0) {
+      toast.error('Please select at least one image');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Get current search filters to pass to download
+      const searchFilters = {
+        ...currentFilters,
+        // Override with only selected images by using their IDs
+        imageIds: selectedGalleryImages
+      };
+
+      const response = await apiCall('/api/images/download-bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          searchFilters,
+          filename: `snaptag-selection-${new Date().toISOString().split('T')[0]}.zip`
+        })
+      });
+
+      if (response.ok) {
+        // Create blob and download
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `snaptag-selection-${new Date().toISOString().split('T')[0]}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        toast.success(`Downloaded ${selectedGalleryImages.length} images as ZIP file`);
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Failed to download images');
+      }
+    } catch (error) {
+      console.error('Error downloading images:', error);
+      toast.error('Failed to download images');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const deleteImage = async (imageId, imageName) => {
     if (!window.confirm(`Are you sure you want to delete "${imageName}"? This action cannot be undone.`)) {
       return;
@@ -488,6 +538,14 @@ const ImageGallery = () => {
                 <Plus className="h-4 w-4 mr-2" />
                 Apply Tags
               </button>
+              <button
+                onClick={downloadSelectedImages}
+                disabled={loading}
+                className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 disabled:opacity-50 flex items-center"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download ZIP
+              </button>
             </div>
             <div className="flex items-center space-x-2">
               <button
@@ -500,7 +558,7 @@ const ImageGallery = () => {
                 onClick={clearGallerySelection}
                 className="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded-md hover:bg-gray-200"
               >
-                Clear Selection
+                Unselect All
               </button>
             </div>
           </div>

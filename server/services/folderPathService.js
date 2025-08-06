@@ -96,8 +96,16 @@ class FolderPathService {
       filename = 'image';
     }
     
-    // Add timestamp for uniqueness
-    filename = `${timestamp}-${filename}`;
+    // Add short timestamp for uniqueness (YYMMDD-HHMM format)
+    const date = new Date(timestamp);
+    const shortTimestamp = 
+      date.getFullYear().toString().slice(-2) +
+      (date.getMonth() + 1).toString().padStart(2, '0') +
+      date.getDate().toString().padStart(2, '0') + '-' +
+      date.getHours().toString().padStart(2, '0') +
+      date.getMinutes().toString().padStart(2, '0');
+    
+    filename = `${shortTimestamp}-${filename}`;
     
     // Ensure proper extension
     if (!originalExtension.startsWith('.')) {

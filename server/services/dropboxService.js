@@ -79,6 +79,52 @@ class DropboxService {
     }
   }
 
+  // Move/rename file in Dropbox (much faster than download-upload-delete)
+  async moveFile(fromPath, toPath) {
+    return this.executeWithRetry(async (fromPath, toPath) => {
+      try {
+        console.log('🚚 Moving file in Dropbox...');
+        console.log(`   From: ${fromPath}`);
+        console.log(`   To: ${toPath}`);
+        
+        // Use raw HTTP request with Path-Root header for team folder access
+        const pathRootHeader = JSON.stringify({
+          '.tag': 'root',
+          'root': this.rootNamespaceId
+        });
+        
+        const response = await fetch('https://api.dropboxapi.com/2/files/move_v2', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this.currentAccessToken}`,
+            'Content-Type': 'application/json',
+            'Dropbox-API-Path-Root': pathRootHeader,
+            'Dropbox-API-Select-User': 'dbmid:AAA0PUrLqsZJolDDF_ziN_IPt74i1ti5Cy8'
+          },
+          body: JSON.stringify({
+            from_path: fromPath,
+            to_path: toPath,
+            allow_shared_folder: true,
+            autorename: false,
+            allow_ownership_transfer: false
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.text();
+          throw new Error(`HTTP ${response.status}: ${error}`);
+        }
+
+        const result = await response.json();
+        console.log(`✅ File moved successfully: ${fromPath} → ${toPath}`);
+        return result;
+      } catch (error) {
+        console.error('❌ Error moving file in Dropbox:', error);
+        throw new Error(`Failed to move file in Dropbox: ${error.message}`);
+      }
+    }, fromPath, toPath);
+  }
+
   async makeHttpsRequest(hostname, path, options = {}) {
     return new Promise((resolve, reject) => {
       const req = https.request({

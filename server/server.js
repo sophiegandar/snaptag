@@ -5,6 +5,7 @@ const rateLimit = require('express-rate-limit');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs').promises;
+const archiver = require('archiver');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const dropboxService = require('./services/dropboxService');
@@ -515,29 +516,14 @@ app.post('/api/batch/apply-tags', async (req, res) => {
           console.log(`📁 Moving file to: ${newDropboxPath}`);
           
           try {
-            // Download from current location
-            const tempPath = `temp/batch-move-${Date.now()}-${image.filename}`;
-            await dropboxService.downloadFile(image.dropbox_path, tempPath);
-            
-            // Upload to new location
-            await dropboxService.uploadFile(tempPath, newDropboxPath);
+            // Use fast Dropbox move API instead of download-upload-delete
+            await dropboxService.moveFile(image.dropbox_path, newDropboxPath);
             
             // Update database with new path and filename
             await databaseService.query(
               'UPDATE images SET dropbox_path = $1, filename = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
               [newDropboxPath, newFilename, imageId]
             );
-            
-            // Delete from old location
-            try {
-              await dropboxService.deleteFile(image.dropbox_path);
-              console.log(`✅ Deleted old file: ${image.dropbox_path}`);
-            } catch (deleteError) {
-              console.warn(`⚠️ Could not delete old file ${image.dropbox_path}:`, deleteError.message);
-            }
-            
-            // Clean up temp file
-            await fs.unlink(tempPath);
             
             console.log(`✅ Successfully moved file to new folder structure`);
           } catch (moveError) {
@@ -780,6 +766,118 @@ app.get('/api/triage/stats', async (req, res) => {
   }
 });
 
+// Bulk download selected images as ZIP
+app.post('/api/images/download-bulk', async (req, res) => {
+  try {
+    const { searchFilters, filename } = req.body;
+    console.log('📦 Starting bulk download for selected images');
+    
+    // If imageIds are provided, fetch those specific images
+    let images = [];
+    if (searchFilters && searchFilters.imageIds && searchFilters.imageIds.length > 0) {
+      console.log(`📦 Downloading ${searchFilters.imageIds.length} selected images`);
+      
+      // Get images by IDs
+      const imagePromises = searchFilters.imageIds.map(id => databaseService.getImageById(id));
+      const imageResults = await Promise.all(imagePromises);
+      images = imageResults.filter(img => img !== null); // Remove any null results
+    } else {
+      return res.status(400).json({ error: 'No images selected for download' });
+    }
+    
+    if (images.length === 0) {
+      return res.status(404).json({ error: 'No images found for download' });
+    }
+    
+    console.log(`📦 Found ${images.length} images for bulk download`);
+    
+    // Set headers for ZIP download
+    const zipFilename = filename || `snaptag-selection-${Date.now()}.zip`;
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${zipFilename}"`);
+    
+    // Create archive
+    const archive = archiver('zip', {
+      zlib: { level: 9 } // Maximum compression
+    });
+    
+    // Handle archive errors
+    archive.on('error', (err) => {
+      console.error('❌ Archive error:', err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Failed to create archive' });
+      }
+    });
+    
+    // Pipe archive to response
+    archive.pipe(res);
+    
+    let successCount = 0;
+    let errorCount = 0;
+    
+    // Add each image to the archive
+    for (const image of images) {
+      try {
+        console.log(`📄 Adding ${image.filename} to archive...`);
+        
+        // Download image from Dropbox to temp location
+        const tempPath = `temp/bulk-download-${Date.now()}-${image.filename}`;
+        await dropboxService.downloadFile(image.dropbox_path, tempPath);
+        
+        // Add to archive with organized folder structure
+        const archivePath = image.dropbox_path.startsWith('/') ? image.dropbox_path.substring(1) : image.dropbox_path;
+        archive.file(tempPath, { name: archivePath });
+        
+        successCount++;
+        
+        // Clean up temp file after adding to archive
+        setTimeout(async () => {
+          try {
+            await fs.unlink(tempPath);
+          } catch (cleanupError) {
+            console.warn('⚠️ Could not clean up temp file:', tempPath);
+          }
+        }, 5000); // Clean up after 5 seconds
+        
+      } catch (error) {
+        console.error(`❌ Error adding ${image.filename} to archive:`, error.message);
+        errorCount++;
+        
+        // Add error info to archive as text file
+        const errorInfo = `Error downloading ${image.filename}: ${error.message}\nDropbox path: ${image.dropbox_path}\n`;
+        archive.append(errorInfo, { name: `errors/${image.filename}.error.txt` });
+      }
+    }
+    
+    // Add metadata file with export info
+    const exportInfo = {
+      exportDate: new Date().toISOString(),
+      totalImages: images.length,
+      successfulDownloads: successCount,
+      errors: errorCount,
+      images: images.map(img => ({
+        filename: img.filename,
+        tags: img.tags || [],
+        created_at: img.created_at,
+        dropbox_path: img.dropbox_path
+      }))
+    };
+    
+    archive.append(JSON.stringify(exportInfo, null, 2), { name: 'export-info.json' });
+    
+    console.log(`📦 Archive complete: ${successCount} successful, ${errorCount} errors`);
+    
+    // Finalize the archive
+    await archive.finalize();
+    
+  } catch (error) {
+    console.error('❌ Bulk download error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Failed to create bulk download: ' + error.message });
+    }
+  }
+});
+
 // Sync database with Dropbox folder contents
 app.post('/api/sync/dropbox', async (req, res) => {
   try {
@@ -929,29 +1027,14 @@ app.post('/api/organize/folders', async (req, res) => {
         console.log(`🔄 Moving from: ${image.dropbox_path}`);
         console.log(`🔄 Moving to: ${newDropboxPath}`);
         
-        // Download the file from current location
-        const tempPath = `temp/reorganize-${Date.now()}-${image.filename}`;
-        await dropboxService.downloadFile(image.dropbox_path, tempPath);
-        
-        // Upload to new location
-        await dropboxService.uploadFile(tempPath, newDropboxPath);
+        // Use fast Dropbox move API instead of download-upload-delete
+        await dropboxService.moveFile(image.dropbox_path, newDropboxPath);
         
         // Update database with new path and filename
         await databaseService.query(
           'UPDATE images SET dropbox_path = $1, filename = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
           [newDropboxPath, newFilename, image.id]
         );
-        
-        // Delete from old location
-        try {
-          await dropboxService.deleteFile(image.dropbox_path);
-          console.log(`✅ Deleted old file: ${image.dropbox_path}`);
-        } catch (deleteError) {
-          console.warn(`⚠️ Could not delete old file ${image.dropbox_path}:`, deleteError.message);
-        }
-        
-        // Clean up temp file
-        await fs.unlink(tempPath);
         
         movedCount++;
         console.log(`✅ Successfully reorganized: ${image.filename}`);
