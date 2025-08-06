@@ -114,23 +114,23 @@ app.get('/api/debug/paths', async (req, res) => {
   try {
     console.log('🔍 Debug: Checking all image paths in database');
     
-    const images = await databaseService.executeQuery(`
+    const images = await databaseService.all(`
       SELECT id, filename, dropbox_path, LENGTH(dropbox_path) as path_length
       FROM images 
       ORDER BY id DESC 
       LIMIT 10
     `);
     
-    console.log(`📊 Found ${images.rows.length} images in database`);
-    images.rows.forEach(img => {
+    console.log(`📊 Found ${images.length} images in database`);
+    images.forEach(img => {
       console.log(`📂 ID ${img.id}: ${img.filename}`);
       console.log(`   Path (${img.path_length} chars): ${img.dropbox_path}`);
     });
     
     res.json({
       success: true,
-      count: images.rows.length,
-      images: images.rows
+      count: images.length,
+      images: images
     });
   } catch (error) {
     console.error('❌ Debug error:', error);
@@ -682,19 +682,16 @@ app.get('/api/images/untagged', async (req, res) => {
   try {
     console.log('🔍 Finding untagged images for triage...');
     
-    // Query for images with no tags or empty tags
-    const untaggedImages = await databaseService.executeQuery(`
-      SELECT i.*, 
-             COALESCE(array_agg(DISTINCT t.name) FILTER (WHERE t.name IS NOT NULL), '{}') as tags
+    // Query for images with no tags (SQLite-compatible)
+    const untaggedImages = await databaseService.all(`
+      SELECT i.* 
       FROM images i
       LEFT JOIN image_tags it ON i.id = it.image_id
-      LEFT JOIN tags t ON it.tag_id = t.id
-      GROUP BY i.id, i.filename, i.dropbox_path, i.original_url, i.title, i.description, i.created_at, i.updated_at
-      HAVING COUNT(t.id) = 0 OR array_agg(t.name) = '{}'
+      WHERE it.image_id IS NULL
       ORDER BY i.created_at DESC
     `);
     
-    const images = untaggedImages.rows;
+    const images = untaggedImages; // SQLite returns array directly, not .rows
     console.log(`📊 Found ${images.length} untagged images`);
     
     // Generate temporary URLs for display
