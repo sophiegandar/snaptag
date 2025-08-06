@@ -185,7 +185,7 @@ class DropboxService {
         console.error('❌ Error uploading to Dropbox:', error);
         throw new Error(`Failed to upload file to Dropbox: ${error.message}`);
       }
-    }, localFilePath, dropboxPath);
+    }, localFilePath, dropboxPath, overwrite);
   }
 
   async downloadFile(dropboxPath, localFilePath) {
