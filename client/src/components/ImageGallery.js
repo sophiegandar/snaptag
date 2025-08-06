@@ -22,20 +22,21 @@ const ImageGallery = () => {
   // Gallery selection state
   const [selectedGalleryImages, setSelectedGalleryImages] = useState([]);
   const [galleryQuickTags, setGalleryQuickTags] = useState('');
+  const [pollingEnabled, setPollingEnabled] = useState(true);
 
   useEffect(() => {
     loadImages();
     loadUntaggedImages();
     
-    // Set up polling for real-time updates every 30 seconds
+    // Set up polling for real-time updates every 60 seconds (reduced frequency)
     const pollInterval = setInterval(() => {
-      // Only poll if there are no current filters (showing all images)
-      if (Object.keys(currentFilters).length === 0) {
+      // Only poll if enabled, no current filters, not loading, and no selections active
+      if (pollingEnabled && Object.keys(currentFilters).length === 0 && !loading && selectedGalleryImages.length === 0) {
         console.log('🔄 Polling for new images...');
         loadImages(currentFilters);
         loadUntaggedImages();
       }
-    }, 30000);
+    }, 120000); // Increased to 2 minutes to reduce server load and prevent constant reloads
     
     return () => clearInterval(pollInterval);
   }, []);
@@ -188,6 +189,10 @@ const ImageGallery = () => {
 
   // Gallery selection functions
   const toggleGalleryImageSelection = (imageId) => {
+    // Temporarily disable polling when user is actively selecting
+    setPollingEnabled(false);
+    setTimeout(() => setPollingEnabled(true), 30000); // Re-enable after 30 seconds of inactivity
+    
     setSelectedGalleryImages(prev => 
       prev.includes(imageId) 
         ? prev.filter(id => id !== imageId)
@@ -612,13 +617,8 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
   const handleImageError = () => {
     console.warn(`Failed to load image: ${image.filename}`, { url: imageUrl, dropbox_path: image.dropbox_path });
     setImageError(true);
-    // Try to reload the image URL by refetching
-    if (image.url && !imageError) {
-      console.log('Attempting to reload image...');
-      setTimeout(() => {
-        setImageUrl(image.url + '?retry=' + Date.now());
-      }, 1000);
-    }
+    // Don't retry automatically to prevent infinite reload loops
+    // The user can refresh the page manually if needed
   };
 
   if (viewMode === 'list') {

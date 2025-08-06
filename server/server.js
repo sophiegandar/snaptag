@@ -643,7 +643,7 @@ app.get('/api/images/untagged', async (req, res) => {
     console.log('🔍 Finding untagged images for triage...');
     
     // Query for images with no tags or empty tags
-    const untaggedImages = await databaseService.query(`
+    const untaggedImages = await databaseService.executeQuery(`
       SELECT i.*, 
              COALESCE(array_agg(DISTINCT t.name) FILTER (WHERE t.name IS NOT NULL), '{}') as tags
       FROM images i
