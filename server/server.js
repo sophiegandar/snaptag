@@ -445,7 +445,10 @@ app.post('/api/batch/apply-tags', async (req, res) => {
     
     let successCount = 0;
     let errorCount = 0;
+    let skippedCount = 0;
     const errors = [];
+    const duplicateInfo = [];
+    const processedImages = [];
     
     for (const imageId of imageIds) {
       try {
@@ -465,14 +468,94 @@ app.post('/api/batch/apply-tags', async (req, res) => {
           currentTags = image.tags.split(',').map(t => t.trim()).filter(Boolean);
         }
         
-        // Merge with new tags (avoid duplicates)
-        const allTags = [...new Set([...currentTags, ...tags])];
+        // Normalize tags for comparison (case-insensitive duplicate prevention)
+        const normalizedCurrentTags = currentTags.map(tag => tag.toLowerCase().trim());
+        const normalizedNewTags = tags.map(tag => tag.toLowerCase().trim());
+        
+        // Check if any new tags are already present
+        const duplicateTags = normalizedNewTags.filter(tag => normalizedCurrentTags.includes(tag));
+        if (duplicateTags.length > 0) {
+          console.log(`⚠️ Skipping duplicate tags for image ${imageId}:`, duplicateTags);
+          duplicateInfo.push({
+            imageId: imageId,
+            filename: image.filename,
+            duplicateTags: tags.filter(tag => normalizedCurrentTags.includes(tag.toLowerCase().trim()))
+          });
+        }
+        
+        // Only add truly new tags
+        const uniqueNewTags = tags.filter(tag => !normalizedCurrentTags.includes(tag.toLowerCase().trim()));
+        
+        if (uniqueNewTags.length === 0) {
+          console.log(`✅ No new tags to add for image ${imageId} (all tags already exist)`);
+          skippedCount++;
+          continue;
+        }
+        
+        // Merge with new unique tags
+        const allTags = [...currentTags, ...uniqueNewTags];
+        
+        console.log(`🏷️ Adding ${uniqueNewTags.length} new tags to image ${imageId}:`, uniqueNewTags);
         
         // Update tags in database
         await databaseService.updateImageTags(imageId, allTags, image.focused_tags || []);
         
+        // Check if folder reorganization is needed
+        const baseDropboxFolder = serverSettings.dropboxFolder || process.env.DROPBOX_FOLDER || '/SnapTag';
+        const normalizedBaseFolder = baseDropboxFolder.startsWith('/') ? baseDropboxFolder : `/${baseDropboxFolder}`;
+        const newFolderPath = folderPathService.generateFolderPath(allTags, normalizedBaseFolder);
+        const ext = path.extname(image.filename);
+        const timestamp = Date.now();
+        const newFilename = folderPathService.generateTagBasedFilename(allTags, ext, timestamp);
+        const newDropboxPath = path.posix.join(newFolderPath, newFilename);
+        
+        // Move file in Dropbox if path has changed
+        if (image.dropbox_path !== newDropboxPath) {
+          console.log(`📁 Moving file from: ${image.dropbox_path}`);
+          console.log(`📁 Moving file to: ${newDropboxPath}`);
+          
+          try {
+            // Download from current location
+            const tempPath = `temp/batch-move-${Date.now()}-${image.filename}`;
+            await dropboxService.downloadFile(image.dropbox_path, tempPath);
+            
+            // Upload to new location
+            await dropboxService.uploadFile(tempPath, newDropboxPath);
+            
+            // Update database with new path and filename
+            await databaseService.query(
+              'UPDATE images SET dropbox_path = $1, filename = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
+              [newDropboxPath, newFilename, imageId]
+            );
+            
+            // Delete from old location
+            try {
+              await dropboxService.deleteFile(image.dropbox_path);
+              console.log(`✅ Deleted old file: ${image.dropbox_path}`);
+            } catch (deleteError) {
+              console.warn(`⚠️ Could not delete old file ${image.dropbox_path}:`, deleteError.message);
+            }
+            
+            // Clean up temp file
+            await fs.unlink(tempPath);
+            
+            console.log(`✅ Successfully moved file to new folder structure`);
+          } catch (moveError) {
+            console.error(`❌ Failed to move file in Dropbox:`, moveError.message);
+            errors.push(`Image ${imageId}: Failed to reorganize in Dropbox - ${moveError.message}`);
+            errorCount++;
+            continue;
+          }
+        }
+        
         console.log(`✅ Updated tags for image ${imageId}`);
         successCount++;
+        processedImages.push({
+          imageId: imageId,
+          filename: image.filename,
+          addedTags: uniqueNewTags,
+          moved: image.dropbox_path !== newDropboxPath
+        });
         
       } catch (error) {
         console.error(`❌ Error updating tags for image ${imageId}:`, error.message);
@@ -481,7 +564,11 @@ app.post('/api/batch/apply-tags', async (req, res) => {
       }
     }
     
-    const message = `Batch tagging completed: ${successCount} successful, ${errorCount} errors`;
+    // Create detailed message
+    let message = `Batch tagging completed: ${successCount} updated`;
+    if (skippedCount > 0) message += `, ${skippedCount} skipped (duplicates)`;
+    if (errorCount > 0) message += `, ${errorCount} errors`;
+    
     console.log(message);
     
     res.json({
@@ -490,8 +577,11 @@ app.post('/api/batch/apply-tags', async (req, res) => {
       stats: {
         total: imageIds.length,
         successful: successCount,
+        skipped: skippedCount,
         errors: errorCount,
-        errorDetails: errors
+        errorDetails: errors,
+        duplicateInfo: duplicateInfo,
+        processedImages: processedImages
       }
     });
     
@@ -561,7 +651,134 @@ app.post('/api/images/search', async (req, res) => {
   }
 });
 
+// Get untagged images for triage
+app.get('/api/images/untagged', async (req, res) => {
+  try {
+    console.log('🔍 Finding untagged images for triage...');
+    
+    // Query for images with no tags or empty tags
+    const untaggedImages = await databaseService.query(`
+      SELECT i.*, 
+             COALESCE(array_agg(DISTINCT t.name) FILTER (WHERE t.name IS NOT NULL), '{}') as tags
+      FROM images i
+      LEFT JOIN image_tags it ON i.id = it.image_id
+      LEFT JOIN tags t ON it.tag_id = t.id
+      GROUP BY i.id, i.filename, i.dropbox_path, i.original_url, i.title, i.description, i.created_at, i.updated_at
+      HAVING COUNT(t.id) = 0 OR array_agg(t.name) = '{}'
+      ORDER BY i.created_at DESC
+    `);
+    
+    const images = untaggedImages.rows;
+    console.log(`📊 Found ${images.length} untagged images`);
+    
+    // Generate temporary URLs for display
+    const imagesWithUrls = await Promise.all(
+      images.map(async (image) => {
+        try {
+          const url = await dropboxService.getTemporaryLink(image.dropbox_path);
+          return {
+            ...image,
+            url,
+            tags: [] // Ensure tags is empty array
+          };
+        } catch (error) {
+          console.error(`❌ Failed to get URL for ${image.filename}:`, error.message);
+          return {
+            ...image,
+            url: '/api/placeholder-image.jpg',
+            tags: []
+          };
+        }
+      })
+    );
+    
+    res.json({
+      success: true,
+      count: images.length,
+      images: imagesWithUrls,
+      message: images.length > 0 
+        ? `Found ${images.length} untagged image(s) that need attention`
+        : 'All images are properly tagged!'
+    });
+    
+  } catch (error) {
+    console.error('❌ Error finding untagged images:', error);
+    res.status(500).json({ error: 'Failed to find untagged images: ' + error.message });
+  }
+});
 
+// Get triage statistics
+app.get('/api/triage/stats', async (req, res) => {
+  try {
+    console.log('📊 Getting triage statistics...');
+    
+    // Get total image count
+    const totalResult = await databaseService.query('SELECT COUNT(*) as total FROM images');
+    const totalImages = parseInt(totalResult.rows[0].total);
+    
+    // Get untagged count
+    const untaggedResult = await databaseService.query(`
+      SELECT COUNT(*) as untagged
+      FROM images i
+      LEFT JOIN image_tags it ON i.id = it.image_id
+      LEFT JOIN tags t ON it.tag_id = t.id
+      GROUP BY i.id
+      HAVING COUNT(t.id) = 0
+    `);
+    const untaggedImages = untaggedResult.rows.length;
+    
+    // Get images with minimal tags (1-2 tags only)
+    const minimalTagsResult = await databaseService.query(`
+      SELECT COUNT(*) as minimal
+      FROM (
+        SELECT i.id, COUNT(t.id) as tag_count
+        FROM images i
+        LEFT JOIN image_tags it ON i.id = it.image_id
+        LEFT JOIN tags t ON it.tag_id = t.id
+        GROUP BY i.id
+        HAVING COUNT(t.id) BETWEEN 1 AND 2
+      ) as minimal_tagged
+    `);
+    const minimalTagsImages = parseInt(minimalTagsResult.rows[0].minimal || 0);
+    
+    // Get recent untagged (last 7 days)
+    const recentUntaggedResult = await databaseService.query(`
+      SELECT COUNT(*) as recent_untagged
+      FROM images i
+      LEFT JOIN image_tags it ON i.id = it.image_id
+      LEFT JOIN tags t ON it.tag_id = t.id
+      WHERE i.created_at >= NOW() - INTERVAL '7 days'
+      GROUP BY i.id
+      HAVING COUNT(t.id) = 0
+    `);
+    const recentUntagged = recentUntaggedResult.rows.length;
+    
+    const taggedImages = totalImages - untaggedImages;
+    const taggedPercentage = totalImages > 0 ? Math.round((taggedImages / totalImages) * 100) : 100;
+    
+    res.json({
+      success: true,
+      stats: {
+        totalImages,
+        taggedImages,
+        untaggedImages,
+        minimalTagsImages,
+        recentUntagged,
+        taggedPercentage,
+        needsAttention: untaggedImages + minimalTagsImages
+      },
+      alerts: {
+        critical: untaggedImages > 0,
+        warning: minimalTagsImages > 0,
+        recent: recentUntagged > 0
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error getting triage stats:', error);
+    res.status(500).json({ error: 'Failed to get triage stats: ' + error.message });
+  }
+});
 
 // Sync database with Dropbox folder contents
 app.post('/api/sync/dropbox', async (req, res) => {

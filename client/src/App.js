@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
-import { Search, Upload, Tag, Settings as SettingsIcon, Zap, FileText } from 'lucide-react';
+import { Search, Upload, Tag, Settings as SettingsIcon, Zap, FileText, AlertTriangle } from 'lucide-react';
 
 import ImageGallery from './components/ImageGallery';
 import ImageUpload from './components/ImageUpload';
@@ -10,6 +10,7 @@ import TagManager from './components/TagManager';
 import Settings from './components/Settings';
 import BatchProcessing from './components/BatchProcessing';
 import ProfessionalWorkflow from './components/ProfessionalWorkflow';
+import Triage from './components/Triage';
 
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
@@ -59,6 +60,14 @@ function App() {
                 </Link>
                 
                 <Link
+                  to="/triage"
+                  className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                >
+                  <AlertTriangle className="h-4 w-4" />
+                  <span>Triage</span>
+                </Link>
+                
+                <Link
                   to="/batch"
                   className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
                 >
@@ -89,13 +98,14 @@ function App() {
         {/* Main Content */}
         <main className="max-w-7xl mx-auto py-6 px-4">
           <Routes>
-            <Route path="/" element={<ImageGallery />} />
-            <Route path="/upload" element={<ImageUpload />} />
-            <Route path="/image/:id" element={<ImageEditor />} />
-            <Route path="/tags" element={<TagManager />} />
-            <Route path="/batch" element={<BatchProcessing />} />
-            <Route path="/workflow" element={<ProfessionalWorkflow />} />
-            <Route path="/settings" element={<Settings />} />
+                            <Route path="/" element={<ImageGallery />} />
+                <Route path="/upload" element={<ImageUpload />} />
+                <Route path="/image/:id" element={<ImageEditor />} />
+                <Route path="/tags" element={<TagManager />} />
+                <Route path="/triage" element={<Triage />} />
+                <Route path="/batch" element={<BatchProcessing />} />
+                <Route path="/workflow" element={<ProfessionalWorkflow />} />
+                <Route path="/settings" element={<Settings />} />
           </Routes>
         </main>
 

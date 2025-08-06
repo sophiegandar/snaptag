@@ -57,7 +57,27 @@ const BatchProcessing = () => {
       
       const result = await response.json();
       if (result.success) {
+        // Show main success message
         toast.success(result.message);
+        
+        // Show additional info about duplicates if any
+        if (result.stats && result.stats.duplicateInfo && result.stats.duplicateInfo.length > 0) {
+          const duplicateCount = result.stats.duplicateInfo.length;
+          const duplicateMessage = `${duplicateCount} image(s) had duplicate tags that were skipped`;
+          toast.info(duplicateMessage, { autoClose: 5000 });
+          
+          // Log detailed duplicate info for debugging
+          console.log('📝 Duplicate tags detected:', result.stats.duplicateInfo);
+        }
+        
+        // Show info about moved files if any
+        if (result.stats && result.stats.processedImages) {
+          const movedCount = result.stats.processedImages.filter(img => img.moved).length;
+          if (movedCount > 0) {
+            toast.info(`${movedCount} image(s) moved to new folder structure`, { autoClose: 5000 });
+          }
+        }
+        
         setSelectedImages([]);
         setNewTagInput('');
         setShowImageSelector(false);
