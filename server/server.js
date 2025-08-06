@@ -86,6 +86,77 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// Placeholder image endpoint
+app.get('/api/placeholder-image.jpg', (req, res) => {
+  // Create a simple SVG placeholder
+  const svg = `
+    <svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+      <rect width="400" height="300" fill="#f3f4f6"/>
+      <text x="200" y="140" font-family="Arial, sans-serif" font-size="16" fill="#9ca3af" text-anchor="middle">
+        SnapTag
+      </text>
+      <text x="200" y="170" font-family="Arial, sans-serif" font-size="14" fill="#6b7280" text-anchor="middle">
+        Image not available
+      </text>
+    </svg>
+  `;
+  
+  res.setHeader('Content-Type', 'image/svg+xml');
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  res.send(svg);
+});
+
+// Debug endpoint to test individual image URL generation
+app.get('/api/debug/image/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(`🔍 Debug: Testing image URL generation for ID: ${id}`);
+    
+    const image = await databaseService.getImageById(id);
+    if (!image) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+    
+    console.log(`📂 Debug: Image found - ${image.filename}`);
+    console.log(`📂 Debug: Dropbox path - ${image.dropbox_path}`);
+    
+    try {
+      const url = await dropboxService.getTemporaryLink(image.dropbox_path);
+      console.log(`✅ Debug: URL generated successfully`);
+      console.log(`🔗 Debug: URL length: ${url ? url.length : 'null'}`);
+      console.log(`🔗 Debug: URL preview: ${url ? url.substring(0, 100) + '...' : 'null'}`);
+      
+      res.json({
+        success: true,
+        image: {
+          id: image.id,
+          filename: image.filename,
+          dropbox_path: image.dropbox_path,
+          url: url
+        },
+        debug: {
+          url_length: url ? url.length : 0,
+          url_preview: url ? url.substring(0, 100) + '...' : null,
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (urlError) {
+      console.error(`❌ Debug: Failed to generate URL:`, urlError.message);
+      res.status(500).json({
+        error: 'Failed to generate URL',
+        debug: {
+          dropbox_path: image.dropbox_path,
+          error_message: urlError.message,
+          timestamp: new Date().toISOString()
+        }
+      });
+    }
+  } catch (error) {
+    console.error('❌ Debug endpoint error:', error);
+    res.status(500).json({ error: 'Debug failed', message: error.message });
+  }
+});
+
 // Get all images with tags
 app.get('/api/images', async (req, res) => {
   try {

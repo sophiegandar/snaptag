@@ -193,21 +193,44 @@ const ImageGallery = () => {
 
 const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit }) => {
   const [imageUrl, setImageUrl] = useState('');
+  const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
-    // In a real implementation, you'd get the temporary URL from the API
+    // Reset error state when image changes
+    setImageError(false);
     setImageUrl(image.url || '/api/placeholder-image.jpg');
   }, [image]);
+
+  const handleImageError = () => {
+    console.warn(`Failed to load image: ${image.filename}`, { url: imageUrl, dropbox_path: image.dropbox_path });
+    setImageError(true);
+    // Try to reload the image URL by refetching
+    if (image.url && !imageError) {
+      console.log('Attempting to reload image...');
+      setTimeout(() => {
+        setImageUrl(image.url + '?retry=' + Date.now());
+      }, 1000);
+    }
+  };
 
   if (viewMode === 'list') {
     return (
       <div className="bg-white p-4 rounded-lg shadow flex gap-4">
-        <img
-          src={imageUrl}
-          alt={image.title || image.filename}
-          className="w-24 h-24 object-cover rounded cursor-pointer"
-          onClick={() => onEdit(image.id)}
-        />
+        {imageError ? (
+          <div className="w-24 h-24 bg-gray-200 flex items-center justify-center rounded cursor-pointer" onClick={() => onEdit(image.id)}>
+            <div className="text-center text-gray-500">
+              <div className="text-lg">🖼️</div>
+            </div>
+          </div>
+        ) : (
+          <img
+            src={imageUrl}
+            alt={image.title || image.filename}
+            className="w-24 h-24 object-cover rounded cursor-pointer"
+            onClick={() => onEdit(image.id)}
+            onError={handleImageError}
+          />
+        )}
         <div className="flex-1">
           <div className="flex justify-between items-start mb-2">
             <h3 className="font-semibold text-gray-900">{image.title || image.filename}</h3>
@@ -251,12 +274,23 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit }) => {
   return (
     <div className="image-card relative group">
       <div className="relative">
-        <img
-          src={imageUrl}
-          alt={image.title || image.filename}
-          className="w-full h-48 object-cover cursor-pointer"
-          onClick={() => onEdit(image.id)}
-        />
+        {imageError ? (
+          <div className="w-full h-48 bg-gray-200 flex items-center justify-center cursor-pointer" onClick={() => onEdit(image.id)}>
+            <div className="text-center text-gray-500">
+              <div className="text-2xl mb-2">🖼️</div>
+              <div className="text-sm">Image not available</div>
+              <div className="text-xs mt-1">{image.filename}</div>
+            </div>
+          </div>
+        ) : (
+          <img
+            src={imageUrl}
+            alt={image.title || image.filename}
+            className="w-full h-48 object-cover cursor-pointer"
+            onClick={() => onEdit(image.id)}
+            onError={handleImageError}
+          />
+        )}
         <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={(e) => {
