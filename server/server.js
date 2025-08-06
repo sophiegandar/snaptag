@@ -331,18 +331,23 @@ app.delete('/api/tags/:id', async (req, res) => {
     console.log('🗑️ Deleting tag with ID:', tagId);
     
     // First check if tag exists
-    const tag = await databaseService.query('SELECT * FROM tags WHERE id = $1', [tagId]);
-    if (tag.length === 0) {
+    const tagResult = await databaseService.query('SELECT * FROM tags WHERE id = $1', [tagId]);
+    if (tagResult.rows.length === 0) {
+      console.log('❌ Tag not found with ID:', tagId);
       return res.status(404).json({ error: 'Tag not found' });
     }
     
+    const tagName = tagResult.rows[0].name;
+    console.log('🗑️ Found tag to delete:', tagName);
+    
     // Delete all image_tag relationships first
     await databaseService.run('DELETE FROM image_tags WHERE tag_id = $1', [tagId]);
+    console.log('✅ Deleted image-tag relationships for tag:', tagName);
     
     // Delete the tag itself
     await databaseService.run('DELETE FROM tags WHERE id = $1', [tagId]);
     
-    console.log('✅ Tag deleted successfully:', tag[0].name);
+    console.log('✅ Tag deleted successfully:', tagName);
     res.json({ success: true, message: 'Tag deleted successfully' });
   } catch (error) {
     console.error('❌ Error deleting tag:', error);
