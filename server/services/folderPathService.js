@@ -74,12 +74,10 @@ class FolderPathService {
   generateTagBasedFilename(tags = [], originalExtension = '.jpg', timestamp = Date.now()) {
     console.log('🏷️ Generating tag-based filename for tags:', tags);
     
-    // Normalize and filter tags
+    // Normalize ALL tags (don't filter out any tags)
     const normalizedTags = tags
       .map(tag => tag.toLowerCase().trim())
-      .filter(tag => tag.length > 0)
-      .filter(tag => tag !== 'archier') // Remove folder-determining tags
-      .filter(tag => !this.categoryFolders.includes(tag.toLowerCase()));
+      .filter(tag => tag.length > 0);
     
     // Convert tags to filename-safe format
     const filenameTags = normalizedTags
@@ -91,8 +89,8 @@ class FolderPathService {
     // Create base filename
     let filename;
     if (filenameTags.length > 0) {
-      // Use tags as filename
-      filename = filenameTags.slice(0, 5).join('-'); // Limit to 5 tags max
+      // Use ALL tags as filename (increase limit to accommodate more tags)
+      filename = filenameTags.slice(0, 10).join('-'); // Increased limit to 10 tags
     } else {
       // Fallback to timestamp if no suitable tags
       filename = 'image';
