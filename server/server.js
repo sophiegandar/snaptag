@@ -237,20 +237,25 @@ app.post('/api/images/save-from-url', async (req, res) => {
 // Update image tags
 app.put('/api/images/:id/tags', async (req, res) => {
   try {
+    console.log('🔧 DEBUG: Tag update endpoint called');
     const { id } = req.params;
     const { tags, focusedTags } = req.body;
 
     console.log(`🏷️ Updating tags for image ${id}:`, { tags, focusedTags });
+    console.log('🔧 DEBUG: About to update database tags');
 
     // Update database first
     await databaseService.updateImageTags(id, tags, focusedTags);
     console.log('✅ Database tags updated successfully');
+    console.log('🔧 DEBUG: About to get image for metadata embedding');
     
     // Try to update metadata in Dropbox file (non-blocking)
     const image = await databaseService.getImageById(id);
+    console.log('🔧 DEBUG: Retrieved image:', image ? 'found' : 'not found');
     if (image) {
       try {
         console.log('📝 Attempting to embed metadata in Dropbox file...');
+        console.log('🔧 DEBUG: Calling metadataService.updateImageMetadata');
         await metadataService.updateImageMetadata(image.dropbox_path, {
           tags,
           focusedTags,
@@ -261,8 +266,11 @@ app.put('/api/images/:id/tags', async (req, res) => {
       } catch (metadataError) {
         // Don't fail the whole request if metadata embedding fails
         console.error('⚠️ Metadata embedding failed (non-critical):', metadataError.message);
+        console.error('🔧 DEBUG: Full metadata error:', metadataError);
         console.log('✅ Tags saved to database successfully (metadata embedding can be retried later)');
       }
+    } else {
+      console.log('🔧 DEBUG: No image found, skipping metadata embedding');
     }
 
     res.json({ success: true });
