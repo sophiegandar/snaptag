@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Tag, Hash, Trash2, Edit, Plus, BarChart3, Search } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { apiCall } from '../utils/apiConfig';
 
 const TagManager = () => {
   const [tags, setTags] = useState([]);
@@ -20,7 +21,7 @@ const TagManager = () => {
   const loadTags = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/tags');
+      const response = await apiCall('/api/tags');
       if (!response.ok) throw new Error('Failed to load tags');
       
       const data = await response.json();
@@ -35,7 +36,7 @@ const TagManager = () => {
 
   const loadStats = async () => {
     try {
-      const response = await fetch('/api/images/stats');
+      const response = await apiCall('/api/images/stats');
       if (response.ok) {
         const data = await response.json();
         setStats(data);
@@ -89,7 +90,7 @@ const TagManager = () => {
     }
 
     try {
-      const response = await fetch(`/api/tags/${tagId}`, {
+      const response = await apiCall(`/api/tags/${tagId}`, {
         method: 'DELETE'
       });
 
