@@ -591,6 +591,15 @@ app.post('/api/images/search', async (req, res) => {
     const images = await databaseService.searchImages(searchTerm, tags);
     console.log('📊 Raw search results:', images.length, 'images found');
     
+    // Debug: Log first image details
+    if (images.length > 0) {
+      console.log(`📊 Sample image details:`, {
+        filename: images[0].filename,
+        dropbox_path: images[0].dropbox_path,
+        tags: images[0].tags
+      });
+    }
+    
     // Filter by sources if specified
     let filteredImages = images;
     if (sources && sources.length > 0) {
@@ -615,11 +624,13 @@ app.post('/api/images/search', async (req, res) => {
     console.log(`🔗 Generating temporary URLs for ${filteredImages.length} images...`);
     for (const image of filteredImages) {
       try {
+        console.log(`🔗 Attempting to generate URL for ${image.filename} at path: ${image.dropbox_path}`);
         image.url = await dropboxService.getTemporaryLink(image.dropbox_path);
-        console.log(`✅ Generated URL for ${image.filename}`);
+        console.log(`✅ Generated URL for ${image.filename}: ${image.url ? 'SUCCESS' : 'EMPTY'}`);
       } catch (error) {
         console.error(`❌ Failed to generate URL for ${image.filename}:`, error.message);
-        image.url = null; // Set to null if failed
+        console.error(`❌ Error details:`, error);
+        image.url = '/api/placeholder-image.jpg'; // Use placeholder instead of null
       }
     }
     
