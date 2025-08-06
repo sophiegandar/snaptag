@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Grid, List, Trash2, Edit } from 'lucide-react';
+import { Search, Filter, Grid, List, Trash2, Edit, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import AdvancedSearch from './AdvancedSearch';
@@ -15,6 +15,17 @@ const ImageGallery = () => {
 
   useEffect(() => {
     loadImages();
+    
+    // Set up polling for real-time updates every 30 seconds
+    const pollInterval = setInterval(() => {
+      // Only poll if there are no current filters (showing all images)
+      if (Object.keys(currentFilters).length === 0) {
+        console.log('🔄 Polling for new images...');
+        loadImages(currentFilters);
+      }
+    }, 30000);
+    
+    return () => clearInterval(pollInterval);
   }, []);
 
   const loadImages = async (searchFilters = {}) => {
@@ -122,6 +133,13 @@ const ImageGallery = () => {
         </div>
         
         <div className="flex gap-2">
+          <button
+            onClick={() => loadImages(currentFilters)}
+            className="p-2 rounded-md bg-gray-200 hover:bg-gray-300 transition-colors"
+            title="Refresh images"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </button>
           <button
             onClick={() => setViewMode('grid')}
             className={`p-2 rounded-md transition-colors ${

@@ -89,7 +89,15 @@ const TagManager = () => {
     }
 
     try {
-      // Remove locally for now
+      const response = await fetch(`/api/tags/${tagId}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete tag');
+      }
+
+      // Remove from local state
       setTags(prev => prev.filter(tag => tag.id !== tagId));
       toast.success('Tag deleted successfully');
     } catch (error) {

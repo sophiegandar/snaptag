@@ -324,6 +324,32 @@ app.get('/api/tags', async (req, res) => {
   }
 });
 
+// Delete a tag
+app.delete('/api/tags/:id', async (req, res) => {
+  try {
+    const tagId = req.params.id;
+    console.log('🗑️ Deleting tag with ID:', tagId);
+    
+    // First check if tag exists
+    const tag = await databaseService.query('SELECT * FROM tags WHERE id = $1', [tagId]);
+    if (tag.length === 0) {
+      return res.status(404).json({ error: 'Tag not found' });
+    }
+    
+    // Delete all image_tag relationships first
+    await databaseService.run('DELETE FROM image_tags WHERE tag_id = $1', [tagId]);
+    
+    // Delete the tag itself
+    await databaseService.run('DELETE FROM tags WHERE id = $1', [tagId]);
+    
+    console.log('✅ Tag deleted successfully:', tag[0].name);
+    res.json({ success: true, message: 'Tag deleted successfully' });
+  } catch (error) {
+    console.error('❌ Error deleting tag:', error);
+    res.status(500).json({ error: 'Failed to delete tag' });
+  }
+});
+
 // Search images with filters (POST endpoint for frontend)
 app.post('/api/images/search', async (req, res) => {
   try {

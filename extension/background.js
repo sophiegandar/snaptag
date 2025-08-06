@@ -213,17 +213,22 @@ async function handleImageSave(imageUrl, tab, metadata = {}) {
       });
       
       // Send the saved image data to popup for real-time update
+      console.log('📡 Attempting to send image data to popup for real-time update');
       try {
         chrome.runtime.sendMessage({
           action: 'imageAdded',
           imageData: result
-        }).catch(() => {
-          // Popup might not be open, ignore error
-          console.log('📝 Popup not open, skipping real-time update');
+        }, (response) => {
+          if (chrome.runtime.lastError) {
+            console.log('📝 Popup not open or no response:', chrome.runtime.lastError.message);
+          } else if (response && response.success) {
+            console.log('✅ Real-time update sent successfully to popup');
+          } else {
+            console.log('📝 Popup received message but no response');
+          }
         });
       } catch (error) {
-        // Popup might not be open, ignore error
-        console.log('📝 Popup not open, skipping real-time update');
+        console.log('📝 Error sending real-time update:', error.message);
       }
       
       return result;

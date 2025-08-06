@@ -5,9 +5,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const openAppBtn = document.getElementById('openApp');
   const saveAllImagesBtn = document.getElementById('saveAllImages');
   const scanPageBtn = document.getElementById('scanPage');
-  const tagsInput = document.getElementById('tagsInput');
-  const addTagBtn = document.getElementById('addTagBtn');
-  const tagsList = document.getElementById('tagsList');
   const recentImagesDiv = document.getElementById('recentImages');
   
   // Modal elements
@@ -25,7 +22,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const statusMessage = document.getElementById('statusMessage');
 
   // State
-  let defaultTags = [];
   let selectedImages = [];
   let pageImages = [];
   let settings = {};
@@ -35,19 +31,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Listen for real-time updates from background script
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    console.log('📨 Popup received message:', request.action);
     if (request.action === 'imageAdded' && request.imageData) {
       console.log('📥 Received new image from background:', request.imageData.filename);
+      console.log('📊 Image data:', request.imageData);
       // Add the new image to the recent images display
       addImageToRecentImages(request.imageData);
       sendResponse({ success: true });
+      return true; // Keep the message channel open
     }
+    return false; // Close the message channel for other messages
   });
 
   async function init() {
     try {
-      // Load settings and default tags
+      // Load settings
       await loadSettings();
-      renderTags();
       loadRecentImages();
       
       // Set up event listeners
@@ -68,12 +67,7 @@ document.addEventListener('DOMContentLoaded', function() {
     scanPageBtn.addEventListener('click', scanPageForImages);
     
     // Tags management
-    addTagBtn.addEventListener('click', addTag);
-    tagsInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        addTag();
-      }
-    });
+
     
     // Modal controls
     closeModalBtn.addEventListener('click', closeModal);
@@ -93,7 +87,6 @@ document.addEventListener('DOMContentLoaded', function() {
       chrome.runtime.sendMessage({ action: 'getSettings' }, (response) => {
         if (response.success) {
           settings = response.settings;
-          defaultTags = settings.defaultTags || [];
         }
         resolve();
       });
@@ -102,8 +95,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   async function saveSettings() {
     const newSettings = {
-      snaptagServer: settings.serverUrl,
-      defaultTags: defaultTags
+      snaptagServer: settings.serverUrl
     };
     
     chrome.runtime.sendMessage({ 
@@ -301,39 +293,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  function addTag() {
-    const tagName = tagsInput.value.trim();
-    if (tagName && !defaultTags.includes(tagName)) {
-      defaultTags.push(tagName);
-      tagsInput.value = '';
-      renderTags();
-      saveSettings();
-    }
-  }
 
-  function removeTag(tagName) {
-    defaultTags = defaultTags.filter(tag => tag !== tagName);
-    renderTags();
-    saveSettings();
-  }
-
-  function renderTags() {
-    tagsList.innerHTML = '';
-    defaultTags.forEach(tag => {
-      const tagElement = document.createElement('div');
-      tagElement.className = 'tag';
-      tagElement.innerHTML = `
-        <span>${tag}</span>
-        <button class="tag-remove" onclick="removeTag('${tag}')">&times;</button>
-      `;
-      
-      // Add event listener for remove button
-      const removeBtn = tagElement.querySelector('.tag-remove');
-      removeBtn.addEventListener('click', () => removeTag(tag));
-      
-      tagsList.appendChild(tagElement);
-    });
-  }
 
   async function loadRecentImages() {
     try {
@@ -369,6 +329,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function addImageToRecentImages(imageData) {
     try {
+      console.log('🖼️ Adding image to recent images display:', imageData.filename);
+      console.log('🔍 Image URL:', imageData.url);
+      
       // Check if we already have this image (avoid duplicates)
       const existingImage = recentImagesDiv.querySelector(`img[alt*="${imageData.filename}"]`);
       if (existingImage) {
@@ -426,8 +389,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 4000);
   }
 
-  // Make removeTag available globally for inline event handlers
-  window.removeTag = removeTag;
+  
 });
 
 // Function to be injected into page to find images
