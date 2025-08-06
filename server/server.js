@@ -109,6 +109,35 @@ app.get('/api/placeholder-image.jpg', (req, res) => {
   res.send(svg);
 });
 
+// Debug endpoint to check all image paths in database
+app.get('/api/debug/paths', async (req, res) => {
+  try {
+    console.log('🔍 Debug: Checking all image paths in database');
+    
+    const images = await databaseService.executeQuery(`
+      SELECT id, filename, dropbox_path, LENGTH(dropbox_path) as path_length
+      FROM images 
+      ORDER BY id DESC 
+      LIMIT 10
+    `);
+    
+    console.log(`📊 Found ${images.rows.length} images in database`);
+    images.rows.forEach(img => {
+      console.log(`📂 ID ${img.id}: ${img.filename}`);
+      console.log(`   Path (${img.path_length} chars): ${img.dropbox_path}`);
+    });
+    
+    res.json({
+      success: true,
+      count: images.rows.length,
+      images: images.rows
+    });
+  } catch (error) {
+    console.error('❌ Debug error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Debug endpoint to test individual image URL generation
 app.get('/api/debug/image/:id', async (req, res) => {
   try {
