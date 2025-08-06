@@ -162,6 +162,7 @@ class DropboxService {
               autorename: true
             }),
             'Dropbox-API-Path-Root': pathRootHeader,
+            'Dropbox-API-Select-User': 'dbmid:AAA0PUrLqsZJolDDF_ziN_IPt74i1ti5Cy8',
             'Content-Type': 'application/octet-stream'
           },
           body: fileBuffer
@@ -216,9 +217,33 @@ class DropboxService {
   async deleteFile(dropboxPath) {
     return this.executeWithRetry(async (dropboxPath) => {
       try {
-        const response = await this.dbx.filesDeleteV2({ path: dropboxPath });
-        console.log(`🗑️ File deleted from Dropbox: ${dropboxPath}`);
-        return response.result;
+        console.log('🗑️ Deleting file with Path-Root header for team folder access');
+        
+        // Use raw HTTP request with Path-Root header for team folder access
+        const pathRootHeader = JSON.stringify({
+          '.tag': 'root',
+          'root': this.rootNamespaceId
+        });
+        
+        const response = await fetch('https://api.dropboxapi.com/2/files/delete_v2', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this.currentAccessToken}`,
+            'Dropbox-API-Path-Root': pathRootHeader,
+            'Dropbox-API-Select-User': 'dbmid:AAA0PUrLqsZJolDDF_ziN_IPt74i1ti5Cy8',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ path: dropboxPath })
+        });
+
+        if (!response.ok) {
+          const error = await response.text();
+          throw new Error(`HTTP ${response.status}: ${error}`);
+        }
+
+        const result = await response.json();
+        console.log(`✅ File deleted from Dropbox: ${dropboxPath}`);
+        return result;
       } catch (error) {
         console.error('❌ Error deleting from Dropbox:', error);
         throw new Error(`Failed to delete file from Dropbox: ${error.message}`);
@@ -242,6 +267,7 @@ class DropboxService {
           headers: {
             'Authorization': `Bearer ${this.currentAccessToken}`,
             'Dropbox-API-Path-Root': pathRootHeader,
+            'Dropbox-API-Select-User': 'dbmid:AAA0PUrLqsZJolDDF_ziN_IPt74i1ti5Cy8',
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({ path: dropboxPath })
@@ -278,6 +304,7 @@ class DropboxService {
           headers: {
             'Authorization': `Bearer ${this.currentAccessToken}`,
             'Dropbox-API-Path-Root': pathRootHeader,
+            'Dropbox-API-Select-User': 'dbmid:AAA0PUrLqsZJolDDF_ziN_IPt74i1ti5Cy8',
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
