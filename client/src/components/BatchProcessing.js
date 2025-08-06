@@ -92,7 +92,6 @@ const BatchProcessing = () => {
       if (result.success) {
         toast.success(result.message);
         setNewTagInput('');
-        loadJobs();
       } else {
         toast.error(result.error);
       }
@@ -104,24 +103,7 @@ const BatchProcessing = () => {
     }
   };
 
-  const cancelJob = async (jobId) => {
-    try {
-      const response = await fetch(`/api/batch/jobs/${jobId}`, {
-        method: 'DELETE'
-      });
-      
-      const result = await response.json();
-      if (result.success) {
-        toast.success(result.message);
-        loadJobs();
-      } else {
-        toast.error(result.error);
-      }
-    } catch (error) {
-      toast.error('Failed to cancel job');
-      console.error('Error:', error);
-    }
-  };
+
 
   const toggleImageSelection = (imageId) => {
     setSelectedImages(prev => 
@@ -139,29 +121,7 @@ const BatchProcessing = () => {
     setSelectedImages([]);
   };
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'running': return <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />;
-      case 'completed': return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'failed': return <XCircle className="h-4 w-4 text-red-500" />;
-      case 'cancelled': return <Square className="h-4 w-4 text-gray-500" />;
-      default: return <Clock className="h-4 w-4 text-gray-500" />;
-    }
-  };
 
-  const formatDuration = (ms) => {
-    const seconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    
-    if (hours > 0) {
-      return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${seconds % 60}s`;
-    } else {
-      return `${seconds}s`;
-    }
-  };
 
   return (
     <div className="max-w-6xl mx-auto p-6">
