@@ -98,8 +98,7 @@ class DropboxService {
           headers: {
             'Authorization': `Bearer ${this.currentAccessToken}`,
             'Content-Type': 'application/json',
-            'Dropbox-API-Path-Root': pathRootHeader,
-            'Dropbox-API-Select-User': 'dbmid:AAA0PUrLqsZJolDDF_ziN_IPt74i1ti5Cy8'
+            'Dropbox-API-Path-Root': pathRootHeader
           },
           body: JSON.stringify({
             from_path: fromPath,
@@ -219,7 +218,6 @@ class DropboxService {
               autorename: overwrite ? false : true
             }),
             'Dropbox-API-Path-Root': pathRootHeader,
-            'Dropbox-API-Select-User': 'dbmid:AAA0PUrLqsZJolDDF_ziN_IPt74i1ti5Cy8',
             'Content-Type': 'application/octet-stream'
           },
           body: fileBuffer
@@ -257,8 +255,7 @@ class DropboxService {
           headers: {
             'Authorization': `Bearer ${this.currentAccessToken}`,
             'Dropbox-API-Arg': JSON.stringify({ path: dropboxPath }),
-            'Dropbox-API-Path-Root': pathRootHeader,
-            'Dropbox-API-Select-User': 'dbmid:AAA0PUrLqsZJolDDF_ziN_IPt74i1ti5Cy8'
+            'Dropbox-API-Path-Root': pathRootHeader
           }
         });
 
@@ -295,7 +292,6 @@ class DropboxService {
           headers: {
             'Authorization': `Bearer ${this.currentAccessToken}`,
             'Dropbox-API-Path-Root': pathRootHeader,
-            'Dropbox-API-Select-User': 'dbmid:AAA0PUrLqsZJolDDF_ziN_IPt74i1ti5Cy8',
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({ path: dropboxPath })
@@ -332,7 +328,6 @@ class DropboxService {
           headers: {
             'Authorization': `Bearer ${this.currentAccessToken}`,
             'Dropbox-API-Path-Root': pathRootHeader,
-            'Dropbox-API-Select-User': 'dbmid:AAA0PUrLqsZJolDDF_ziN_IPt74i1ti5Cy8',
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({ path: dropboxPath })
@@ -369,7 +364,6 @@ class DropboxService {
           headers: {
             'Authorization': `Bearer ${this.currentAccessToken}`,
             'Dropbox-API-Path-Root': pathRootHeader,
-            'Dropbox-API-Select-User': 'dbmid:AAA0PUrLqsZJolDDF_ziN_IPt74i1ti5Cy8',
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
