@@ -132,8 +132,8 @@ class DropboxService {
     }
   }
 
-  async uploadFile(localFilePath, dropboxPath) {
-    return this.executeWithRetry(async (localFilePath, dropboxPath) => {
+  async uploadFile(localFilePath, dropboxPath, overwrite = false) {
+    return this.executeWithRetry(async (localFilePath, dropboxPath, overwrite) => {
       try {
         console.log('📖 Reading file for upload:', localFilePath);
         const fileBuffer = await fs.readFile(localFilePath);
@@ -152,14 +152,18 @@ class DropboxService {
           'root': this.rootNamespaceId
         });
         
+        // Set upload mode based on overwrite parameter
+        const uploadMode = overwrite ? 'overwrite' : 'add';
+        console.log(`📤 Upload mode: ${uploadMode}${overwrite ? ' (replacing existing file)' : ' (creating new file)'}`);
+        
         const response = await fetch('https://content.dropboxapi.com/2/files/upload', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${this.currentAccessToken}`,
             'Dropbox-API-Arg': JSON.stringify({
               path: dropboxPath,
-              mode: 'add',
-              autorename: true
+              mode: uploadMode,
+              autorename: overwrite ? false : true
             }),
             'Dropbox-API-Path-Root': pathRootHeader,
             'Dropbox-API-Select-User': 'dbmid:AAA0PUrLqsZJolDDF_ziN_IPt74i1ti5Cy8',

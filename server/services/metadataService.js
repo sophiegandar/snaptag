@@ -162,9 +162,9 @@ class MetadataService {
         focusedTags: newMetadata.focusedTags
       });
       
-      // Re-upload to Dropbox with updated metadata
-      console.log(`📤 Re-uploading file with embedded metadata...`);
-      await dropboxService.uploadFile(tempPath, imagePath);
+      // Re-upload to Dropbox with updated metadata (overwrite existing file)
+      console.log(`📤 Re-uploading file with embedded metadata (overwriting original)...`);
+      await dropboxService.uploadFile(tempPath, imagePath, true);
       
       // Clean up temp file
       await fs.unlink(tempPath);
