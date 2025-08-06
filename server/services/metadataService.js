@@ -43,6 +43,9 @@ class MetadataService {
       const outputPath = imagePath.replace(ext, `_tagged${ext}`);
 
       // Prepare metadata for ExifTool
+      console.log(`🔧 Debug - tags input:`, tags);
+      console.log(`🔧 Debug - tags type:`, typeof tags, Array.isArray(tags));
+      
       const metadataArgs = {
         'IPTC:Keywords': tags,
         'XMP:Subject': tags,
@@ -55,6 +58,8 @@ class MetadataService {
         'XMP:Rights': 'Copyright Archier',
         'IPTC:CopyrightNotice': 'Copyright Archier'
       };
+      
+      console.log(`🔧 Debug - metadataArgs:`, JSON.stringify(metadataArgs, null, 2));
 
       // Add focused tags as custom XMP data
       if (focusedTags && focusedTags.length > 0) {
@@ -62,9 +67,13 @@ class MetadataService {
       }
 
       // Write metadata to image
-      await ep.writeMetadata(imagePath, metadataArgs, ['-overwrite_original']);
+      console.log(`🔧 Debug - About to write metadata to: ${imagePath}`);
+      console.log(`🔧 Debug - ExifTool process initialized:`, this.initialized);
+      
+      const result = await ep.writeMetadata(imagePath, metadataArgs, ['-overwrite_original']);
+      console.log(`🔧 Debug - ExifTool result:`, result);
 
-      console.log(`Metadata added to image: ${imagePath}`);
+      console.log(`✅ Metadata added to image: ${imagePath}`);
       return imagePath;
     } catch (error) {
       console.error('Error adding metadata:', error);
