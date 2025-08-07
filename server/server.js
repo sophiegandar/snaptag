@@ -525,11 +525,18 @@ app.delete('/api/images/:id', async (req, res) => {
 // Get available tags
 app.get('/api/tags', async (req, res) => {
   try {
+    console.log('🔍 Fetching all tags...');
     const tags = await databaseService.getAllTags();
+    console.log(`✅ Found ${tags.length} tags`);
+    console.log('📊 Sample tag:', tags[0]);
     res.json(tags);
   } catch (error) {
-    console.error('Error fetching tags:', error);
-    res.status(500).json({ error: 'Failed to fetch tags' });
+    console.error('❌ Error fetching tags:', error);
+    console.error('❌ Error stack:', error.stack);
+    res.status(500).json({ 
+      error: 'Failed to fetch tags: ' + error.message,
+      details: error.stack
+    });
   }
 });
 
