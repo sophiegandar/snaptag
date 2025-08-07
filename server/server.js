@@ -109,6 +109,15 @@ app.get('/api/placeholder-image.jpg', (req, res) => {
   res.send(svg);
 });
 
+// Simple test endpoint
+app.get('/api/debug/simple-test', async (req, res) => {
+  try {
+    res.json({ success: true, message: 'Simple endpoint working' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Debug endpoint to test untagged query
 app.get('/api/debug/untagged-test', async (req, res) => {
   try {
@@ -300,7 +309,11 @@ app.get('/api/images/untagged', async (req, res) => {
     
   } catch (error) {
     console.error('❌ Error finding untagged images:', error);
-    res.status(500).json({ error: 'Failed to find untagged images: ' + error.message });
+    console.error('❌ Error stack:', error.stack);
+    res.status(500).json({ 
+      error: 'Failed to find untagged images: ' + error.message,
+      details: error.stack
+    });
   }
 });
 
