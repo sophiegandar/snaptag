@@ -109,6 +109,40 @@ app.get('/api/placeholder-image.jpg', (req, res) => {
   res.send(svg);
 });
 
+// Debug endpoint to test untagged query
+app.get('/api/debug/untagged-test', async (req, res) => {
+  try {
+    console.log('🔍 Debug: Testing untagged query...');
+    
+    // Test basic query first
+    const allImages = await databaseService.all(`SELECT id, filename FROM images LIMIT 5`);
+    console.log(`📊 Basic query works: ${allImages.length} images`);
+    
+    // Test the untagged query
+    const untaggedImages = await databaseService.all(`
+      SELECT i.* 
+      FROM images i
+      LEFT JOIN image_tags it ON i.id = it.image_id
+      WHERE it.image_id IS NULL
+      ORDER BY i.created_at DESC
+    `);
+    console.log(`📊 Untagged query works: ${untaggedImages.length} untagged images`);
+    
+    res.json({
+      success: true,
+      allImagesCount: allImages.length,
+      untaggedCount: untaggedImages.length,
+      untaggedImages: untaggedImages.slice(0, 3) // Just first 3 for brevity
+    });
+  } catch (error) {
+    console.error('❌ Debug untagged error:', error);
+    res.status(500).json({ 
+      error: error.message,
+      stack: error.stack 
+    });
+  }
+});
+
 // Debug endpoint to check all image paths in database
 app.get('/api/debug/paths', async (req, res) => {
   try {
@@ -298,6 +332,12 @@ app.post('/api/images/upload', upload.single('image'), async (req, res) => {
 // Save image from URL (for browser extension)
 app.post('/api/images/save-from-url', async (req, res) => {
   try {
+    console.log('🌐 Extension save request received:', {
+      imageUrl: req.body.imageUrl?.substring(0, 100) + '...',
+      tags: req.body.tags,
+      title: req.body.title,
+      sourceUrl: req.body.sourceUrl?.substring(0, 100) + '...'
+    });
     const { imageUrl, tags, title, description, focusedTags, sourceUrl } = req.body;
     
     if (!imageUrl) {
