@@ -251,6 +251,59 @@ app.get('/api/images', async (req, res) => {
   }
 });
 
+// Get untagged images for triage (must be before /api/images/:id route)
+app.get('/api/images/untagged', async (req, res) => {
+  try {
+    console.log('🔍 Finding untagged images for triage...');
+    
+    // Query for images with no tags (PostgreSQL-compatible)
+    const untaggedImages = await databaseService.query(`
+      SELECT i.* 
+      FROM images i
+      LEFT JOIN image_tags it ON i.id = it.image_id
+      WHERE it.image_id IS NULL
+      ORDER BY i.created_at DESC
+    `);
+    
+    const images = untaggedImages.rows; // PostgreSQL returns .rows
+    console.log(`📊 Found ${images.length} untagged images`);
+    
+    // Generate temporary URLs for display
+    const imagesWithUrls = await Promise.all(
+      images.map(async (image) => {
+        try {
+          const url = await dropboxService.getTemporaryLink(image.dropbox_path);
+          return {
+            ...image,
+            url,
+            tags: [] // Ensure tags is empty array
+          };
+        } catch (error) {
+          console.error(`❌ Failed to get URL for ${image.filename}:`, error.message);
+          return {
+            ...image,
+            url: '/api/placeholder-image.jpg',
+            tags: []
+          };
+        }
+      })
+    );
+    
+    res.json({
+      success: true,
+      count: images.length,
+      images: imagesWithUrls,
+      message: images.length > 0 
+        ? `Found ${images.length} untagged image(s) that need attention`
+        : 'All images are properly tagged!'
+    });
+    
+  } catch (error) {
+    console.error('❌ Error finding untagged images:', error);
+    res.status(500).json({ error: 'Failed to find untagged images: ' + error.message });
+  }
+});
+
 // Get available image sources (must be before /api/images/:id route)
 app.get('/api/images/sources', async (req, res) => {
   try {
@@ -729,58 +782,6 @@ app.post('/api/images/search', async (req, res) => {
   }
 });
 
-// Get untagged images for triage
-app.get('/api/images/untagged', async (req, res) => {
-  try {
-    console.log('🔍 Finding untagged images for triage...');
-    
-    // Query for images with no tags (SQLite-compatible)
-    const untaggedImages = await databaseService.all(`
-      SELECT i.* 
-      FROM images i
-      LEFT JOIN image_tags it ON i.id = it.image_id
-      WHERE it.image_id IS NULL
-      ORDER BY i.created_at DESC
-    `);
-    
-    const images = untaggedImages; // SQLite returns array directly, not .rows
-    console.log(`📊 Found ${images.length} untagged images`);
-    
-    // Generate temporary URLs for display
-    const imagesWithUrls = await Promise.all(
-      images.map(async (image) => {
-        try {
-          const url = await dropboxService.getTemporaryLink(image.dropbox_path);
-          return {
-            ...image,
-            url,
-            tags: [] // Ensure tags is empty array
-          };
-        } catch (error) {
-          console.error(`❌ Failed to get URL for ${image.filename}:`, error.message);
-          return {
-            ...image,
-            url: '/api/placeholder-image.jpg',
-            tags: []
-          };
-        }
-      })
-    );
-    
-    res.json({
-      success: true,
-      count: images.length,
-      images: imagesWithUrls,
-      message: images.length > 0 
-        ? `Found ${images.length} untagged image(s) that need attention`
-        : 'All images are properly tagged!'
-    });
-    
-  } catch (error) {
-    console.error('❌ Error finding untagged images:', error);
-    res.status(500).json({ error: 'Failed to find untagged images: ' + error.message });
-  }
-});
 
 // Get triage statistics
 app.get('/api/triage/stats', async (req, res) => {
