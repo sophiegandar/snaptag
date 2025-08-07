@@ -10,7 +10,7 @@ function createContextMenus() {
   chrome.contextMenus.removeAll(() => {
     console.log('🗑️ Cleared existing menus');
     
-    // Create individual image menu (target images specifically)
+    // Create individual image menu (right-click on image)
     chrome.contextMenus.create({
       id: 'saveToSnapTag',
       title: 'Save to SnapTag',
@@ -23,29 +23,41 @@ function createContextMenus() {
       }
     });
 
-    // Create fallback menu for all contexts (when not directly on an image)
+    // Create "Save All Images" menu for image context as well
     chrome.contextMenus.create({
-      id: 'saveToSnapTagFallback',
-      title: 'Save Image to SnapTag',
-      contexts: ['all']
+      id: 'saveAllImagesFromImage',
+      title: 'Save All Images to SnapTag',
+      contexts: ['image']
     }, () => {
       if (chrome.runtime.lastError) {
-        console.error('❌ Error creating fallback context menu:', chrome.runtime.lastError);
+        console.error('❌ Error creating image "save all" context menu:', chrome.runtime.lastError);
       } else {
-        console.log('✅ Fallback context menu created successfully');
+        console.log('✅ Image "save all" context menu created successfully');
       }
     });
 
-    // Create page menu
+    // Create page menus (right-click on page, not on image)
     chrome.contextMenus.create({
-      id: 'savePageImagesToSnapTag',
-      title: 'Save All Images to SnapTag',
+      id: 'saveToSnapTagPage',
+      title: 'Save to SnapTag',
       contexts: ['page']
     }, () => {
       if (chrome.runtime.lastError) {
         console.error('❌ Error creating page context menu:', chrome.runtime.lastError);
       } else {
         console.log('✅ Page context menu created successfully');
+      }
+    });
+
+    chrome.contextMenus.create({
+      id: 'savePageImagesToSnapTag',
+      title: 'Save All Images to SnapTag',
+      contexts: ['page']
+    }, () => {
+      if (chrome.runtime.lastError) {
+        console.error('❌ Error creating page "save all" context menu:', chrome.runtime.lastError);
+      } else {
+        console.log('✅ Page "save all" context menu created successfully');
       }
     });
   });
@@ -71,7 +83,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   console.log('🖱️ Context menu clicked:', info.menuItemId);
   console.log('📋 Menu info:', info);
   
-    if (info.menuItemId === 'saveToSnapTag' || info.menuItemId === 'saveToSnapTagFallback') {
+    if (info.menuItemId === 'saveToSnapTag' || info.menuItemId === 'saveToSnapTagPage') {
     console.log('💾 Save to SnapTag clicked');
     console.log('🔍 Checking if this is an image...', {
       srcUrl: info.srcUrl,
@@ -112,7 +124,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
         }
       });
     }
-  } else if (info.menuItemId === 'savePageImagesToSnapTag') {
+  } else if (info.menuItemId === 'savePageImagesToSnapTag' || info.menuItemId === 'saveAllImagesFromImage') {
     console.log('📦 Saving all images from page');
     // Save all images on page
     handleBulkImageSave(tab);
