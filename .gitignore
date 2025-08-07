@@ -9,8 +9,11 @@ client/dist/
 
 # Environment variables (contains sensitive Dropbox tokens)
 .env
+.env.*
 .env.local
 .env.production
+.env.backup*
+.env.bak*
 
 # Database files
 server/data/*.db
