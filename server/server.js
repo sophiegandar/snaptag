@@ -703,11 +703,32 @@ app.post('/api/batch/apply-tags', async (req, res) => {
         const normalizedBaseFolder = baseDropboxFolder.startsWith('/') ? baseDropboxFolder : `/${baseDropboxFolder}`;
         const newFolderPath = folderPathService.generateFolderPath(allTags, normalizedBaseFolder);
         const ext = path.extname(image.filename);
-        const timestamp = Date.now();
-        const newFilename = folderPathService.generateTagBasedFilename(allTags, ext, timestamp);
+        
+        // Check if we need to regenerate filename (only if tags changed)
+        let newFilename = image.filename;
+        let needsFilenameUpdate = false;
+        
+        // If this is a new tagging (tags were added), regenerate filename with ALL tags
+        if (uniqueNewTags.length > 0) {
+          // Try to get sequence number from existing filename, or get next available
+          let sequenceNumber = null;
+          const existingMatch = image.filename.match(/^(\d{5})-/);
+          
+          if (existingMatch) {
+            // Preserve existing sequence number
+            sequenceNumber = parseInt(existingMatch[1]);
+          } else {
+            // Get next sequence number for new files
+            sequenceNumber = await folderPathService.getNextSequenceNumber(databaseService);
+          }
+          
+          newFilename = folderPathService.generateTagBasedFilename(allTags, ext, sequenceNumber);
+          needsFilenameUpdate = newFilename !== image.filename;
+        }
+        
         const newDropboxPath = path.posix.join(newFolderPath, newFilename);
         
-        // Move file in Dropbox if path has changed
+        // Move file in Dropbox if path or filename has changed
         if (image.dropbox_path !== newDropboxPath) {
           console.log(`📁 Moving file from: ${image.dropbox_path}`);
           console.log(`📁 Moving file to: ${newDropboxPath}`);
