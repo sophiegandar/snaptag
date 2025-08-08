@@ -251,12 +251,12 @@ app.get('/api/debug/tags-test', async (req, res) => {
     
     // Test the actual getAllTags query step by step
     const rawTagsQuery = `
-      SELECT t.*, 
+      SELECT t.id, t.name, t.color, t.created_at,
              COALESCE(COUNT(it.image_id), 0) as usage_count
       FROM tags t
       LEFT JOIN image_tags it ON t.id = it.tag_id
       GROUP BY t.id, t.name, t.color, t.created_at
-      ORDER BY usage_count DESC, t.name ASC
+      ORDER BY COALESCE(COUNT(it.image_id), 0) DESC, t.name ASC
     `;
     
     console.log('🔍 Running getAllTags query...');

@@ -395,12 +395,12 @@ class PostgresService {
   async getAllTags() {
     // Get tags with actual usage counts from image_tags table
     return this.all(`
-      SELECT t.*, 
+      SELECT t.id, t.name, t.color, t.created_at,
              COALESCE(COUNT(it.image_id), 0) as usage_count
       FROM tags t
       LEFT JOIN image_tags it ON t.id = it.tag_id
       GROUP BY t.id, t.name, t.color, t.created_at
-      ORDER BY usage_count DESC, t.name ASC
+      ORDER BY COALESCE(COUNT(it.image_id), 0) DESC, t.name ASC
     `);
   }
 
