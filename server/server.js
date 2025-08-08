@@ -232,6 +232,61 @@ app.get('/api/debug/image/:id', async (req, res) => {
   }
 });
 
+// Add this debug endpoint after other debug endpoints (around line 320)
+app.get('/api/debug/tags-test', async (req, res) => {
+  try {
+    console.log('🧪 Testing getAllTags method...');
+    
+    // Test basic database connection
+    const testQuery = await databaseService.query('SELECT NOW() as current_time');
+    console.log('✅ Database connection OK:', testQuery.rows[0]);
+    
+    // Test tags table exists
+    const tagsTest = await databaseService.query('SELECT COUNT(*) as count FROM tags');
+    console.log('✅ Tags table OK, count:', tagsTest.rows[0].count);
+    
+    // Test image_tags table exists  
+    const imageTagsTest = await databaseService.query('SELECT COUNT(*) as count FROM image_tags');
+    console.log('✅ Image_tags table OK, count:', imageTagsTest.rows[0].count);
+    
+    // Test the actual getAllTags query step by step
+    const rawTagsQuery = `
+      SELECT t.*, 
+             COALESCE(COUNT(it.image_id), 0) as usage_count
+      FROM tags t
+      LEFT JOIN image_tags it ON t.id = it.tag_id
+      GROUP BY t.id, t.name, t.color, t.created_at
+      ORDER BY usage_count DESC, t.name ASC
+    `;
+    
+    console.log('🔍 Running getAllTags query...');
+    const tagsResult = await databaseService.query(rawTagsQuery);
+    console.log('✅ Query result:', tagsResult.rows);
+    
+    // Test the getAllTags method directly
+    console.log('🔍 Testing getAllTags method...');
+    const allTags = await databaseService.getAllTags();
+    console.log('✅ getAllTags result:', allTags);
+    
+    res.json({
+      success: true,
+      dbConnection: testQuery.rows[0],
+      tagsCount: tagsTest.rows[0].count,
+      imageTagsCount: imageTagsTest.rows[0].count,
+      rawQueryResult: tagsResult.rows,
+      getAllTagsResult: allTags
+    });
+    
+  } catch (error) {
+    console.error('❌ Tags test error:', error);
+    console.error('❌ Error stack:', error.stack);
+    res.status(500).json({ 
+      error: 'Tags test failed: ' + error.message,
+      stack: error.stack
+    });
+  }
+});
+
 // Get all images with tags
 app.get('/api/images', async (req, res) => {
   try {
