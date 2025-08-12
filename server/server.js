@@ -919,7 +919,7 @@ app.post('/api/images/search', async (req, res) => {
         
         // Add small delay between requests to avoid rate limiting
         if (i < filteredImages.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
+          await new Promise(resolve => setTimeout(resolve, 25)); // Reduced from 100ms to 25ms for better performance
         }
       } catch (error) {
         console.error(`❌ Failed to generate URL for ${image.filename}:`, error.message);
@@ -2161,6 +2161,91 @@ app.post('/api/admin/remove-visual-duplicates', async (req, res) => {
   } catch (error) {
     console.error('❌ Visual duplicate removal error:', error);
     res.status(500).json({ error: 'Visual duplicate removal failed: ' + error.message });
+  }
+});
+
+// Re-embed metadata for all images (fix metadata lost during migration)
+app.post('/api/admin/re-embed-metadata', async (req, res) => {
+  try {
+    console.log('📝 Starting metadata re-embedding for all images...');
+    
+    // Get all images from database
+    const allImages = await databaseService.query(`
+      SELECT i.id, i.filename, i.dropbox_path, 
+             STRING_AGG(DISTINCT t.name, ',') AS tag_names
+      FROM images i
+      LEFT JOIN image_tags it ON i.id = it.image_id
+      LEFT JOIN tags t ON it.tag_id = t.id
+      GROUP BY i.id, i.filename, i.dropbox_path
+      ORDER BY i.id
+    `);
+    const images = allImages.rows;
+    
+    console.log(`📊 Found ${images.length} images to update metadata`);
+    
+    let updatedCount = 0;
+    let errorCount = 0;
+    const errors = [];
+    
+    for (const image of images) {
+      try {
+        console.log(`📝 Updating metadata for: ${image.filename}`);
+        
+        const tags = image.tag_names ? image.tag_names.split(',') : [];
+        console.log(`🏷️ Tags to embed: ${tags.join(', ')}`);
+        
+        if (tags.length === 0) {
+          console.log(`⚠️ Skipping ${image.filename} - no tags to embed`);
+          continue;
+        }
+        
+        // Get focused tags for this image
+        const focusedTagsResult = await databaseService.query(`
+          SELECT tag_name, x_coordinate, y_coordinate, width, height
+          FROM focused_tags 
+          WHERE image_id = $1
+        `, [image.id]);
+        
+        const focusedTags = focusedTagsResult.rows;
+        
+        // Update metadata
+        await metadataService.updateImageMetadata(image.dropbox_path, {
+          tags: tags,
+          focusedTags: focusedTags,
+          title: image.filename,
+          description: `Tagged with: ${tags.join(', ')}`
+        });
+        
+        console.log(`✅ Updated metadata for ${image.filename}`);
+        updatedCount++;
+        
+        // Add small delay to avoid overwhelming Dropbox API
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+      } catch (error) {
+        console.error(`❌ Failed to update metadata for ${image.filename}:`, error.message);
+        errors.push(`${image.filename}: ${error.message}`);
+        errorCount++;
+      }
+    }
+    
+    const message = `Metadata re-embedding completed: ${updatedCount} updated, ${errorCount} errors`;
+    console.log(`✅ ${message}`);
+    
+    res.json({
+      success: true,
+      message,
+      stats: {
+        total: images.length,
+        updated: updatedCount,
+        errors: errorCount,
+        errorDetails: errors
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Metadata re-embedding error:', error);
+    res.status(500).json({ error: 'Metadata re-embedding failed: ' + error.message });
   }
 });
 
