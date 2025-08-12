@@ -107,161 +107,126 @@ class TagSuggestionService {
     
     console.log(`🔍 Analyzing filename: "${filename}" -> cleaned: "${cleanFilename}"`);
     
-    // Look for keyword matches in existing tags first
-    try {
-      const result = await this.databaseService.query(`
-        SELECT name, COUNT(*) as usage_count
-        FROM tags
-        GROUP BY name
-        ORDER BY usage_count DESC
-      `);
+    // PRIORITY 1: Folder structure tags (high confidence)
+    const folderStructureTags = {
+      // Archier project indicators
+      'archier': 0.95,
       
-      const existingTags = result.rows;
+      // Archier project names
+      'yandoit': 0.9, 'ballarat': 0.9, 'melbourne': 0.9, 'brunswick': 0.9, 
+      'geelong': 0.9, 'sydney': 0.9, 'adelaide': 0.9, 'perth': 0.9,
       
-      // Check if filename contains any existing tags
-      existingTags.forEach(tagRow => {
-        const tagName = tagRow.name.toLowerCase();
-        if (cleanFilename.includes(tagName) || tagName.includes(cleanFilename)) {
-          suggestions.push({
-            tag: tagRow.name,
-            confidence: 0.8,
-            reason: `Filename contains "${tagName}"`
-          });
-        }
-      });
+      // Project status
+      'final': 0.9, 'complete': 0.9, 'wip': 0.9,
       
-      // Check for architectural keywords - enhanced detection
-      const architecturalKeywords = {
-        // High confidence architectural elements
-        'facade': 0.9,
-        'interior': 0.9,
-        'exterior': 0.9,
-        'exteriors': 0.9,
-        'bathroom': 0.9,
-        'kitchen': 0.9,
-        'landscape': 0.9,
-        'landscapes': 0.9,
-        
-        // Materials - high confidence
-        'wood': 0.9,
-        'wooden': 0.9,
-        'timber': 0.9,
-        'concrete': 0.8,
-        'metal': 0.8,
-        'steel': 0.8,
-        'glass': 0.8,
-        'brick': 0.8,
-        'stone': 0.8,
-        'marble': 0.8,
-        'granite': 0.8,
-        'tile': 0.8,
-        'ceramic': 0.7,
-        'fabric': 0.7,
-        'carpet': 0.7,
-        
-        // Spaces and rooms
-        'living': 0.8,
-        'bedroom': 0.8,
-        'dining': 0.8,
-        'office': 0.8,
-        'study': 0.8,
-        'entrance': 0.8,
-        'hallway': 0.7,
-        'balcony': 0.8,
-        'terrace': 0.8,
-        'courtyard': 0.8,
-        'garden': 0.8,
-        'pool': 0.8,
-        
-        // Architectural features
-        'stair': 0.8,
-        'stairs': 0.8,
-        'staircase': 0.8,
-        'lighting': 0.8,
-        'window': 0.8,
-        'windows': 0.8,
-        'door': 0.8,
-        'doors': 0.8,
-        'roof': 0.8,
-        'ceiling': 0.8,
-        'floor': 0.8,
-        'wall': 0.7,
-        'walls': 0.7,
-        'column': 0.7,
-        'beam': 0.7,
-        'arch': 0.7,
-        'balustrade': 0.7,
-        
-        // Design elements
-        'joinery': 0.7,
-        'detail': 0.7,
-        'details': 0.7,
-        'furniture': 0.8,
-        'spatial': 0.7,
-        'structure': 0.8,
-        'modern': 0.6,
-        'contemporary': 0.6,
-        'traditional': 0.6,
-        'minimalist': 0.6,
-        'industrial': 0.6,
-        
-        // Project types
-        'residential': 0.7,
-        'commercial': 0.7,
-        'office': 0.7,
-        'retail': 0.7,
-        'hospitality': 0.7,
-        'restaurant': 0.7,
-        'hotel': 0.7,
-        
-        // Common architectural terms
-        'design': 0.6,
-        'architecture': 0.8,
-        'building': 0.7,
-        'construction': 0.7,
-        'renovation': 0.7,
-        'extension': 0.7,
-        'addition': 0.7
-      };
+      // Precedent categories (use plural forms for folder structure)
+      'exteriors': 0.9,  // Use plural for folder structure
+      'interiors': 0.9,
+      'bathrooms': 0.9,
+      'kitchens': 0.9,
+      'landscape': 0.9,
+      'furniture': 0.9,
+      'lighting': 0.9,
+      'stairs': 0.9,
+      'details': 0.9,
+      'doors': 0.9,
+      'structure': 0.9,
+      'spatial': 0.9,
+      'joinery': 0.9,
       
-      Object.entries(architecturalKeywords).forEach(([keyword, confidence]) => {
-        // More flexible matching - check for word boundaries
-        const regex = new RegExp(`\\b${keyword}\\b`, 'i');
-        if (regex.test(cleanFilename)) {
-          suggestions.push({
-            tag: keyword,
-            confidence: confidence,
-            reason: `Filename contains "${keyword}"`
-          });
-          console.log(`✅ Found keyword "${keyword}" in filename with confidence ${confidence}`);
-        }
-      });
+      // Material categories
+      'wood': 0.9,
+      'metal': 0.9,
+      'concrete': 0.9,
+      'glass': 0.9,
+      'brick': 0.9,
+      'stone': 0.9,
+      'tile': 0.9,
+      'fabric': 0.9,
+      'carpet': 0.9,
       
-      // Additional pattern matching for common filename formats
-      const patterns = [
-        { pattern: /\b(out|outdoor|outside)\b/i, tag: 'exterior', confidence: 0.8 },
-        { pattern: /\b(in|indoor|inside|internal)\b/i, tag: 'interior', confidence: 0.8 },
-        { pattern: /\b(yard|outdoor|garden|park)\b/i, tag: 'landscape', confidence: 0.8 },
-        { pattern: /\b(timber|lumber|plywood)\b/i, tag: 'wood', confidence: 0.8 },
-        { pattern: /\b(steel|aluminum|iron|metallic)\b/i, tag: 'metal', confidence: 0.8 },
-        { pattern: /\b(stone|rock|granite|marble)\b/i, tag: 'stone', confidence: 0.8 },
-        { pattern: /\b(glass|glazing|transparent)\b/i, tag: 'glass', confidence: 0.8 }
-      ];
+      // Base categories
+      'precedents': 0.85,
+      'materials': 0.85
+    };
+    
+    // PRIORITY 2: Supplementary/descriptive tags (medium confidence)
+    const descriptiveTags = {
+      // Specific materials and finishes
+      'timber': 0.7, 'wooden': 0.7, 'steel': 0.7, 'aluminum': 0.7,
+      'marble': 0.7, 'granite': 0.7, 'ceramic': 0.7,
       
-      patterns.forEach(({ pattern, tag, confidence }) => {
-        if (pattern.test(cleanFilename)) {
-          suggestions.push({
-            tag: tag,
-            confidence: confidence,
-            reason: `Filename pattern suggests "${tag}"`
-          });
-          console.log(`✅ Pattern match for "${tag}" in filename`);
-        }
-      });
+      // Architectural elements
+      'window': 0.7, 'windows': 0.7, 'door': 0.6, 'roof': 0.7, 'ceiling': 0.7,
+      'floor': 0.7, 'wall': 0.6, 'walls': 0.6, 'column': 0.7, 'beam': 0.7,
       
-    } catch (error) {
-      console.error('Error getting filename suggestions:', error);
-    }
+      // Descriptive elements
+      'deck': 0.6, 'balcony': 0.7, 'terrace': 0.7, 'courtyard': 0.7,
+      'garden': 0.7, 'pool': 0.7, 'entrance': 0.7,
+      
+      // Natural elements (supplementary)
+      'tree': 0.6, 'trees': 0.6, 'gum': 0.5, 'eucalyptus': 0.5,
+      'oak': 0.5, 'pine': 0.5, 'palm': 0.5,
+      
+      // Design styles (supplementary)
+      'modern': 0.5, 'contemporary': 0.5, 'traditional': 0.5, 
+      'minimalist': 0.5, 'industrial': 0.5,
+      
+      // Colors and textures (low priority)
+      'black': 0.4, 'white': 0.4, 'grey': 0.4, 'natural': 0.4,
+      'textured': 0.4, 'smooth': 0.4
+    };
+    
+    // Check folder structure tags first
+    Object.entries(folderStructureTags).forEach(([keyword, confidence]) => {
+      const regex = new RegExp(`\\b${keyword}\\b`, 'i');
+      if (regex.test(cleanFilename)) {
+        suggestions.push({
+          tag: keyword,
+          confidence: confidence,
+          reason: `Folder structure: "${keyword}"`,
+          priority: 1
+        });
+        console.log(`✅ Found folder tag "${keyword}" with confidence ${confidence}`);
+      }
+    });
+    
+    // Then check descriptive tags
+    Object.entries(descriptiveTags).forEach(([keyword, confidence]) => {
+      const regex = new RegExp(`\\b${keyword}\\b`, 'i');
+      if (regex.test(cleanFilename)) {
+        suggestions.push({
+          tag: keyword,
+          confidence: confidence,
+          reason: `Descriptive element: "${keyword}"`,
+          priority: 2
+        });
+        console.log(`✅ Found descriptive tag "${keyword}" with confidence ${confidence}`);
+      }
+    });
+    
+    // Pattern matching for common combinations
+    const patterns = [
+      { pattern: /\b(out|outdoor|outside)\b/i, tag: 'exteriors', confidence: 0.9, priority: 1 },
+      { pattern: /\b(in|indoor|inside|internal)\b/i, tag: 'interiors', confidence: 0.9, priority: 1 },
+      { pattern: /\b(yard|garden|park)\b/i, tag: 'landscape', confidence: 0.9, priority: 1 },
+      { pattern: /\b(timber|lumber|plywood)\b/i, tag: 'wood', confidence: 0.9, priority: 1 },
+      { pattern: /\b(steel|aluminum|iron|metallic)\b/i, tag: 'metal', confidence: 0.9, priority: 1 },
+      { pattern: /\b(gum tree|eucalyptus)\b/i, tag: 'gum tree', confidence: 0.6, priority: 2 },
+      { pattern: /\b(timber deck|wooden deck)\b/i, tag: 'timber deck', confidence: 0.7, priority: 2 }
+    ];
+    
+    patterns.forEach(({ pattern, tag, confidence, priority }) => {
+      if (pattern.test(cleanFilename)) {
+        suggestions.push({
+          tag: tag,
+          confidence: confidence,
+          reason: `Pattern match: "${tag}"`,
+          priority: priority
+        });
+        console.log(`✅ Pattern match for "${tag}" (priority ${priority})`);
+      }
+    });
     
     console.log(`📊 Generated ${suggestions.length} suggestions from filename analysis`);
     return suggestions;
@@ -369,14 +334,22 @@ class TagSuggestionService {
       
       // Add base architectural suggestions if no specific patterns found
       const baseArchitecturalSuggestions = [
-        { tag: 'exterior', confidence: 0.4, reason: 'Common architectural element' },
-        { tag: 'landscape', confidence: 0.4, reason: 'Common architectural element' },
-        { tag: 'wood', confidence: 0.4, reason: 'Common material' },
-        { tag: 'metal', confidence: 0.4, reason: 'Common material' },
-        { tag: 'concrete', confidence: 0.4, reason: 'Common material' },
-        { tag: 'glass', confidence: 0.4, reason: 'Common material' },
-        { tag: 'modern', confidence: 0.3, reason: 'Common architectural style' },
-        { tag: 'design', confidence: 0.3, reason: 'Common architectural term' }
+        // Folder structure tags (high priority)
+        { tag: 'exteriors', confidence: 0.4, reason: 'Common folder category', priority: 1 },
+        { tag: 'interiors', confidence: 0.4, reason: 'Common folder category', priority: 1 },
+        { tag: 'landscape', confidence: 0.4, reason: 'Common folder category', priority: 1 },
+        { tag: 'bathrooms', confidence: 0.4, reason: 'Common folder category', priority: 1 },
+        { tag: 'kitchens', confidence: 0.4, reason: 'Common folder category', priority: 1 },
+        
+        // Material categories (high priority)
+        { tag: 'wood', confidence: 0.4, reason: 'Common material', priority: 1 },
+        { tag: 'metal', confidence: 0.4, reason: 'Common material', priority: 1 },
+        { tag: 'concrete', confidence: 0.4, reason: 'Common material', priority: 1 },
+        { tag: 'glass', confidence: 0.4, reason: 'Common material', priority: 1 },
+        
+        // Supplementary tags (lower priority)
+        { tag: 'modern', confidence: 0.3, reason: 'Common architectural style', priority: 2 },
+        { tag: 'design', confidence: 0.3, reason: 'Common architectural term', priority: 2 }
       ];
       
       suggestions.push(...baseArchitecturalSuggestions);
@@ -401,23 +374,34 @@ class TagSuggestionService {
         // Combine confidence scores (taking max and adding bonus for multiple sources)
         existing.confidence = Math.min(0.95, Math.max(existing.confidence, suggestion.confidence) + 0.1);
         existing.reasons.push(suggestion.reason);
+        // Keep the highest priority (1 is higher than 2)
+        existing.priority = Math.min(existing.priority || 3, suggestion.priority || 3);
       } else {
         tagMap.set(suggestion.tag, {
           tag: suggestion.tag,
           confidence: suggestion.confidence,
-          reasons: [suggestion.reason]
+          reasons: [suggestion.reason],
+          priority: suggestion.priority || 3
         });
       }
     });
     
-    // Convert to array and sort by confidence
+    // Convert to array and sort by priority first, then confidence
     return Array.from(tagMap.values())
-      .sort((a, b) => b.confidence - a.confidence)
+      .sort((a, b) => {
+        // First sort by priority (1 = folder structure, 2 = descriptive, 3 = general)
+        if (a.priority !== b.priority) {
+          return a.priority - b.priority;
+        }
+        // Then by confidence within same priority
+        return b.confidence - a.confidence;
+      })
       .slice(0, 8) // Return top 8 suggestions
       .map(item => ({
         tag: item.tag,
         confidence: Math.round(item.confidence * 100),
-        reason: item.reasons[0] // Show primary reason
+        reason: item.reasons[0], // Show primary reason
+        priority: item.priority
       }));
   }
 
