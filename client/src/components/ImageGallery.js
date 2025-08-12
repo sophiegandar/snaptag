@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Grid, List, Trash2, Edit, RefreshCw, AlertTriangle, Tag, Plus, CheckCircle, Download } from 'lucide-react';
+import { Search, Filter, Grid, List, Trash2, Edit, RefreshCw, AlertTriangle, Tag, Plus, CheckCircle, Download, Lightbulb, Check, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import AdvancedSearch from './AdvancedSearch';
@@ -23,6 +23,8 @@ const ImageGallery = () => {
   const [selectedGalleryImages, setSelectedGalleryImages] = useState([]);
   const [galleryQuickTags, setGalleryQuickTags] = useState('');
   const [pollingEnabled, setPollingEnabled] = useState(true);
+  const [imageSuggestions, setImageSuggestions] = useState({});
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 
   useEffect(() => {
     loadImages();
@@ -318,6 +320,74 @@ const ImageGallery = () => {
     }
   };
 
+  // Load tag suggestions for untagged images
+  const loadTagSuggestions = async () => {
+    if (untaggedImages.length === 0) return;
+    
+    try {
+      setLoadingSuggestions(true);
+      
+      const imageIds = untaggedImages.map(img => img.id);
+      const response = await apiCall('/api/images/bulk-suggestions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageIds })
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        setImageSuggestions(result.suggestions);
+        console.log(`🤖 Loaded suggestions for ${Object.keys(result.suggestions).length} images`);
+      }
+    } catch (error) {
+      console.error('Error loading tag suggestions:', error);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
+
+  // Apply suggested tags to an image
+  const applySuggestedTags = async (imageId, tags) => {
+    try {
+      const response = await apiCall(`/api/images/${imageId}/apply-suggestions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tags })
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        toast.success(`Applied ${tags.length} tags to image`);
+        
+        // Remove from untagged images
+        setUntaggedImages(prev => prev.filter(img => img.id !== imageId));
+        setImageSuggestions(prev => {
+          const updated = { ...prev };
+          delete updated[imageId];
+          return updated;
+        });
+        
+        // Refresh the main gallery
+        await loadImages(currentFilters);
+        
+      } else {
+        toast.error(result.error || 'Failed to apply tags');
+      }
+    } catch (error) {
+      console.error('Error applying suggested tags:', error);
+      toast.error('Failed to apply suggested tags');
+    }
+  };
+
+  // Dismiss suggestions for an image
+  const dismissSuggestions = (imageId) => {
+    setImageSuggestions(prev => {
+      const updated = { ...prev };
+      delete updated[imageId];
+      return updated;
+    });
+  };
+
   const deleteImage = async (imageId, imageName) => {
     if (!window.confirm(`Are you sure you want to delete "${imageName}"? This action cannot be undone.`)) {
       return;
@@ -376,21 +446,33 @@ const ImageGallery = () => {
                 >
                   Select All
                 </button>
-                <button
-                  onClick={clearUntaggedSelection}
-                  className="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded-md hover:bg-gray-200"
-                >
-                  Clear
-                </button>
-                <button
-                  onClick={() => setShowUntagged(false)}
-                  className="text-sm text-gray-600 hover:text-gray-800"
-                >
-                  Hide
-                </button>
-                <span className="text-sm text-gray-600">
-                  {selectedUntagged.length} selected
-                </span>
+                              <button
+                onClick={clearUntaggedSelection}
+                className="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded-md hover:bg-gray-200"
+              >
+                Clear
+              </button>
+              <button
+                onClick={loadTagSuggestions}
+                disabled={loadingSuggestions}
+                className="flex items-center gap-1 text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-md hover:bg-blue-200 disabled:opacity-50"
+              >
+                {loadingSuggestions ? (
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Lightbulb className="h-3 w-3" />
+                )}
+                Get AI Suggestions
+              </button>
+              <button
+                onClick={() => setShowUntagged(false)}
+                className="text-sm text-gray-600 hover:text-gray-800"
+              >
+                Hide
+              </button>
+              <span className="text-sm text-gray-600">
+                {selectedUntagged.length} selected
+              </span>
               </div>
             </div>
           </div>
@@ -454,6 +536,60 @@ const ImageGallery = () => {
                       {image.filename}
                     </p>
                   </div>
+                  
+                  {/* AI Suggestions */}
+                  {imageSuggestions[image.id] && imageSuggestions[image.id].length > 0 && (
+                    <div className="absolute top-2 left-2 right-2">
+                      <div className="bg-white/90 backdrop-blur-sm rounded-md p-2 shadow-sm">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-1">
+                            <Lightbulb className="h-3 w-3 text-blue-500" />
+                            <span className="text-xs font-medium text-gray-700">AI Suggestions</span>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              dismissSuggestions(image.id);
+                            }}
+                            className="text-gray-400 hover:text-gray-600"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          {imageSuggestions[image.id].slice(0, 3).map((suggestion, index) => (
+                            <button
+                              key={index}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                applySuggestedTags(image.id, [suggestion.tag]);
+                              }}
+                              className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition-colors"
+                              title={`${suggestion.confidence}% confidence - ${suggestion.reason}`}
+                            >
+                              {suggestion.tag} ({suggestion.confidence}%)
+                            </button>
+                          ))}
+                        </div>
+                        {imageSuggestions[image.id].length > 3 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const allTags = imageSuggestions[image.id]
+                                .filter(s => s.confidence > 60)
+                                .map(s => s.tag);
+                              if (allTags.length > 0) {
+                                applySuggestedTags(image.id, allTags);
+                              }
+                            }}
+                            className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200 transition-colors"
+                          >
+                            Apply All High Confidence
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

@@ -20,9 +20,11 @@ const Settings = () => {
   const [testing, setTesting] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [organizing, setOrganizing] = useState(false);
+  const [migrating, setMigrating] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState(null);
   const [syncStatus, setSyncStatus] = useState(null);
   const [organizeStatus, setOrganizeStatus] = useState(null);
+  const [migrateStatus, setMigrateStatus] = useState(null);
   const [stats, setStats] = useState({});
 
   useEffect(() => {
@@ -199,6 +201,49 @@ const Settings = () => {
     }
   };
 
+  const migrateToNewStructure = async () => {
+    if (!window.confirm('This will reorganize ALL existing images to the new folder structure based on their current tags. Files will be moved to:\n\n• Archier/[Project]/[Complete|WIP]\n• Precedents/[Category] \n• Materials/[Type]\n\nFilenames will be updated to sequential format (00001-tag1-tag2.jpg).\n\nThis process may take several minutes. Continue?')) {
+      return;
+    }
+    
+    try {
+      setMigrating(true);
+      setMigrateStatus(null);
+      
+      toast.info('Starting migration... This may take several minutes depending on the number of images.');
+      
+      const serverUrl = settings.serverUrl || 'http://localhost:3001';
+      const response = await fetch(`${serverUrl}/api/admin/migrate-folder-structure`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setMigrateStatus('success');
+        toast.success(`Migration completed! ${result.stats.migrated} images migrated, ${result.stats.skipped} skipped`);
+        if (result.stats.errors > 0) {
+          toast.warning(`${result.stats.errors} errors occurred during migration. Check console for details.`);
+          console.log('Migration errors:', result.stats.errorDetails);
+        }
+        await loadStats(); // Refresh stats
+      } else {
+        setMigrateStatus('failed');
+        toast.error(result.error || 'Migration failed');
+      }
+    } catch (error) {
+      console.error('Error during migration:', error);
+      setMigrateStatus('failed');
+      toast.error('Migration failed: ' + error.message);
+    } finally {
+      setMigrating(false);
+      setTimeout(() => setMigrateStatus(null), 5000);
+    }
+  };
+
   const resetSettings = () => {
     if (window.confirm('Are you sure you want to reset all settings to default values?')) {
       const defaultSettings = {
@@ -350,13 +395,18 @@ const Settings = () => {
               Path in your Dropbox where images will be saved (e.g., /SnapTag, /Projects/Images)
             </p>
             <div className="mt-2 p-3 bg-blue-50 rounded-md">
-              <h4 className="text-sm font-medium text-blue-900 mb-2">📁 Automatic Folder Organization</h4>
+              <h4 className="text-sm font-medium text-blue-900 mb-2">📁 EXACT Folder Organization Structure</h4>
               <div className="text-xs text-blue-800 space-y-1">
-                <p><strong>New images are automatically organized into:</strong></p>
-                <p>• Images with 'archier' tag → <code>/SnapTag/Archier/[Category]/</code></p>
-                <p>• Images without 'archier' tag → <code>/SnapTag/Precedents/[Category]/</code></p>
-                <p><strong>Categories:</strong> Facade, Finishes, Joinery, Lighting, Sanitary, Wet Areas</p>
-                <p><strong>Filenames:</strong> Generated from tags (e.g., <code>modern-glass-facade.jpg</code>)</p>
+                <p><strong>Images are automatically organized into:</strong></p>
+                <p>• <strong>Archier projects:</strong> <code>/SnapTag/Archier/[Project]/[Final|WIP]/</code></p>
+                <p>• <strong>Precedents:</strong> <code>/SnapTag/Precedents/[Category]/</code></p>
+                <p>• <strong>Materials:</strong> <code>/SnapTag/Materials/[Type]/</code></p>
+                <p><strong>Precedent Categories:</strong> Art, Bathrooms, Details, Doors, Exteriors, Furniture, General, Interiors, Joinery, Kitchens, Landscape, Lighting, Spatial, Stairs, Structure</p>
+                <p><strong>Material Types:</strong> Brick, Carpet, Concrete, Fabric, General, Landscape, Metal, Stone, Tile, Wood</p>
+                <p><strong>Filenames:</strong> Sequential + category format</p>
+                <p>&nbsp;&nbsp;• <code>0001-archier-projectname.jpg</code> (Archier projects)</p>
+                <p>&nbsp;&nbsp;• <code>0002-precedents-category.jpg</code> (Precedents)</p>
+                <p>&nbsp;&nbsp;• <code>0003-materials-type.jpg</code> (Materials)</p>
               </div>
             </div>
           </div>
@@ -401,7 +451,20 @@ const Settings = () => {
               Organize Folders
             </button>
 
-            {(connectionStatus || syncStatus || organizeStatus) && (
+            <button
+              onClick={migrateToNewStructure}
+              disabled={migrating || !settings.serverUrl}
+              className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 disabled:opacity-50"
+            >
+              {migrating ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <Droplets className="h-4 w-4" />
+              )}
+              Migrate Structure
+            </button>
+
+            {(connectionStatus || syncStatus || organizeStatus || migrateStatus) && (
               <div className="flex gap-2">
                 {connectionStatus && (
                   <div className={`flex items-center gap-2 px-3 py-2 rounded-md ${
@@ -450,6 +513,23 @@ const Settings = () => {
                     )}
                     <span className="text-sm font-medium">
                       {organizeStatus === 'success' ? 'Organized' : 'Organization Failed'}
+                    </span>
+                  </div>
+                )}
+
+                {migrateStatus && (
+                  <div className={`flex items-center gap-2 px-3 py-2 rounded-md ${
+                    migrateStatus === 'success' 
+                      ? 'bg-orange-100 text-orange-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {migrateStatus === 'success' ? (
+                      <Droplets className="h-4 w-4" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4" />
+                    )}
+                    <span className="text-sm font-medium">
+                      {migrateStatus === 'success' ? 'Migrated' : 'Migration Failed'}
                     </span>
                   </div>
                 )}

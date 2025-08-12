@@ -12,11 +12,13 @@ const dropboxService = require('./services/dropboxService');
 const metadataService = require('./services/metadataService');
 const PostgresService = require('./services/postgresService');
 const FolderPathService = require('./services/folderPathService');
+const TagSuggestionService = require('./services/tagSuggestionService');
 const { generateFileHash } = require('./utils/fileHash');
 
 // Initialize services
 const databaseService = new PostgresService();
 const folderPathService = new FolderPathService();
+const tagSuggestionService = new TagSuggestionService(databaseService);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -1293,6 +1295,325 @@ app.post('/api/cleanup/single-letter-tags', async (req, res) => {
       success: false, 
       error: 'Failed to clean up tags: ' + error.message 
     });
+  }
+});
+
+// Migration endpoint to reorganize all existing images to new folder structure
+app.post('/api/admin/migrate-folder-structure', async (req, res) => {
+  try {
+    console.log('🚀 Starting folder structure migration for all existing images...');
+    
+    // Get all images from database
+    const allImages = await databaseService.query('SELECT * FROM images ORDER BY id');
+    const images = allImages.rows;
+    
+    console.log(`📊 Found ${images.length} images to migrate`);
+    
+    let successCount = 0;
+    let errorCount = 0;
+    let skippedCount = 0;
+    const errors = [];
+    const migratedImages = [];
+    
+    for (const image of images) {
+      try {
+        console.log(`\n🔄 Processing image ${image.id}: ${image.filename}`);
+        
+        // Get current tags for this image
+        const imageTagsResult = await databaseService.query(`
+          SELECT t.name 
+          FROM tags t
+          JOIN image_tags it ON t.id = it.tag_id 
+          WHERE it.image_id = $1
+        `, [image.id]);
+        
+        const currentTags = imageTagsResult.rows.map(row => row.name);
+        console.log(`🏷️ Current tags:`, currentTags);
+        
+        if (currentTags.length === 0) {
+          console.log(`⚠️ Skipping image ${image.id} - no tags found`);
+          skippedCount++;
+          continue;
+        }
+        
+        // Generate new folder path and filename using new structure
+        const baseDropboxFolder = serverSettings.dropboxFolder || process.env.DROPBOX_FOLDER || '/ARCHIER Team Folder/Support/Production/SnapTag';
+        const normalizedBaseFolder = baseDropboxFolder.startsWith('/') ? baseDropboxFolder : `/${baseDropboxFolder}`;
+        const newFolderPath = folderPathService.generateFolderPath(currentTags, normalizedBaseFolder);
+        const ext = path.extname(image.filename);
+        
+        // Try to preserve existing sequence number or assign new one
+        let sequenceNumber = null;
+        const existingMatch = image.filename.match(/^(\d{5})-/);
+        
+        if (existingMatch) {
+          // Keep existing sequence number
+          sequenceNumber = parseInt(existingMatch[1]);
+          console.log(`🔢 Preserving sequence number: ${sequenceNumber}`);
+        } else {
+          // Get next available sequence number
+          sequenceNumber = await folderPathService.getNextSequenceNumber(databaseService);
+          console.log(`🔢 Assigning new sequence number: ${sequenceNumber}`);
+        }
+        
+        const newFilename = folderPathService.generateTagBasedFilename(currentTags, ext, sequenceNumber);
+        const newDropboxPath = path.posix.join(newFolderPath, newFilename);
+        
+        console.log(`📁 Old path: ${image.dropbox_path}`);
+        console.log(`📁 New path: ${newDropboxPath}`);
+        
+        // Only migrate if path actually changed
+        if (image.dropbox_path === newDropboxPath) {
+          console.log(`✅ Image ${image.id} already in correct location`);
+          skippedCount++;
+          continue;
+        }
+        
+        // Move file in Dropbox
+        try {
+          await dropboxService.moveFile(image.dropbox_path, newDropboxPath);
+          console.log(`✅ Successfully moved file in Dropbox`);
+          
+          // Update database with new path and filename
+          await databaseService.query(
+            'UPDATE images SET dropbox_path = $1, filename = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
+            [newDropboxPath, newFilename, image.id]
+          );
+          
+          console.log(`✅ Updated database for image ${image.id}`);
+          successCount++;
+          
+          migratedImages.push({
+            id: image.id,
+            oldPath: image.dropbox_path,
+            newPath: newDropboxPath,
+            oldFilename: image.filename,
+            newFilename: newFilename,
+            tags: currentTags
+          });
+          
+        } catch (moveError) {
+          console.error(`❌ Failed to move file in Dropbox:`, moveError.message);
+          
+          // Check if it's a "path not found" error (file may already be moved)
+          if (moveError.message.includes('path/not_found') || moveError.message.includes('not_found')) {
+            console.log(`⚠️ File not found at old path, checking if it exists at new path...`);
+            
+            try {
+              // Try to check if file exists at new location
+              await dropboxService.getTemporaryLink(newDropboxPath);
+              console.log(`✅ File already exists at new location, updating database only`);
+              
+              // Update database since file is already in correct location
+              await databaseService.query(
+                'UPDATE images SET dropbox_path = $1, filename = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
+                [newDropboxPath, newFilename, image.id]
+              );
+              
+              successCount++;
+              migratedImages.push({
+                id: image.id,
+                oldPath: image.dropbox_path,
+                newPath: newDropboxPath,
+                oldFilename: image.filename,
+                newFilename: newFilename,
+                tags: currentTags,
+                note: 'File already at new location'
+              });
+              
+            } catch (checkError) {
+              console.error(`❌ File not found at either location:`, checkError.message);
+              errors.push(`Image ${image.id} (${image.filename}): File not found at old or new location`);
+              errorCount++;
+            }
+          } else {
+            errors.push(`Image ${image.id} (${image.filename}): ${moveError.message}`);
+            errorCount++;
+          }
+        }
+        
+      } catch (error) {
+        console.error(`❌ Error processing image ${image.id}:`, error.message);
+        errors.push(`Image ${image.id}: ${error.message}`);
+        errorCount++;
+      }
+    }
+    
+    const message = `Migration completed: ${successCount} migrated, ${skippedCount} skipped, ${errorCount} errors`;
+    console.log(`\n🎉 ${message}`);
+    
+    res.json({
+      success: true,
+      message,
+      stats: {
+        total: images.length,
+        migrated: successCount,
+        skipped: skippedCount,
+        errors: errorCount,
+        errorDetails: errors,
+        migratedImages: migratedImages.slice(0, 10) // Show first 10 for preview
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Migration error:', error);
+    res.status(500).json({ error: 'Migration failed: ' + error.message });
+  }
+});
+
+// Get tag suggestions for an untagged image
+app.get('/api/images/:id/suggestions', async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(`🤖 Generating tag suggestions for image ${id}...`);
+    
+    // Get the image
+    const image = await databaseService.getImageById(id);
+    if (!image) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+    
+    // Check if image already has tags
+    const tagsResult = await databaseService.query(`
+      SELECT t.name 
+      FROM tags t
+      JOIN image_tags it ON t.id = it.tag_id 
+      WHERE it.image_id = $1
+    `, [id]);
+    
+    if (tagsResult.rows.length > 0) {
+      return res.json({ 
+        suggestions: [],
+        message: 'Image already has tags',
+        existingTags: tagsResult.rows.map(row => row.name)
+      });
+    }
+    
+    // Generate suggestions
+    const suggestions = await tagSuggestionService.generateSuggestions(image);
+    
+    console.log(`✅ Generated ${suggestions.length} tag suggestions for image ${id}`);
+    
+    res.json({
+      success: true,
+      image: {
+        id: image.id,
+        filename: image.filename,
+        source_url: image.source_url
+      },
+      suggestions: suggestions
+    });
+    
+  } catch (error) {
+    console.error('❌ Error generating tag suggestions:', error);
+    res.status(500).json({ error: 'Failed to generate suggestions: ' + error.message });
+  }
+});
+
+// Get bulk tag suggestions for multiple untagged images
+app.post('/api/images/bulk-suggestions', async (req, res) => {
+  try {
+    const { imageIds } = req.body;
+    
+    if (!imageIds || !Array.isArray(imageIds)) {
+      return res.status(400).json({ error: 'Image IDs array is required' });
+    }
+    
+    console.log(`🤖 Generating bulk tag suggestions for ${imageIds.length} images...`);
+    
+    // Filter to only untagged images
+    const untaggedIds = [];
+    for (const imageId of imageIds) {
+      const tagsResult = await databaseService.query(`
+        SELECT COUNT(*) as tag_count
+        FROM image_tags 
+        WHERE image_id = $1
+      `, [imageId]);
+      
+      if (tagsResult.rows[0].tag_count == 0) {
+        untaggedIds.push(imageId);
+      }
+    }
+    
+    console.log(`📊 Found ${untaggedIds.length} untagged images out of ${imageIds.length} requested`);
+    
+    // Generate suggestions for untagged images
+    const suggestions = await tagSuggestionService.getBulkSuggestions(untaggedIds);
+    
+    console.log(`✅ Generated bulk suggestions for ${Object.keys(suggestions).length} images`);
+    
+    res.json({
+      success: true,
+      totalRequested: imageIds.length,
+      untaggedCount: untaggedIds.length,
+      suggestions: suggestions
+    });
+    
+  } catch (error) {
+    console.error('❌ Error generating bulk suggestions:', error);
+    res.status(500).json({ error: 'Failed to generate bulk suggestions: ' + error.message });
+  }
+});
+
+// Apply suggested tags to an image
+app.post('/api/images/:id/apply-suggestions', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tags } = req.body;
+    
+    if (!tags || !Array.isArray(tags)) {
+      return res.status(400).json({ error: 'Tags array is required' });
+    }
+    
+    console.log(`🏷️ Applying suggested tags to image ${id}:`, tags);
+    
+    // Get current image data
+    const image = await databaseService.getImageById(id);
+    if (!image) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+    
+    // Apply tags using existing batch tagging logic
+    await databaseService.updateImageTags(id, tags, image.focused_tags || []);
+    
+    // Check if folder reorganization is needed
+    const baseDropboxFolder = serverSettings.dropboxFolder || process.env.DROPBOX_FOLDER || '/ARCHIER Team Folder/Support/Production/SnapTag';
+    const normalizedBaseFolder = baseDropboxFolder.startsWith('/') ? baseDropboxFolder : `/${baseDropboxFolder}`;
+    const newFolderPath = folderPathService.generateFolderPath(tags, normalizedBaseFolder);
+    const ext = path.extname(image.filename);
+    
+    // Generate new filename with sequential number
+    let sequenceNumber = await folderPathService.getNextSequenceNumber(databaseService);
+    const newFilename = folderPathService.generateTagBasedFilename(tags, ext, sequenceNumber);
+    const newDropboxPath = path.posix.join(newFolderPath, newFilename);
+    
+    // Move file if path changed
+    if (image.dropbox_path !== newDropboxPath) {
+      console.log(`📁 Moving file from: ${image.dropbox_path}`);
+      console.log(`📁 Moving file to: ${newDropboxPath}`);
+      
+      await dropboxService.moveFile(image.dropbox_path, newDropboxPath);
+      
+      // Update database with new path and filename
+      await databaseService.query(
+        'UPDATE images SET dropbox_path = $1, filename = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
+        [newDropboxPath, newFilename, id]
+      );
+    }
+    
+    console.log(`✅ Applied suggested tags to image ${id}`);
+    
+    res.json({
+      success: true,
+      message: `Applied ${tags.length} tags to image`,
+      tags: tags,
+      moved: image.dropbox_path !== newDropboxPath,
+      newPath: newDropboxPath
+    });
+    
+  } catch (error) {
+    console.error('❌ Error applying suggested tags:', error);
+    res.status(500).json({ error: 'Failed to apply suggested tags: ' + error.message });
   }
 });
 
