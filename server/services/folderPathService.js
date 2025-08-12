@@ -8,6 +8,7 @@ class FolderPathService {
       'bathrooms',
       'details',
       'doors',
+      'exterior',
       'exteriors',
       'furniture',
       'general',
@@ -49,12 +50,15 @@ class FolderPathService {
    */
   generateFolderPath(tags = [], baseFolder = '/SnapTag') {
     console.log('📁 Generating folder path for tags:', tags);
+    console.log('📁 Base folder:', baseFolder);
     
     // Normalize tags to lowercase for comparison
     const normalizedTags = tags.map(tag => tag.toLowerCase().trim());
+    console.log('📁 Normalized tags:', normalizedTags);
     
     // Step 1: Check for Archier project structure
     if (normalizedTags.includes('archier')) {
+      console.log('🏗️ Processing as Archier project');
       // Archier project structure: /SnapTag/Archier/[Project Name]/[Final|WIP]
       let folderPath = path.posix.join(baseFolder, 'Archier');
       
@@ -77,7 +81,7 @@ class FolderPathService {
         folderPath = path.posix.join(folderPath, projectName);
         
         // Determine Final vs WIP (changed from Complete to Final)
-        if (normalizedTags.includes('final')) {
+        if (normalizedTags.includes('final') || normalizedTags.includes('complete')) {
           folderPath = path.posix.join(folderPath, 'Final');
         } else if (normalizedTags.includes('wip')) {
           folderPath = path.posix.join(folderPath, 'WIP');
@@ -102,12 +106,18 @@ class FolderPathService {
     }
     
     // Step 3: Default to Precedents with category subfolder
+    console.log('📂 Processing as Precedents (not Archier or Materials)');
     let folderPath = path.posix.join(baseFolder, 'Precedents');
     
     // Determine category subfolder
+    console.log('🔍 Looking for precedent category in:', normalizedTags);
+    console.log('🔍 Available categories:', this.precedentCategories);
+    
     for (const category of this.precedentCategories) {
+      console.log(`🔍 Checking if tags include "${category.toLowerCase()}"`);
       if (normalizedTags.includes(category.toLowerCase())) {
         folderPath = path.posix.join(folderPath, this.toProperCase(category));
+        console.log('✅ Found category match:', category, '-> folder:', this.toProperCase(category));
         console.log('📁 Precedents category folder:', this.toProperCase(category));
         break;
       }
@@ -202,7 +212,7 @@ class FolderPathService {
         
         // If no category found, add first non-structural tag
         if (filenameStructure === 'precedents') {
-          const structuralTags = ['archier', 'final', 'wip', ...this.precedentCategories, ...this.materialCategories];
+          const structuralTags = ['archier', 'final', 'complete', 'wip', ...this.precedentCategories, ...this.materialCategories];
           const specificTag = normalizedTags.find(tag => !structuralTags.includes(tag));
           if (specificTag) {
             filenameStructure += '-' + cleanTag(specificTag);

@@ -172,6 +172,9 @@ const ImageGallery = () => {
           }
         }
         
+        // Show info about retained selection
+        toast.info(`Selection retained - add more tags or click "Unselect All" when done`, { autoClose: 3000 });
+        
         // Efficiently update state instead of full reload
         // Remove tagged images from untagged list
         setUntaggedImages(prev => prev.filter(img => !selectedUntagged.includes(img.id)));
@@ -203,8 +206,8 @@ const ImageGallery = () => {
           }));
         }
         
-        // Clear selections
-        setSelectedUntagged([]);
+        // Keep selections but clear tag input for next batch
+        // setSelectedUntagged([]);  // Don't clear selection
         setQuickTags('');
       } else {
         toast.error(result.error);
@@ -281,6 +284,9 @@ const ImageGallery = () => {
           }
         }
         
+        // Show info about retained selection
+        toast.info(`${selectedGalleryImages.length} image(s) still selected - add more tags or "Unselect All"`, { autoClose: 3000 });
+        
         // Efficiently update state instead of full reload
         // Remove newly tagged images from untagged list if they were untagged
         setUntaggedImages(prev => prev.filter(img => !selectedGalleryImages.includes(img.id)));
@@ -312,8 +318,8 @@ const ImageGallery = () => {
           }));
         }
         
-        // Clear selections
-        setSelectedGalleryImages([]);
+        // Keep selections but clear tag input for next batch
+        // setSelectedGalleryImages([]);  // Don't clear selection
         setGalleryQuickTags('');
       } else {
         toast.error(result.error);
