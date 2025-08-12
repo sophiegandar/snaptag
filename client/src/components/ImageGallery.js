@@ -378,25 +378,61 @@ const ImageGallery = () => {
 
   // Load tag suggestions for untagged images
   const loadTagSuggestions = async () => {
-    if (untaggedImages.length === 0) return;
-    
+    if (untaggedImages.length === 0) {
+      toast.info('No untagged images to analyze');
+      return;
+    }
+
     try {
       setLoadingSuggestions(true);
+      const untaggedIds = untaggedImages.map(img => img.id);
       
-      const imageIds = untaggedImages.map(img => img.id);
       const response = await apiCall('/api/images/bulk-suggestions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageIds })
+        body: JSON.stringify({ imageIds: untaggedIds })
       });
       
       const result = await response.json();
       if (result.success) {
         setImageSuggestions(result.suggestions);
-        console.log(`🤖 Loaded suggestions for ${Object.keys(result.suggestions).length} images`);
+        toast.success(`Generated suggestions for ${Object.keys(result.suggestions).length} images`);
+      } else {
+        toast.error('Failed to generate suggestions');
       }
     } catch (error) {
       console.error('Error loading tag suggestions:', error);
+      toast.error('Failed to load suggestions');
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
+
+  const loadGallerySelectionSuggestions = async () => {
+    if (selectedGalleryImages.length === 0) {
+      toast.error('Please select images first');
+      return;
+    }
+
+    try {
+      setLoadingSuggestions(true);
+      
+      const response = await apiCall('/api/images/bulk-suggestions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageIds: selectedGalleryImages })
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        setImageSuggestions(prev => ({ ...prev, ...result.suggestions }));
+        toast.success(`Generated AI suggestions for ${selectedGalleryImages.length} selected image${selectedGalleryImages.length !== 1 ? 's' : ''}`);
+      } else {
+        toast.error('Failed to generate suggestions');
+      }
+    } catch (error) {
+      console.error('Error loading gallery selection suggestions:', error);
+      toast.error('Failed to load suggestions');
     } finally {
       setLoadingSuggestions(false);
     }
@@ -786,6 +822,18 @@ const ImageGallery = () => {
                   >
                     <Download className="h-4 w-4 mr-2" />
                     Download ZIP
+                  </button>
+                  <button
+                    onClick={loadGallerySelectionSuggestions}
+                    disabled={loadingSuggestions || selectedGalleryImages.length === 0}
+                    className="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600 disabled:opacity-50 flex items-center"
+                  >
+                    {loadingSuggestions ? (
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Lightbulb className="h-4 w-4 mr-2" />
+                    )}
+                    AI Suggestions
                   </button>
                 </div>
                 <div className="flex items-center space-x-2">
