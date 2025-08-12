@@ -219,17 +219,44 @@ class PostgresService {
     }
   }
 
-  async getOrCreateTag(tagName) {
-    // Try to get existing tag
-    const existingTag = await this.get('SELECT id FROM tags WHERE name = $1', [tagName]);
+  async getOrCreateTag(tagName, client = null) {
+    const useClient = client || await this.pool.connect();
     
-    if (existingTag) {
-      return existingTag.id;
+    try {
+      // Normalize tag name to lowercase and trim whitespace
+      const normalizedTagName = tagName.toLowerCase().trim();
+      
+      if (!normalizedTagName) {
+        throw new Error('Tag name cannot be empty');
+      }
+      
+      console.log(`🏷️ Getting or creating tag: "${tagName}" -> normalized: "${normalizedTagName}"`);
+      
+      // Check if tag already exists (case-insensitive)
+      const existingTag = await useClient.query(
+        'SELECT id FROM tags WHERE LOWER(name) = LOWER($1)',
+        [normalizedTagName]
+      );
+      
+      if (existingTag.rows.length > 0) {
+        console.log(`✅ Found existing tag with ID: ${existingTag.rows[0].id}`);
+        return existingTag.rows[0].id;
+      }
+      
+      // Create new tag with normalized name
+      const result = await useClient.query(
+        'INSERT INTO tags (name, created_at) VALUES ($1, CURRENT_TIMESTAMP) RETURNING id',
+        [normalizedTagName]
+      );
+      
+      console.log(`✅ Created new tag "${normalizedTagName}" with ID: ${result.rows[0].id}`);
+      return result.rows[0].id;
+      
+    } finally {
+      if (!client) {
+        useClient.release();
+      }
     }
-
-    // Create new tag
-    const result = await this.query('INSERT INTO tags (name) VALUES ($1) RETURNING id', [tagName]);
-    return result.rows[0].id;
   }
 
   async searchImages(searchTerm, tagFilter) {

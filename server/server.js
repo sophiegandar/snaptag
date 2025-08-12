@@ -13,12 +13,14 @@ const metadataService = require('./services/metadataService');
 const PostgresService = require('./services/postgresService');
 const FolderPathService = require('./services/folderPathService');
 const TagSuggestionService = require('./services/tagSuggestionService');
+const DuplicateDetectionService = require('./services/duplicateDetectionService');
 const { generateFileHash } = require('./utils/fileHash');
 
 // Initialize services
 const databaseService = new PostgresService();
 const folderPathService = new FolderPathService();
 const tagSuggestionService = new TagSuggestionService(databaseService);
+const duplicateDetectionService = new DuplicateDetectionService(databaseService, dropboxService);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -1908,6 +1910,258 @@ process.on('SIGINT', async () => {
   console.log('SIGINT received, shutting down gracefully');
   await databaseService.close();
   process.exit(0);
+});
+
+// Clean up orphaned database records (images that exist in DB but not in Dropbox)
+app.post('/api/admin/cleanup-orphaned-records', async (req, res) => {
+  try {
+    console.log('🧹 Starting cleanup of orphaned database records...');
+    
+    // Get all images from database
+    const allImages = await databaseService.query('SELECT id, filename, dropbox_path FROM images ORDER BY id');
+    const images = allImages.rows;
+    
+    console.log(`📊 Checking ${images.length} database records against Dropbox...`);
+    
+    let foundCount = 0;
+    let missingCount = 0;
+    const missingImages = [];
+    const cleanupErrors = [];
+    
+    for (const image of images) {
+      try {
+        // Try to check if file exists in Dropbox
+        await dropboxService.getTemporaryLink(image.dropbox_path);
+        foundCount++;
+        console.log(`✅ Found: ${image.filename}`);
+      } catch (error) {
+        if (error.message.includes('path/not_found') || error.message.includes('not_found')) {
+          console.log(`❌ Missing: ${image.filename} (${image.dropbox_path})`);
+          missingImages.push({
+            id: image.id,
+            filename: image.filename,
+            dropbox_path: image.dropbox_path
+          });
+          missingCount++;
+        } else {
+          // Other error (maybe network issue), don't delete
+          console.log(`⚠️ Error checking ${image.filename}: ${error.message}`);
+        }
+      }
+    }
+    
+    console.log(`📊 Results: ${foundCount} found, ${missingCount} missing`);
+    
+    // Remove orphaned records if any found
+    if (missingImages.length > 0) {
+      console.log(`🗑️ Removing ${missingImages.length} orphaned database records...`);
+      
+      for (const missingImage of missingImages) {
+        try {
+          // Remove image tags first
+          await databaseService.query('DELETE FROM image_tags WHERE image_id = $1', [missingImage.id]);
+          
+          // Remove focused tags
+          await databaseService.query('DELETE FROM focused_tags WHERE image_id = $1', [missingImage.id]);
+          
+          // Remove image record
+          await databaseService.query('DELETE FROM images WHERE id = $1', [missingImage.id]);
+          
+          console.log(`🗑️ Removed orphaned record: ${missingImage.filename}`);
+        } catch (deleteError) {
+          console.error(`❌ Failed to delete record ${missingImage.id}:`, deleteError.message);
+          cleanupErrors.push(`Failed to delete ${missingImage.filename}: ${deleteError.message}`);
+        }
+      }
+    }
+    
+    const message = `Cleanup completed: ${foundCount} valid files, ${missingCount} orphaned records removed`;
+    console.log(`✅ ${message}`);
+    
+    res.json({
+      success: true,
+      message,
+      stats: {
+        total: images.length,
+        found: foundCount,
+        missing: missingCount,
+        removed: missingImages.length,
+        errors: cleanupErrors.length,
+        errorDetails: cleanupErrors,
+        removedFiles: missingImages.map(img => img.filename)
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Cleanup error:', error);
+    res.status(500).json({ error: 'Cleanup failed: ' + error.message });
+  }
+});
+
+// Cleanup and normalize existing tags
+app.post('/api/admin/normalize-tags', async (req, res) => {
+  try {
+    console.log('🏷️ Starting tag normalization process...');
+    
+    // Get all existing tags
+    const allTags = await databaseService.query('SELECT id, name FROM tags ORDER BY created_at ASC');
+    const tags = allTags.rows;
+    
+    console.log(`📊 Found ${tags.length} tags to normalize`);
+    
+    const tagMap = new Map(); // normalized_name -> {id, original_name, duplicates: []}
+    const duplicateTags = [];
+    
+    // Group tags by normalized name
+    tags.forEach(tag => {
+      const normalizedName = tag.name.toLowerCase().trim();
+      
+      if (tagMap.has(normalizedName)) {
+        // This is a duplicate
+        tagMap.get(normalizedName).duplicates.push(tag);
+        duplicateTags.push(tag);
+      } else {
+        // First occurrence
+        tagMap.set(normalizedName, {
+          id: tag.id,
+          originalName: tag.name,
+          normalizedName: normalizedName,
+          duplicates: []
+        });
+      }
+    });
+    
+    console.log(`📊 Found ${duplicateTags.length} duplicate tags to merge`);
+    
+    let mergedCount = 0;
+    let updatedCount = 0;
+    
+    // Process each tag group
+    for (const [normalizedName, tagGroup] of tagMap) {
+      try {
+        // Update the main tag to use normalized name
+        if (tagGroup.originalName !== normalizedName) {
+          await databaseService.query(
+            'UPDATE tags SET name = $1 WHERE id = $2',
+            [normalizedName, tagGroup.id]
+          );
+          console.log(`📝 Updated tag "${tagGroup.originalName}" -> "${normalizedName}"`);
+          updatedCount++;
+        }
+        
+        // Merge duplicates into the main tag
+        for (const duplicateTag of tagGroup.duplicates) {
+          console.log(`🔄 Merging duplicate "${duplicateTag.name}" into "${normalizedName}"`);
+          
+          // Move all image_tags references from duplicate to main tag
+          await databaseService.query(`
+            UPDATE image_tags 
+            SET tag_id = $1 
+            WHERE tag_id = $2 
+            AND NOT EXISTS (
+              SELECT 1 FROM image_tags it2 
+              WHERE it2.image_id = image_tags.image_id 
+              AND it2.tag_id = $1
+            )
+          `, [tagGroup.id, duplicateTag.id]);
+          
+          // Delete duplicate image_tags that would create conflicts
+          await databaseService.query(`
+            DELETE FROM image_tags 
+            WHERE tag_id = $1 
+            AND EXISTS (
+              SELECT 1 FROM image_tags it2 
+              WHERE it2.image_id = image_tags.image_id 
+              AND it2.tag_id = $2
+            )
+          `, [duplicateTag.id, tagGroup.id]);
+          
+          // Delete the duplicate tag
+          await databaseService.query('DELETE FROM tags WHERE id = $1', [duplicateTag.id]);
+          
+          mergedCount++;
+        }
+        
+      } catch (error) {
+        console.error(`❌ Error processing tag group "${normalizedName}":`, error);
+      }
+    }
+    
+    console.log(`✅ Tag normalization complete: ${updatedCount} updated, ${mergedCount} merged`);
+    
+    res.json({
+      success: true,
+      message: `Tag normalization complete: ${updatedCount} tags updated to lowercase, ${mergedCount} duplicates merged`,
+      stats: {
+        totalTags: tags.length,
+        duplicatesFound: duplicateTags.length,
+        tagsUpdated: updatedCount,
+        tagsMerged: mergedCount,
+        finalTagCount: tags.length - mergedCount
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Tag normalization error:', error);
+    res.status(500).json({ error: 'Tag normalization failed: ' + error.message });
+  }
+});
+
+// Scan for visual duplicates
+app.post('/api/admin/scan-visual-duplicates', async (req, res) => {
+  try {
+    console.log('🔍 Starting visual duplicate scan...');
+    
+    const { similarityThreshold = 5, autoRemove = false } = req.body;
+    
+    const result = await duplicateDetectionService.scanForVisualDuplicates(similarityThreshold);
+    
+    if (autoRemove && result.duplicateGroups.length > 0) {
+      console.log('🗑️ Auto-removing visual duplicates...');
+      const removeResult = await duplicateDetectionService.removeDuplicates(result.duplicateGroups);
+      result.stats.removed = removeResult.removed;
+      result.stats.removeErrors = removeResult.errors;
+    }
+    
+    res.json({
+      success: true,
+      message: `Visual duplicate scan completed: ${result.stats.duplicateGroups} groups found with ${result.stats.duplicateImages} duplicate images`,
+      stats: result.stats,
+      duplicateGroups: result.duplicateGroups
+    });
+    
+  } catch (error) {
+    console.error('❌ Visual duplicate scan error:', error);
+    res.status(500).json({ error: 'Visual duplicate scan failed: ' + error.message });
+  }
+});
+
+// Remove specific visual duplicates
+app.post('/api/admin/remove-visual-duplicates', async (req, res) => {
+  try {
+    console.log('🗑️ Removing selected visual duplicates...');
+    
+    const { duplicateGroups } = req.body;
+    
+    if (!duplicateGroups || !Array.isArray(duplicateGroups)) {
+      return res.status(400).json({ error: 'duplicateGroups array is required' });
+    }
+    
+    const result = await duplicateDetectionService.removeDuplicates(duplicateGroups);
+    
+    res.json({
+      success: true,
+      message: `Removed ${result.removed} visual duplicates`,
+      stats: {
+        removed: result.removed,
+        errors: result.errors
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Visual duplicate removal error:', error);
+    res.status(500).json({ error: 'Visual duplicate removal failed: ' + error.message });
+  }
 });
 
 startServer(); 

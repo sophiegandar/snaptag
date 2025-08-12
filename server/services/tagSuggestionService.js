@@ -130,22 +130,96 @@ class TagSuggestionService {
       
       // Check for architectural keywords
       const architecturalKeywords = {
+        // High confidence architectural elements
         'facade': 0.9,
         'interior': 0.9,
         'exterior': 0.9,
+        'exteriors': 0.9,
         'bathroom': 0.9,
         'kitchen': 0.9,
-        'stair': 0.8,
-        'lighting': 0.8,
+        'landscape': 0.9,
+        'landscapes': 0.9,
+        
+        // Materials - high confidence
+        'wood': 0.9,
+        'wooden': 0.9,
+        'timber': 0.9,
         'concrete': 0.8,
-        'wood': 0.8,
         'metal': 0.8,
+        'steel': 0.8,
         'glass': 0.8,
         'brick': 0.8,
         'stone': 0.8,
-        'landscape': 0.8,
+        'marble': 0.8,
+        'granite': 0.8,
+        'tile': 0.8,
+        'ceramic': 0.7,
+        'fabric': 0.7,
+        'carpet': 0.7,
+        
+        // Spaces and rooms
+        'living': 0.8,
+        'bedroom': 0.8,
+        'dining': 0.8,
+        'office': 0.8,
+        'study': 0.8,
+        'entrance': 0.8,
+        'hallway': 0.7,
+        'balcony': 0.8,
+        'terrace': 0.8,
+        'courtyard': 0.8,
+        'garden': 0.8,
+        'pool': 0.8,
+        
+        // Architectural features
+        'stair': 0.8,
+        'stairs': 0.8,
+        'staircase': 0.8,
+        'lighting': 0.8,
+        'window': 0.8,
+        'windows': 0.8,
+        'door': 0.8,
+        'doors': 0.8,
+        'roof': 0.8,
+        'ceiling': 0.8,
+        'floor': 0.8,
+        'wall': 0.7,
+        'walls': 0.7,
+        'column': 0.7,
+        'beam': 0.7,
+        'arch': 0.7,
+        'balustrade': 0.7,
+        
+        // Design elements
         'joinery': 0.7,
-        'detail': 0.7
+        'detail': 0.7,
+        'details': 0.7,
+        'furniture': 0.8,
+        'spatial': 0.7,
+        'structure': 0.8,
+        'modern': 0.6,
+        'contemporary': 0.6,
+        'traditional': 0.6,
+        'minimalist': 0.6,
+        'industrial': 0.6,
+        
+        // Project types
+        'residential': 0.7,
+        'commercial': 0.7,
+        'office': 0.7,
+        'retail': 0.7,
+        'hospitality': 0.7,
+        'restaurant': 0.7,
+        'hotel': 0.7,
+        
+        // Common architectural terms
+        'design': 0.6,
+        'architecture': 0.8,
+        'building': 0.7,
+        'construction': 0.7,
+        'renovation': 0.7,
+        'extension': 0.7,
+        'addition': 0.7
       };
       
       Object.entries(architecturalKeywords).forEach(([keyword, confidence]) => {

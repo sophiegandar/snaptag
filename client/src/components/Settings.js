@@ -1,30 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { Save, TestTube, Check, AlertCircle, RefreshCw, Database, Droplets, Settings as SettingsIcon } from 'lucide-react';
+import { Save, TestTube, Check, AlertCircle, RefreshCw, Database, Droplets, Settings as SettingsIcon, Tag, Copy, Search } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 const Settings = () => {
   const [settings, setSettings] = useState({
     dropboxToken: '',
-    dropboxFolder: '/SnapTag',
-    serverUrl: 'http://localhost:3001',
+    serverUrl: window.location.origin,
+    dropboxFolder: '/ARCHIER Team Folder/Support/Production/SnapTag',
     autoBackup: true,
     imageQuality: 85,
     maxFileSize: 10,
     defaultTags: '',
     autoTagging: false,
-    metadataFormat: 'both' // 'xmp', 'iptc', 'both'
+    metadataFormat: 'both'
   });
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-  const [organizing, setOrganizing] = useState(false);
-  const [migrating, setMigrating] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState(null);
-  const [syncStatus, setSyncStatus] = useState(null);
-  const [organizeStatus, setOrganizeStatus] = useState(null);
-  const [migrateStatus, setMigrateStatus] = useState(null);
+  const [normalizing, setNormalizing] = useState(false);
+  const [normalizeStatus, setNormalizeStatus] = useState(null);
+  const [scanningDuplicates, setScanningDuplicates] = useState(false);
+  const [duplicateScanStatus, setDuplicateScanStatus] = useState(null);
+  const [duplicateResults, setDuplicateResults] = useState(null);
   const [stats, setStats] = useState({});
 
   useEffect(() => {
@@ -45,7 +44,7 @@ const Settings = () => {
       
       // Also load current server settings
       try {
-        const serverUrl = settings.serverUrl || 'http://localhost:3001';
+        const serverUrl = settings.serverUrl || window.location.origin;
         const response = await fetch(`${serverUrl}/api/settings`);
         if (response.ok) {
           const serverSettings = await response.json();
@@ -131,89 +130,19 @@ const Settings = () => {
     }
   };
 
-  const syncWithDropbox = async () => {
-    try {
-      setSyncing(true);
-      setSyncStatus(null);
-      
-      const serverUrl = settings.serverUrl || 'http://localhost:3001';
-      const response = await fetch(`${serverUrl}/api/sync/dropbox`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (response.ok) {
-        const result = await response.json();
-        setSyncStatus('success');
-        toast.success(`Sync completed! Added ${result.stats.addedToDatabase} images to database`);
-        
-        // Reload stats to show updated numbers
-        loadStats();
-      } else {
-        const error = await response.json();
-        throw new Error(error.error || 'Sync failed');
-      }
-    } catch (error) {
-      setSyncStatus('error');
-      toast.error(`Sync failed: ${error.message}`);
-      console.error('Dropbox sync error:', error);
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const organizeIntoFolders = async () => {
-    if (!window.confirm('This will reorganize all existing images into the new folder structure based on their tags. This process may take a while. Continue?')) {
+  const normalizeAllTags = async () => {
+    if (!window.confirm('This will convert all tags to lowercase and merge duplicates (e.g., "Yandoit" and "yandoit" will become one "yandoit" tag). This cannot be undone. Continue?')) {
       return;
     }
     
     try {
-      setOrganizing(true);
-      setOrganizeStatus(null);
+      setNormalizing(true);
+      setNormalizeStatus(null);
       
-      const serverUrl = settings.serverUrl || 'http://localhost:3001';
-      const response = await fetch(`${serverUrl}/api/organize/folders`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+      toast.info('Starting tag normalization...');
       
-      if (response.ok) {
-        const result = await response.json();
-        setOrganizeStatus('success');
-        toast.success(`Reorganization completed! Moved ${result.stats.movedImages} images into new folder structure`);
-        
-        // Reload stats to show updated numbers
-        loadStats();
-      } else {
-        const error = await response.json();
-        throw new Error(error.error || 'Reorganization failed');
-      }
-    } catch (error) {
-      setOrganizeStatus('error');
-      toast.error(`Reorganization failed: ${error.message}`);
-      console.error('Folder reorganization error:', error);
-    } finally {
-      setOrganizing(false);
-    }
-  };
-
-  const migrateToNewStructure = async () => {
-    if (!window.confirm('This will reorganize ALL existing images to the new folder structure based on their current tags. Files will be moved to:\n\n• Archier/[Project]/[Complete|WIP]\n• Precedents/[Category] \n• Materials/[Type]\n\nFilenames will be updated to sequential format (00001-tag1-tag2.jpg).\n\nThis process may take several minutes. Continue?')) {
-      return;
-    }
-    
-    try {
-      setMigrating(true);
-      setMigrateStatus(null);
-      
-      toast.info('Starting migration... This may take several minutes depending on the number of images.');
-      
-      const serverUrl = settings.serverUrl || 'http://localhost:3001';
-      const response = await fetch(`${serverUrl}/api/admin/migrate-folder-structure`, {
+      const serverUrl = settings.serverUrl || window.location.origin;
+      const response = await fetch(`${serverUrl}/api/admin/normalize-tags`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -223,24 +152,71 @@ const Settings = () => {
       const result = await response.json();
       
       if (result.success) {
-        setMigrateStatus('success');
-        toast.success(`Migration completed! ${result.stats.migrated} images migrated, ${result.stats.skipped} skipped`);
-        if (result.stats.errors > 0) {
-          toast.warning(`${result.stats.errors} errors occurred during migration. Check console for details.`);
-          console.log('Migration errors:', result.stats.errorDetails);
-        }
+        setNormalizeStatus('success');
+        toast.success(`Normalization completed! ${result.stats.tagsUpdated} tags updated, ${result.stats.tagsMerged} duplicates merged`);
         await loadStats(); // Refresh stats
       } else {
-        setMigrateStatus('failed');
-        toast.error(result.error || 'Migration failed');
+        setNormalizeStatus('failed');
+        toast.error(result.error || 'Tag normalization failed');
       }
     } catch (error) {
-      console.error('Error during migration:', error);
-      setMigrateStatus('failed');
-      toast.error('Migration failed: ' + error.message);
+      console.error('Error during tag normalization:', error);
+      setNormalizeStatus('failed');
+      toast.error('Tag normalization failed: ' + error.message);
     } finally {
-      setMigrating(false);
-      setTimeout(() => setMigrateStatus(null), 5000);
+      setNormalizing(false);
+      setTimeout(() => setNormalizeStatus(null), 5000);
+    }
+  };
+
+  const scanVisualDuplicates = async () => {
+    if (!window.confirm('This will analyze all images to find visual duplicates based on image content (not source). This process may take several minutes depending on the number of images. Continue?')) {
+      return;
+    }
+    
+    try {
+      setScanningDuplicates(true);
+      setDuplicateScanStatus(null);
+      setDuplicateResults(null);
+      
+      toast.info('Starting visual duplicate scan... This may take several minutes.');
+      
+      const serverUrl = settings.serverUrl || window.location.origin;
+      const response = await fetch(`${serverUrl}/api/admin/scan-visual-duplicates`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          similarityThreshold: 5, // Adjust for sensitivity (lower = more strict)
+          autoRemove: false // Don't auto-remove, let user review first
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setDuplicateScanStatus('success');
+        setDuplicateResults(result);
+        
+        if (result.stats.duplicateGroups > 0) {
+          toast.success(`Scan completed! Found ${result.stats.duplicateGroups} groups with ${result.stats.duplicateImages} duplicate images`);
+        } else {
+          toast.success('Scan completed! No visual duplicates found');
+        }
+        
+        await loadStats(); // Refresh stats
+      } else {
+        setDuplicateScanStatus('failed');
+        toast.error(result.error || 'Visual duplicate scan failed');
+      }
+    } catch (error) {
+      console.error('Error during visual duplicate scan:', error);
+      setDuplicateScanStatus('failed');
+      toast.error('Visual duplicate scan failed: ' + error.message);
+    } finally {
+      setScanningDuplicates(false);
+      setTimeout(() => setDuplicateScanStatus(null), 10000);
     }
   };
 
@@ -248,7 +224,7 @@ const Settings = () => {
     if (window.confirm('Are you sure you want to reset all settings to default values?')) {
       const defaultSettings = {
         dropboxToken: '',
-        serverUrl: 'http://localhost:3001',
+        serverUrl: window.location.origin,
         autoBackup: true,
         imageQuality: 85,
         maxFileSize: 10,
@@ -425,111 +401,21 @@ const Settings = () => {
               Test Connection
             </button>
 
-            <button
-              onClick={syncWithDropbox}
-              disabled={syncing || !settings.serverUrl}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50"
-            >
-              {syncing ? (
-                <RefreshCw className="h-4 w-4 animate-spin" />
-              ) : (
-                <Database className="h-4 w-4" />
-              )}
-              Sync with Dropbox
-            </button>
-
-            <button
-              onClick={organizeIntoFolders}
-              disabled={organizing || !settings.serverUrl}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 disabled:opacity-50"
-            >
-              {organizing ? (
-                <RefreshCw className="h-4 w-4 animate-spin" />
-              ) : (
-                <SettingsIcon className="h-4 w-4" />
-              )}
-              Organize Folders
-            </button>
-
-            <button
-              onClick={migrateToNewStructure}
-              disabled={migrating || !settings.serverUrl}
-              className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 disabled:opacity-50"
-            >
-              {migrating ? (
-                <RefreshCw className="h-4 w-4 animate-spin" />
-              ) : (
-                <Droplets className="h-4 w-4" />
-              )}
-              Migrate Structure
-            </button>
-
-            {(connectionStatus || syncStatus || organizeStatus || migrateStatus) && (
+            {(connectionStatus) && (
               <div className="flex gap-2">
-                {connectionStatus && (
-                  <div className={`flex items-center gap-2 px-3 py-2 rounded-md ${
-                    connectionStatus === 'success' 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {connectionStatus === 'success' ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      <AlertCircle className="h-4 w-4" />
-                    )}
+                {connectionStatus === 'success' && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-green-100 text-green-800">
+                    <Check className="h-4 w-4" />
                     <span className="text-sm font-medium">
-                      {connectionStatus === 'success' ? 'Connected' : 'Failed'}
+                      Connected
                     </span>
                   </div>
                 )}
-                
-                {syncStatus && (
-                  <div className={`flex items-center gap-2 px-3 py-2 rounded-md ${
-                    syncStatus === 'success' 
-                      ? 'bg-blue-100 text-blue-800' 
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {syncStatus === 'success' ? (
-                      <Database className="h-4 w-4" />
-                    ) : (
-                      <AlertCircle className="h-4 w-4" />
-                    )}
+                {connectionStatus === 'error' && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-red-100 text-red-800">
+                    <AlertCircle className="h-4 w-4" />
                     <span className="text-sm font-medium">
-                      {syncStatus === 'success' ? 'Synced' : 'Sync Failed'}
-                    </span>
-                  </div>
-                )}
-
-                {organizeStatus && (
-                  <div className={`flex items-center gap-2 px-3 py-2 rounded-md ${
-                    organizeStatus === 'success' 
-                      ? 'bg-purple-100 text-purple-800' 
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {organizeStatus === 'success' ? (
-                      <SettingsIcon className="h-4 w-4" />
-                    ) : (
-                      <AlertCircle className="h-4 w-4" />
-                    )}
-                    <span className="text-sm font-medium">
-                      {organizeStatus === 'success' ? 'Organized' : 'Organization Failed'}
-                    </span>
-                  </div>
-                )}
-
-                {migrateStatus && (
-                  <div className={`flex items-center gap-2 px-3 py-2 rounded-md ${
-                    migrateStatus === 'success' 
-                      ? 'bg-orange-100 text-orange-800' 
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {migrateStatus === 'success' ? (
-                      <Droplets className="h-4 w-4" />
-                    ) : (
-                      <AlertCircle className="h-4 w-4" />
-                    )}
-                    <span className="text-sm font-medium">
-                      {migrateStatus === 'success' ? 'Migrated' : 'Migration Failed'}
+                      Failed
                     </span>
                   </div>
                 )}
@@ -643,9 +529,9 @@ const Settings = () => {
 
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="font-medium text-gray-900">Auto Tagging</h4>
+              <h4 className="font-medium text-gray-900">AI Tag Suggestions</h4>
               <p className="text-sm text-gray-500">
-                Use AI to suggest tags for uploaded images
+                Get intelligent tag suggestions based on content and patterns
               </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
@@ -658,6 +544,139 @@ const Settings = () => {
               <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
+        </div>
+      </div>
+
+      {/* AI Tagging Management */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <div className="flex items-center gap-2 mb-4">
+          <Tag className="h-5 w-5 text-purple-600" />
+          <h3 className="text-lg font-semibold">AI Tagging Management</h3>
+        </div>
+
+        <div className="space-y-4">
+          <div className="p-4 bg-purple-50 rounded-md">
+            <h4 className="font-medium text-purple-900 mb-2">🤖 Smart Tag Suggestions</h4>
+            <p className="text-sm text-purple-800 mb-3">
+              Our AI analyzes image sources, filenames, and patterns from your previous tagging to suggest relevant tags for untagged images.
+            </p>
+            <ul className="text-xs text-purple-700 space-y-1">
+              <li>• Learns from your existing tagging patterns</li>
+              <li>• Recognizes architectural keywords and terms</li>
+              <li>• Analyzes source websites and domains</li>
+              <li>• Suggests based on filename content</li>
+            </ul>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={normalizeAllTags}
+              disabled={normalizing || !settings.serverUrl}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 disabled:opacity-50"
+            >
+              {normalizing ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <Tag className="h-4 w-4" />
+              )}
+              Normalize Tags
+            </button>
+
+            <button
+              onClick={scanVisualDuplicates}
+              disabled={scanningDuplicates || !settings.serverUrl}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 disabled:opacity-50"
+            >
+              {scanningDuplicates ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <Search className="h-4 w-4" />
+              )}
+              Scan Visual Duplicates
+            </button>
+
+            {(normalizeStatus || duplicateScanStatus) && (
+              <div className="flex gap-2">
+                {normalizeStatus && (
+                  <div className={`flex items-center gap-2 px-3 py-2 rounded-md ${
+                    normalizeStatus === 'success' 
+                      ? 'bg-purple-100 text-purple-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {normalizeStatus === 'success' ? (
+                      <Tag className="h-4 w-4" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4" />
+                    )}
+                    <span className="text-sm font-medium">
+                      {normalizeStatus === 'success' ? 'Tags Normalized' : 'Normalization Failed'}
+                    </span>
+                  </div>
+                )}
+
+                {duplicateScanStatus && (
+                  <div className={`flex items-center gap-2 px-3 py-2 rounded-md ${
+                    duplicateScanStatus === 'success' 
+                      ? 'bg-indigo-100 text-indigo-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {duplicateScanStatus === 'success' ? (
+                      <Search className="h-4 w-4" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4" />
+                    )}
+                    <span className="text-sm font-medium">
+                      {duplicateScanStatus === 'success' ? 'Scan Complete' : 'Scan Failed'}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2 text-sm text-gray-600">
+            <p><strong>Normalize Tags:</strong> Converts all tags to lowercase and merges duplicates (e.g., "Yandoit" and "yandoit" become one "yandoit" tag).</p>
+            <p><strong>Visual Duplicate Scan:</strong> Analyzes image content to find visually similar images from different sources. Uses perceptual hashing to compare actual image appearance.</p>
+          </div>
+
+          {/* Visual Duplicate Results */}
+          {duplicateResults && duplicateResults.stats.duplicateGroups > 0 && (
+            <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+              <h4 className="font-medium text-yellow-900 mb-3">
+                🔍 Visual Duplicates Found
+              </h4>
+              
+              <div className="text-sm text-yellow-800 mb-4">
+                Found <strong>{duplicateResults.stats.duplicateGroups} groups</strong> containing <strong>{duplicateResults.stats.duplicateImages} duplicate images</strong>
+              </div>
+
+              <div className="space-y-3 max-h-60 overflow-y-auto">
+                {duplicateResults.duplicateGroups.map((group, index) => (
+                  <div key={index} className="bg-white p-3 rounded border">
+                    <div className="text-sm font-medium text-gray-700 mb-2">
+                      Group {index + 1} ({group.count} images):
+                    </div>
+                    <div className="space-y-1">
+                      {group.images.map((image, imgIndex) => (
+                        <div key={image.id} className="text-xs text-gray-600 flex items-center gap-2">
+                          <Copy className="h-3 w-3" />
+                          <span className={imgIndex === 0 ? 'font-medium text-green-700' : ''}>
+                            {imgIndex === 0 ? '📌 ' : '🗑️ '}{image.filename}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 text-xs text-yellow-700">
+                <p>📌 = Will be kept (first in each group)</p>
+                <p>🗑️ = Will be removed if you choose to delete duplicates</p>
+                <p className="mt-2 font-medium">Review the results above. Duplicates are detected by comparing visual content, not filenames or sources.</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
