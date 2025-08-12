@@ -398,23 +398,47 @@ app.get('/api/images/stats', async (req, res) => {
   }
 });
 
-// Get single image by ID
+// Get specific image by ID with detailed error logging
 app.get('/api/images/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const image = await databaseService.getImageById(id);
+    console.log(`🔍 Getting image by ID: ${id}`);
     
+    const image = await databaseService.getImageById(id);
     if (!image) {
+      console.log(`❌ Image ${id} not found in database`);
       return res.status(404).json({ error: 'Image not found' });
     }
 
-    // Get temporary Dropbox URL
-    image.url = await dropboxService.getTemporaryLink(image.dropbox_path);
-    
-    res.json(image);
+    console.log(`📂 Found image ${id}: ${image.filename}, path: ${image.dropbox_path}`);
+
+    // Generate temporary URL for this image
+    try {
+      console.log(`🔗 Generating URL for ${image.filename} at path: ${image.dropbox_path}`);
+      image.url = await dropboxService.getTemporaryLink(image.dropbox_path);
+      console.log(`✅ Successfully generated URL for image ${id}`);
+      
+      res.json(image);
+    } catch (urlError) {
+      console.error(`❌ Failed to generate URL for image ${id}:`, urlError.message);
+      console.error(`❌ Dropbox path: ${image.dropbox_path}`);
+      console.error(`❌ Full error:`, urlError);
+      
+      // Return image data without URL - let frontend handle placeholder
+      res.json({
+        ...image,
+        url: null,
+        error: `Failed to load image: ${urlError.message}`
+      });
+    }
   } catch (error) {
-    console.error('Error fetching image:', error);
-    res.status(500).json({ error: 'Failed to fetch image' });
+    console.error(`❌ Error getting image ${req.params.id}:`, error);
+    console.error(`❌ Error stack:`, error.stack);
+    res.status(500).json({ 
+      error: 'Failed to get image',
+      details: error.message,
+      imageId: req.params.id
+    });
   }
 });
 
