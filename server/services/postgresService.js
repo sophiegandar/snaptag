@@ -367,6 +367,8 @@ class PostgresService {
 
   async getImageById(id) {
     try {
+      console.log(`🗃️ PostgreSQL: Getting image by ID: ${id}`);
+      
       const image = await this.get(`
         SELECT i.*, STRING_AGG(DISTINCT t.name, ',') AS tag_names
         FROM images i
@@ -376,14 +378,21 @@ class PostgresService {
         GROUP BY i.id
       `, [id]);
 
+      console.log(`🗃️ PostgreSQL: Query result for image ${id}:`, image ? 'Found' : 'Not found');
+      
       if (image) {
+        console.log(`🗃️ PostgreSQL: Image data - filename: ${image.filename}, path: ${image.dropbox_path}`);
         image.tags = image.tag_names ? image.tag_names.split(',') : [];
+        
+        console.log(`🗃️ PostgreSQL: Getting focused tags for image ${id}`);
         image.focused_tags = await this.getFocusedTags(id);
+        console.log(`🗃️ PostgreSQL: Found ${image.focused_tags.length} focused tags`);
       }
 
       return image;
     } catch (error) {
-      console.error('Error getting image by ID:', error);
+      console.error(`❌ PostgreSQL Error getting image ${id}:`, error);
+      console.error(`❌ PostgreSQL Error stack:`, error.stack);
       throw error;
     }
   }

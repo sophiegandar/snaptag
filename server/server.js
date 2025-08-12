@@ -234,6 +234,42 @@ app.get('/api/debug/image/:id', async (req, res) => {
   }
 });
 
+// Simple database test endpoint
+app.get('/api/debug/db-test', async (req, res) => {
+  try {
+    console.log('🧪 Testing database connection...');
+    
+    // Test basic connection
+    const result = await databaseService.query('SELECT NOW() as current_time, version() as db_version');
+    console.log('✅ Database connection successful');
+    console.log('📊 Database info:', result.rows[0]);
+    
+    // Test images table
+    const imageCount = await databaseService.query('SELECT COUNT(*) as count FROM images');
+    console.log(`📊 Images in database: ${imageCount.rows[0].count}`);
+    
+    // Test specific image 18
+    const image18 = await databaseService.query('SELECT id, filename, dropbox_path FROM images WHERE id = $1', [18]);
+    console.log(`📊 Image 18 data:`, image18.rows[0] || 'Not found');
+    
+    res.json({
+      success: true,
+      connection: 'OK',
+      database: result.rows[0],
+      imageCount: imageCount.rows[0].count,
+      image18: image18.rows[0] || null
+    });
+    
+  } catch (error) {
+    console.error('❌ Database test failed:', error);
+    res.status(500).json({
+      error: 'Database test failed',
+      details: error.message,
+      stack: error.stack
+    });
+  }
+});
+
 // Add this debug endpoint after other debug endpoints (around line 320)
 app.get('/api/debug/tags-test', async (req, res) => {
   try {
