@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, X, Tag, Plus } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -8,6 +8,17 @@ const ImageUpload = () => {
   const [uploading, setUploading] = useState(false);
   const [tags, setTags] = useState([]);
   const [currentTag, setCurrentTag] = useState('');
+
+  // Cleanup preview URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      files.forEach(fileData => {
+        if (fileData.preview) {
+          URL.revokeObjectURL(fileData.preview);
+        }
+      });
+    };
+  }, [files]);
 
   const onDrop = useCallback((acceptedFiles) => {
     const newFiles = acceptedFiles.map(file => ({
@@ -266,6 +277,7 @@ const FilePreview = ({
   onRemoveTag 
 }) => {
   const [newTag, setNewTag] = useState('');
+  const [imageError, setImageError] = useState(false);
 
   const handleAddTag = () => {
     if (newTag.trim()) {
@@ -274,24 +286,46 @@ const FilePreview = ({
     }
   };
 
+  const handleImageError = () => {
+    console.warn('Failed to load image preview:', fileData.file.name);
+    setImageError(true);
+  };
+
   return (
     <div className="border border-gray-200 rounded-lg p-4">
       <div className="flex gap-4">
         {/* Image Preview */}
         <div className="flex-shrink-0">
-          <img
-            src={fileData.preview}
-            alt={fileData.file.name}
-            className="w-24 h-24 object-cover rounded-lg"
-          />
+          {imageError ? (
+            <div className="w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center">
+              <div className="text-center text-gray-500">
+                <div className="text-2xl mb-1">🖼️</div>
+                <div className="text-xs">Preview</div>
+                <div className="text-xs">Error</div>
+              </div>
+            </div>
+          ) : (
+            <img
+              src={fileData.preview}
+              alt={fileData.file.name}
+              className="w-24 h-24 object-cover rounded-lg"
+              onError={handleImageError}
+              onLoad={() => console.log('Image loaded successfully:', fileData.file.name)}
+            />
+          )}
         </div>
 
         {/* Metadata Form */}
         <div className="flex-1 space-y-3">
           <div className="flex justify-between items-start">
-            <h4 className="font-medium text-gray-900 truncate">
-              {fileData.file.name}
-            </h4>
+            <div>
+              <h4 className="font-medium text-gray-900 truncate">
+                {fileData.file.name}
+              </h4>
+              <p className="text-sm text-gray-500">
+                Size: {(fileData.file.size / 1024 / 1024).toFixed(2)} MB
+              </p>
+            </div>
             <button
               onClick={onRemove}
               className="text-gray-400 hover:text-red-500 p-1"

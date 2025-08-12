@@ -35,7 +35,7 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https://*.dropboxusercontent.com", "https://*.dropbox.com", "https:"],
+      imgSrc: ["'self'", "data:", "blob:", "https://*.dropboxusercontent.com", "https://*.dropbox.com", "https:"],
       connectSrc: ["'self'"],
       fontSrc: ["'self'"],
       objectSrc: ["'none'"],
