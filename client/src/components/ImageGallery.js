@@ -537,9 +537,7 @@ const ImageGallery = () => {
                     <h3 className="text-lg font-semibold text-gray-800">
                       {untaggedImages.length} untagged image{untaggedImages.length !== 1 ? 's' : ''}
                     </h3>
-                    <span className="ml-2 text-sm text-gray-600">
-                      Need organised
-                    </span>
+
                   </div>
                   <div className="flex items-center space-x-2">
                     <button
