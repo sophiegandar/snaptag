@@ -493,7 +493,7 @@ app.post('/api/images/upload', upload.single('image'), async (req, res) => {
       return res.status(400).json({ error: 'No image file provided' });
     }
 
-    const { tags, title, description, focusedTags } = req.body;
+    const { tags, title, name, description, focusedTags } = req.body;
     const tempFilePath = req.file.path;
     
     // Parse tags
@@ -506,6 +506,7 @@ app.post('/api/images/upload', upload.single('image'), async (req, res) => {
       originalName: req.file.originalname,
       tags: parsedTags,
       title,
+      name,
       description,
       focusedTags: parsedFocusedTags
     });
@@ -573,13 +574,24 @@ app.put('/api/images/:id/tags', async (req, res) => {
   try {
     console.log('🔧 DEBUG: Tag update endpoint called');
     const { id } = req.params;
-    const { tags, focusedTags } = req.body;
+    const { tags, focusedTags, title, name, description } = req.body;
 
     console.log(`🏷️ Updating tags for image ${id}:`, { tags, focusedTags });
     console.log('🔧 DEBUG: About to update database tags');
 
-    // Update database first
+    // Update database first (tags and metadata)
     await databaseService.updateImageTags(id, tags, focusedTags);
+    
+    // Update metadata fields if provided
+    if (title !== undefined || name !== undefined || description !== undefined) {
+      await databaseService.query(`
+        UPDATE images 
+        SET title = COALESCE($1, title), 
+            name = COALESCE($2, name), 
+            description = COALESCE($3, description)
+        WHERE id = $4
+      `, [title || null, name || null, description || null, id]);
+    }
     console.log('✅ Database tags updated successfully');
     console.log('🔧 DEBUG: About to get image for metadata embedding');
     
@@ -593,8 +605,9 @@ app.put('/api/images/:id/tags', async (req, res) => {
       await metadataService.updateImageMetadata(image.dropbox_path, {
         tags,
           focusedTags,
-          title: image.title,
-          description: image.description
+          title: title || image.title,
+          name: name || image.name,
+          description: description || image.description
         });
         console.log('✅ Metadata embedding completed');
       } catch (metadataError) {
@@ -1718,7 +1731,7 @@ app.post('/api/images/:id/apply-suggestions', async (req, res) => {
 });
 
 // Helper functions
-async function processAndUploadImage({ filePath, originalName, tags, title, description, focusedTags }) {
+async function processAndUploadImage({ filePath, originalName, tags, title, name, description, focusedTags }) {
   console.log('🏷️ Adding metadata to image...');
   
   // Check file size before processing
@@ -1729,6 +1742,7 @@ async function processAndUploadImage({ filePath, originalName, tags, title, desc
   const processedImagePath = await metadataService.addMetadataToImage(filePath, {
     tags,
     title,
+    name,
     description,
     focusedTags
   });
@@ -1782,6 +1796,7 @@ async function processAndUploadImage({ filePath, originalName, tags, title, desc
     dropbox_path: dropboxPath,
     tags,
     title,
+    name,
     description,
     focused_tags: focusedTags,
     upload_date: new Date().toISOString(),
@@ -1801,7 +1816,7 @@ async function processAndUploadImage({ filePath, originalName, tags, title, desc
   };
 }
 
-async function saveImageFromUrl({ imageUrl, tags, title, description, focusedTags, sourceUrl }) {
+async function saveImageFromUrl({ imageUrl, tags, title, name, description, focusedTags, sourceUrl }) {
   console.log('📥 Downloading image from:', imageUrl);
   
   // Download image
@@ -1827,6 +1842,7 @@ async function saveImageFromUrl({ imageUrl, tags, title, description, focusedTag
       originalName,
       tags,
       title,
+      name,
       description,
       focusedTags
     });
@@ -2655,6 +2671,42 @@ app.post('/api/workflow/analyze-archicad/:id', async (req, res) => {
   } catch (error) {
     console.error('❌ ArchiCAD analysis error:', error);
     res.status(500).json({ error: 'ArchiCAD analysis failed: ' + error.message });
+  }
+});
+
+// Fix long dropbox paths to simplified format
+app.post('/api/admin/fix-long-paths', async (req, res) => {
+  try {
+    console.log('🔄 Fixing long Dropbox paths to simplified format...');
+    
+    // Update all paths from long format to simplified format
+    const updateResult = await databaseService.query(`
+      UPDATE images 
+      SET dropbox_path = REPLACE(dropbox_path, '/ARCHIER Team Folder/Support/Production/SnapTag/', '/SnapTag/')
+      WHERE dropbox_path LIKE '/ARCHIER Team Folder/Support/Production/SnapTag/%'
+    `);
+    
+    console.log(`✅ Updated ${updateResult.rowCount || 0} image paths`);
+    
+    // Get a sample of updated paths for verification
+    const sampleResult = await databaseService.query(`
+      SELECT filename, dropbox_path 
+      FROM images 
+      WHERE dropbox_path LIKE '/SnapTag/%' 
+      LIMIT 10
+    `);
+    
+    res.json({
+      success: true,
+      message: 'Long Dropbox paths fixed successfully',
+      stats: {
+        pathsUpdated: updateResult.rowCount || 0,
+        samplePaths: sampleResult.rows
+      }
+    });
+  } catch (error) {
+    console.error('Error fixing long paths:', error);
+    res.status(500).json({ error: 'Failed to fix long paths' });
   }
 });
 

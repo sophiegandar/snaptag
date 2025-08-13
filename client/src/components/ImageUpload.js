@@ -26,6 +26,7 @@ const ImageUpload = () => {
       preview: URL.createObjectURL(file),
       title: '',
       description: '',
+      name: '', // Add name field
       tags: [...tags],
       id: Math.random().toString(36).substr(2, 9)
     }));
@@ -114,6 +115,7 @@ const ImageUpload = () => {
         const formData = new FormData();
         formData.append('image', fileData.file);
         formData.append('title', fileData.title);
+        formData.append('name', fileData.name || '');
         formData.append('description', fileData.description);
         formData.append('tags', JSON.stringify(fileData.tags));
 
@@ -334,12 +336,19 @@ const FilePreview = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <input
               type="text"
               placeholder="Title (optional)"
               value={fileData.title}
               onChange={(e) => onUpdateMetadata('title', e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+            />
+            <input
+              type="text"
+              placeholder="Name (optional)"
+              value={fileData.name || ''}
+              onChange={(e) => onUpdateMetadata('name', e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
             />
             <input

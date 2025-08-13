@@ -1009,6 +1009,10 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
   };
 
   const getName = () => {
+    return image.name || null; // Only return actual name, not fallbacks
+  };
+
+  const getDisplayName = () => {
     return image.name || image.title || image.filename?.replace(/\.(jpg|jpeg|png|gif|webp)$/i, '') || 'Untitled';
   };
 
@@ -1111,7 +1115,7 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
         ) : (
           <img
             src={imageUrl}
-            alt={getName()}
+            alt={getDisplayName()}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             onError={handleImageError}
           />
@@ -1137,10 +1141,12 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
               <span className="font-medium">Category:</span> {getCategory()}
             </div>
             
-            {/* Name */}
-            <div className="text-sm font-medium text-white truncate">
-              {getName()}
-            </div>
+            {/* Name (only if manually entered) */}
+            {getName() && (
+              <div className="text-sm font-medium text-white truncate">
+                {getName()}
+              </div>
+            )}
           </div>
         </div>
 
@@ -1159,7 +1165,7 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onDelete(image.id, getName());
+              onDelete(image.id, getDisplayName());
             }}
             className="p-2 bg-white bg-opacity-90 rounded-full shadow-lg text-gray-600 hover:text-red-600 hover:bg-white transition-colors"
             title="Delete image"

@@ -128,17 +128,17 @@ class DatabaseService {
   async saveImage(imageData) {
     try {
       const {
-        filename, original_name, dropbox_path, dropbox_id, title, description,
+        filename, original_name, dropbox_path, dropbox_id, title, name, description,
         upload_date, file_size, source_url, width, height, mime_type, file_hash, tags, focused_tags
       } = imageData;
 
       // Insert image
       const imageResult = await this.run(`
         INSERT INTO images (
-          filename, original_name, dropbox_path, dropbox_id, title, description,
+          filename, original_name, dropbox_path, dropbox_id, title, name, description,
           upload_date, file_size, source_url, width, height, mime_type, file_hash
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `, [filename, original_name, dropbox_path, dropbox_id, title, description,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [filename, original_name, dropbox_path, dropbox_id, title, name, description,
           upload_date, file_size, source_url, width, height, mime_type, file_hash]);
 
       const imageId = imageResult.lastID;

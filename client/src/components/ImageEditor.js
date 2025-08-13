@@ -16,6 +16,9 @@ const ImageEditor = () => {
   const [loading, setLoading] = useState(true);
   const [tags, setTags] = useState([]);
   const [focusedTags, setFocusedTags] = useState([]);
+  const [editableTitle, setEditableTitle] = useState('');
+  const [editableName, setEditableName] = useState('');
+  const [editableDescription, setEditableDescription] = useState('');
   const [isTaggingMode, setIsTaggingMode] = useState(false);
   const [newTag, setNewTag] = useState('');
   // Removed unused selectedRegion state
@@ -106,6 +109,9 @@ const ImageEditor = () => {
       setImage(imageData);
       setTags(imageData.tags || []);
       setFocusedTags(imageData.focused_tags || []);
+      setEditableTitle(imageData.title || '');
+      setEditableName(imageData.name || '');
+      setEditableDescription(imageData.description || '');
     } catch (error) {
       console.error('Error loading image:', error);
       toast.error('Failed to load image');
@@ -554,7 +560,10 @@ const ImageEditor = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tags,
-          focusedTags
+          focusedTags,
+          title: editableTitle,
+          name: editableName,
+          description: editableDescription
         })
       });
 
@@ -967,42 +976,87 @@ const ImageEditor = () => {
             </div>
           </div>
 
-          {/* Image Info */}
+          {/* Image Details */}
           <div className="bg-white p-4 rounded-lg shadow">
             <h3 className="font-semibold mb-4">Image Details</h3>
             
-            <div className="space-y-2 text-sm">
+            <div className="space-y-3">
+              {/* Editable Title */}
               <div>
-                <span className="font-medium">Filename:</span>
-                <span className="ml-2 text-gray-600">{image.filename}</span>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Title
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter title..."
+                  value={editableTitle}
+                  onChange={(e) => setEditableTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                />
               </div>
+
+              {/* Editable Name */}
               <div>
-                <span className="font-medium">Uploaded:</span>
-                <span className="ml-2 text-gray-600">
-                  {new Date(image.upload_date).toLocaleDateString()}
-                </span>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter name..."
+                  value={editableName}
+                  onChange={(e) => setEditableName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                />
               </div>
-              {image.file_size && (
+
+              {/* Editable Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description
+                </label>
+                <textarea
+                  placeholder="Enter description..."
+                  value={editableDescription}
+                  onChange={(e) => setEditableDescription(e.target.value)}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              {/* Read-only Info */}
+              <div className="pt-3 border-t border-gray-200 space-y-2 text-sm">
                 <div>
-                  <span className="font-medium">Size:</span>
+                  <span className="font-medium">Filename:</span>
+                  <span className="ml-2 text-gray-600">{image.filename}</span>
+                </div>
+                <div>
+                  <span className="font-medium">Uploaded:</span>
                   <span className="ml-2 text-gray-600">
-                    {(image.file_size / 1024 / 1024).toFixed(2)} MB
+                    {new Date(image.upload_date).toLocaleDateString()}
                   </span>
                 </div>
-              )}
-              {image.source_url && (
-                <div>
-                  <span className="font-medium">Source:</span>
-                  <a
-                    href={image.source_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="ml-2 text-blue-600 hover:text-blue-800 break-all"
-                  >
-                    {new URL(image.source_url).hostname}
-                  </a>
-                </div>
-              )}
+                {image.file_size && (
+                  <div>
+                    <span className="font-medium">Size:</span>
+                    <span className="ml-2 text-gray-600">
+                      {(image.file_size / 1024 / 1024).toFixed(2)} MB
+                    </span>
+                  </div>
+                )}
+                {image.source_url && (
+                  <div>
+                    <span className="font-medium">Source:</span>
+                    <a
+                      href={image.source_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-2 text-blue-600 hover:text-blue-800 break-all"
+                    >
+                      {new URL(image.source_url).hostname}
+                    </a>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
