@@ -2407,10 +2407,21 @@ app.put('/api/tags/:tagId/rename', async (req, res) => {
   }
 });
 
-// Fix Dropbox paths after manual folder rename
+// Fix Dropbox paths and filenames after manual folder rename
 app.post('/api/admin/fix-dropbox-paths', async (req, res) => {
   try {
-    console.log('🔄 Starting Dropbox path updates...');
+    console.log('🔄 Starting comprehensive path and filename fixes...');
+    
+    // Fix double dots in filenames (..jpg -> .jpg)
+    const doubleDotsResult = await databaseService.query(`
+      UPDATE images 
+      SET 
+        filename = REPLACE(filename, '..jpg', '.jpg'),
+        dropbox_path = REPLACE(dropbox_path, '..jpg', '.jpg')
+      WHERE filename LIKE '%..jpg'
+    `);
+    
+    console.log(`✅ Fixed ${doubleDotsResult.rowCount} files with double dots`);
     
     // Update Precedents -> Precedent
     const precedentsResult = await databaseService.query(`
@@ -2434,9 +2445,9 @@ app.post('/api/admin/fix-dropbox-paths', async (req, res) => {
     const extensionResult = await databaseService.query(`
       UPDATE images 
       SET 
-        dropbox_path = REPLACE(dropbox_path, filename, filename || '.jpg'),
-        filename = filename || '.jpg'
-      WHERE filename LIKE '%.'
+        dropbox_path = REPLACE(dropbox_path, filename, filename || 'jpg'),
+        filename = filename || 'jpg'
+      WHERE filename LIKE '%.' AND filename NOT LIKE '%.jpg'
     `);
     
     console.log(`✅ Fixed ${extensionResult.rowCount} files with missing extensions`);
@@ -2456,8 +2467,9 @@ app.post('/api/admin/fix-dropbox-paths', async (req, res) => {
     
     res.json({
       success: true,
-      message: 'Dropbox paths updated successfully',
+      message: 'Dropbox paths and filenames fixed successfully',
       stats: {
+        doubleDotsFixed: doubleDotsResult.rowCount || 0,
         precedentsUpdated: precedentsResult.rowCount || 0,
         materialsUpdated: materialsResult.rowCount || 0,
         extensionsFixed: extensionResult.rowCount || 0,
@@ -2466,8 +2478,8 @@ app.post('/api/admin/fix-dropbox-paths', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('❌ Error updating Dropbox paths:', error);
-    res.status(500).json({ error: 'Failed to update Dropbox paths: ' + error.message });
+    console.error('❌ Error fixing paths and filenames:', error);
+    res.status(500).json({ error: 'Failed to fix paths and filenames: ' + error.message });
   }
 });
 
