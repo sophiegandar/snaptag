@@ -428,7 +428,10 @@ const ImageGallery = () => {
       const response = await apiCall('/api/images/bulk-suggestions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageIds: untaggedIds })
+        body: JSON.stringify({ 
+          imageIds: untaggedIds,
+          includeTagged: false  // Only untagged images for untagged section
+        })
       });
       
       const result = await response.json();
@@ -458,13 +461,17 @@ const ImageGallery = () => {
       const response = await apiCall('/api/images/bulk-suggestions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageIds: selectedGalleryImages })
+        body: JSON.stringify({ 
+          imageIds: selectedGalleryImages,
+          includeTagged: true  // Allow suggestions for already-tagged images
+        })
       });
       
       const result = await response.json();
       if (result.success) {
         setImageSuggestions(prev => ({ ...prev, ...result.suggestions }));
-        toast.success(`Generated AI suggestions for ${selectedGalleryImages.length} selected image${selectedGalleryImages.length !== 1 ? 's' : ''}`);
+        const suggestionCount = Object.keys(result.suggestions).length;
+        toast.success(`Generated suggestions for ${suggestionCount} of ${selectedGalleryImages.length} selected image${selectedGalleryImages.length !== 1 ? 's' : ''}`);
       } else {
         toast.error('Failed to generate suggestions');
       }

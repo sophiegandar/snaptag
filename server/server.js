@@ -1597,42 +1597,49 @@ app.get('/api/images/:id/suggestions', async (req, res) => {
   }
 });
 
-// Get bulk tag suggestions for multiple untagged images
+// Get bulk tag suggestions for multiple images
 app.post('/api/images/bulk-suggestions', async (req, res) => {
   try {
-    const { imageIds } = req.body;
+    const { imageIds, includeTagged = false } = req.body;
     
     if (!imageIds || !Array.isArray(imageIds)) {
       return res.status(400).json({ error: 'Image IDs array is required' });
     }
     
-    console.log(`🤖 Generating bulk tag suggestions for ${imageIds.length} images...`);
+    console.log(`🤖 Generating bulk tag suggestions for ${imageIds.length} images (includeTagged: ${includeTagged})...`);
     
-    // Filter to only untagged images
-    const untaggedIds = [];
-    for (const imageId of imageIds) {
-      const tagsResult = await databaseService.query(`
-        SELECT COUNT(*) as tag_count
-        FROM image_tags 
-        WHERE image_id = $1
-      `, [imageId]);
-      
-      if (tagsResult.rows[0].tag_count == 0) {
-        untaggedIds.push(imageId);
+    let targetIds = imageIds;
+    
+    // If includeTagged is false, filter to only untagged images (original behavior)
+    if (!includeTagged) {
+      const untaggedIds = [];
+      for (const imageId of imageIds) {
+        const tagsResult = await databaseService.query(`
+          SELECT COUNT(*) as tag_count
+          FROM image_tags 
+          WHERE image_id = $1
+        `, [imageId]);
+        
+        if (tagsResult.rows[0].tag_count == 0) {
+          untaggedIds.push(imageId);
+        }
       }
+      targetIds = untaggedIds;
+      console.log(`📊 Found ${untaggedIds.length} untagged images out of ${imageIds.length} requested`);
+    } else {
+      console.log(`📊 Generating suggestions for all ${imageIds.length} selected images (including tagged ones)`);
     }
     
-    console.log(`📊 Found ${untaggedIds.length} untagged images out of ${imageIds.length} requested`);
-    
-    // Generate suggestions for untagged images
-    const suggestions = await tagSuggestionService.getBulkSuggestions(untaggedIds);
+    // Generate suggestions for target images
+    const suggestions = await tagSuggestionService.getBulkSuggestions(targetIds);
     
     console.log(`✅ Generated bulk suggestions for ${Object.keys(suggestions).length} images`);
     
     res.json({
       success: true,
       totalRequested: imageIds.length,
-      untaggedCount: untaggedIds.length,
+      targetCount: targetIds.length,
+      includeTagged: includeTagged,
       suggestions: suggestions
     });
     
