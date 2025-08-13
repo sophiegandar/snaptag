@@ -686,7 +686,7 @@ const ImageGallery = () => {
                             <div className="flex items-center justify-between mb-1">
                               <div className="flex items-center gap-1">
                                 <Lightbulb className="h-3 w-3 text-blue-500" />
-                                <span className="text-xs font-medium text-gray-700">AI Suggestions</span>
+                                <span className="text-xs font-medium text-gray-700">Suggest Tags</span>
                               </div>
                               <button
                                 onClick={(e) => {
@@ -822,14 +822,6 @@ const ImageGallery = () => {
                     Apply Tags
                   </button>
                   <button
-                    onClick={downloadSelectedImages}
-                    disabled={loading}
-                    className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 disabled:opacity-50 flex items-center"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Download ZIP
-                  </button>
-                  <button
                     onClick={loadGallerySelectionSuggestions}
                     disabled={loadingSuggestions || selectedGalleryImages.length === 0}
                     className="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600 disabled:opacity-50 flex items-center"
@@ -839,7 +831,15 @@ const ImageGallery = () => {
                     ) : (
                       <Lightbulb className="h-4 w-4 mr-2" />
                     )}
-                    AI Suggestions
+                    Suggest Tags
+                  </button>
+                  <button
+                    onClick={downloadSelectedImages}
+                    disabled={loading}
+                    className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 disabled:opacity-50 flex items-center"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download ZIP
                   </button>
                 </div>
                 <div className="flex items-center space-x-2">

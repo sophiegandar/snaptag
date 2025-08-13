@@ -330,8 +330,14 @@ app.get('/api/debug/tags-test', async (req, res) => {
 // Get all images with tags
 app.get('/api/images', async (req, res) => {
   try {
-    const { search, tags } = req.query;
-    const images = await databaseService.searchImages(search, tags);
+    const { search, tags, limit } = req.query;
+    let images = await databaseService.searchImages(search, tags);
+    
+    // Apply limit if specified (for extension popup)
+    if (limit && !isNaN(parseInt(limit))) {
+      images = images.slice(0, parseInt(limit));
+      console.log(`📊 Applied limit: showing ${images.length} of total images`);
+    }
     
     // Generate temporary Dropbox URLs for each image
     console.log(`🔗 Generating temporary URLs for ${images.length} images...`);

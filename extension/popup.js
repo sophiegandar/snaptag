@@ -297,12 +297,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
   async function loadRecentImages() {
     try {
+      console.log('🔄 Loading recent images from:', `${settings.serverUrl}/api/images?limit=6`);
       const response = await fetch(`${settings.serverUrl}/api/images?limit=6`);
       if (!response.ok) {
-        throw new Error('Failed to load recent images');
+        throw new Error(`Failed to load recent images: ${response.status} ${response.statusText}`);
       }
       
       const images = await response.json();
+      console.log('📊 Received images:', images.length);
       
       recentImagesDiv.innerHTML = '';
       
@@ -311,19 +313,30 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
       }
       
-      images.slice(0, 6).forEach(image => {
+      images.slice(0, 6).forEach((image, index) => {
+        console.log(`🖼️ Processing image ${index + 1}:`, image.filename, 'URL:', image.url ? 'available' : 'missing');
+        
         const imageElement = document.createElement('div');
         imageElement.className = 'recent-image';
-        imageElement.innerHTML = `<img src="${image.url}" alt="${image.title}" loading="lazy">`;
+        
+        if (image.url) {
+          imageElement.innerHTML = `<img src="${image.url}" alt="${image.title || image.filename}" loading="lazy" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjNmNGY2Ii8+Cjx0ZXh0IHg9IjIwIiB5PSIyNCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjgiIGZpbGw9IiM5Y2EzYWYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPk5vIEltYWdlPC90ZXh0Pgo8L3N2Zz4K';">`;
+        } else {
+          // Show placeholder for missing URL
+          imageElement.innerHTML = `<div style="width: 60px; height: 60px; background: #f3f4f6; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #9ca3af;">No Image</div>`;
+        }
+        
         imageElement.addEventListener('click', () => {
-          chrome.tabs.create({ url: `${settings.serverUrl.replace('3001', '3000')}/image/${image.id}` });
+          chrome.tabs.create({ url: `${settings.serverUrl}/image/${image.id}` });
         });
         recentImagesDiv.appendChild(imageElement);
       });
       
+      console.log('✅ Recent images loaded successfully');
+      
     } catch (error) {
-      console.error('Error loading recent images:', error);
-      recentImagesDiv.innerHTML = '<div class="loading">Unable to load recent images</div>';
+      console.error('❌ Error loading recent images:', error);
+      recentImagesDiv.innerHTML = `<div class="loading">Unable to load recent images<br><small>${error.message}</small></div>`;
     }
   }
 
@@ -350,7 +363,7 @@ document.addEventListener('DOMContentLoaded', function() {
       imageElement.className = 'recent-image new-image'; // Add 'new-image' class for animation
       imageElement.innerHTML = `<img src="${imageData.url}" alt="${imageData.title || imageData.filename}" loading="lazy">`;
       imageElement.addEventListener('click', () => {
-        chrome.tabs.create({ url: `${settings.serverUrl.replace('3001', '3000')}/image/${imageData.id}` });
+        chrome.tabs.create({ url: `${settings.serverUrl}/image/${imageData.id}` });
       });
 
       // Add to the beginning of the list (most recent first)
