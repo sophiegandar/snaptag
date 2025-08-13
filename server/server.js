@@ -2325,7 +2325,7 @@ app.put('/api/tags/:tagId/rename', async (req, res) => {
     }
     
     // Update the tag name
-    await databaseService.query('UPDATE tags SET name = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [trimmedNewName, tagId]);
+    await databaseService.query('UPDATE tags SET name = $1 WHERE id = $2', [trimmedNewName, tagId]);
     
     // Get all images that use this tag
     const imagesWithTagResult = await databaseService.query(`
