@@ -472,6 +472,67 @@ class DropboxService {
       }
     });
   }
+
+  /**
+   * Duplicate a file to multiple Dropbox locations
+   * @param {string} sourcePath - Source file path in Dropbox
+   * @param {Array} targetPaths - Array of target paths to copy to
+   * @returns {Array} Array of copy results
+   */
+  async duplicateFile(sourcePath, targetPaths) {
+    return this.withRetry(async () => {
+      console.log(`🔄 Duplicating file from ${sourcePath} to ${targetPaths.length} locations`);
+      
+      const results = [];
+      
+      for (const targetPath of targetPaths) {
+        try {
+          console.log(`📋 Copying to: ${targetPath}`);
+          
+          const response = await fetch('https://api.dropboxapi.com/2/files/copy_v2', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${this.currentAccessToken}`,
+              'Content-Type': 'application/json',
+              'Dropbox-API-Path-Root': `{".tag": "namespace_id", "namespace_id": "${this.rootNamespaceId}"}`
+            },
+            body: JSON.stringify({
+              from_path: sourcePath,
+              to_path: targetPath,
+              allow_shared_folder: true,
+              autorename: false,
+              allow_ownership_transfer: false
+            })
+          });
+
+          if (!response.ok) {
+            const error = await response.text();
+            throw new Error(`HTTP ${response.status}: ${error}`);
+          }
+
+          const result = await response.json();
+          results.push({
+            success: true,
+            targetPath: targetPath,
+            dropboxId: result.metadata.id,
+            result: result
+          });
+          
+          console.log(`✅ Successfully copied to: ${targetPath}`);
+          
+        } catch (error) {
+          console.error(`❌ Failed to copy to ${targetPath}:`, error.message);
+          results.push({
+            success: false,
+            targetPath: targetPath,
+            error: error.message
+          });
+        }
+      }
+      
+      return results;
+    });
+  }
 }
 
 module.exports = new DropboxService(); 

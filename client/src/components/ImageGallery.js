@@ -127,6 +127,27 @@ const ImageGallery = () => {
   };
 
   const clearUntaggedSelection = () => {
+    // Move any tagged images from untagged to main gallery
+    const taggedImages = untaggedImages.filter(img => 
+      selectedUntagged.includes(img.id) && img.tags && img.tags.length > 0
+    );
+    
+    if (taggedImages.length > 0) {
+      // Remove tagged images from untagged list
+      setUntaggedImages(prev => prev.filter(img => 
+        !taggedImages.some(tagged => tagged.id === img.id)
+      ));
+      
+      // Add tagged images to main gallery (avoid duplicates)
+      setImages(prev => {
+        const existingIds = new Set(prev.map(img => img.id));
+        const newImages = taggedImages.filter(img => !existingIds.has(img.id));
+        return [...newImages, ...prev]; // Add to beginning for visibility
+      });
+      
+      toast.success(`${taggedImages.length} tagged image${taggedImages.length !== 1 ? 's' : ''} moved to main gallery`);
+    }
+    
     setSelectedUntagged([]);
   };
 
@@ -172,12 +193,23 @@ const ImageGallery = () => {
           }
         }
         
-        // Show info about retained selection
-        toast.info(`Selection retained - add more tags or click "Unselect All" when done`, { autoClose: 3000 });
+        // Show info about retained selection (matching gallery behavior)
+        toast.info(`${selectedUntagged.length} image(s) still selected - add more tags or "Unselect All"`, { autoClose: 3000 });
         
         // Efficiently update state instead of full reload
-        // Remove tagged images from untagged list
-        setUntaggedImages(prev => prev.filter(img => !selectedUntagged.includes(img.id)));
+        // Remove newly tagged images from untagged list if they were untagged
+        // (This will happen when user clicks "Unselect All")
+        
+        // Update untagged images with new tags (so clearSelection can detect them)
+        setUntaggedImages(prev => prev.map(img => {
+          if (selectedUntagged.includes(img.id)) {
+            return {
+              ...img,
+              tags: [...new Set([...(img.tags || []), ...tags])]
+            };
+          }
+          return img;
+        }));
         
         // Update main gallery images with new tags and paths
         if (result.stats && result.stats.processedImages) {
@@ -206,7 +238,7 @@ const ImageGallery = () => {
           }));
         }
         
-        // Keep selections but clear tag input for next batch
+        // Keep selections but clear tag input for next batch (matching gallery behavior)
         // setSelectedUntagged([]);  // Don't clear selection
         setQuickTags('');
       } else {
@@ -628,7 +660,7 @@ const ImageGallery = () => {
                       type="text"
                       value={quickTags}
                       onChange={(e) => setQuickTags(e.target.value)}
-                      placeholder="Enter tags (comma-separated): archier, facade, glazing..."
+                      placeholder="Enter tags (comma-separated): precedents, materials etc"
                       className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <button
@@ -667,8 +699,21 @@ const ImageGallery = () => {
                       
                       {selectedUntagged.includes(image.id) && (
                         <div className="absolute top-2 right-2">
-                          <div className="bg-blue-500 text-white rounded-full p-1">
+                          <div className={`text-white rounded-full p-1 ${
+                            image.tags && image.tags.length > 0 
+                              ? 'bg-green-500' 
+                              : 'bg-blue-500'
+                          }`}>
                             <CheckCircle className="h-3 w-3" />
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Show tags indicator if image has been tagged */}
+                      {image.tags && image.tags.length > 0 && (
+                        <div className="absolute top-2 left-2">
+                          <div className="bg-green-500 text-white text-xs px-2 py-1 rounded">
+                            {image.tags.length} tag{image.tags.length !== 1 ? 's' : ''}
                           </div>
                         </div>
                       )}
@@ -809,7 +854,7 @@ const ImageGallery = () => {
                     type="text"
                     value={galleryQuickTags}
                     onChange={(e) => setGalleryQuickTags(e.target.value)}
-                    placeholder="Add tags: archier, facade, glazing..."
+                    placeholder="Add tags: precedents, materials etc"
                     className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     style={{ width: '300px' }}
                   />

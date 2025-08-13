@@ -772,7 +772,13 @@ app.post('/api/batch/apply-tags', async (req, res) => {
         const baseDropboxFolder = serverSettings.dropboxFolder || process.env.DROPBOX_FOLDER || '/ARCHIER Team Folder/Support/Production/SnapTag';
         const normalizedBaseFolder = baseDropboxFolder.startsWith('/') ? baseDropboxFolder : `/${baseDropboxFolder}`;
         const newFolderPath = folderPathService.generateFolderPath(allTags, normalizedBaseFolder);
-        const ext = path.extname(image.filename);
+        let ext = path.extname(image.filename);
+        
+        // Fallback to .jpg if no extension found or malformed
+        if (!ext || ext === '.' || ext === '') {
+          ext = '.jpg';
+          console.log(`⚠️ Using fallback extension .jpg for image ${image.id}: "${image.filename}"`);
+        }
         
         // Check if we need to regenerate filename (only if tags changed)
         let newFilename = image.filename;
@@ -1269,7 +1275,14 @@ app.post('/api/organize/folders', async (req, res) => {
         const newFolderPath = folderPathService.generateFolderPath(tags, normalizedBaseFolder);
         
         // Generate new filename from tags
-        const ext = path.extname(image.filename);
+        let ext = path.extname(image.filename);
+        
+        // Fallback to .jpg if no extension found or malformed
+        if (!ext || ext === '.' || ext === '') {
+          ext = '.jpg';
+          console.log(`⚠️ Using fallback extension .jpg for image ${image.id}: "${image.filename}"`);
+        }
+        
         const timestamp = Date.now();
         const newFilename = folderPathService.generateTagBasedFilename(tags, ext, timestamp);
         const newDropboxPath = path.posix.join(newFolderPath, newFilename);
@@ -1408,7 +1421,13 @@ app.post('/api/admin/migrate-folder-structure', async (req, res) => {
         const baseDropboxFolder = serverSettings.dropboxFolder || process.env.DROPBOX_FOLDER || '/ARCHIER Team Folder/Support/Production/SnapTag';
         const normalizedBaseFolder = baseDropboxFolder.startsWith('/') ? baseDropboxFolder : `/${baseDropboxFolder}`;
         const newFolderPath = folderPathService.generateFolderPath(currentTags, normalizedBaseFolder);
-        const ext = path.extname(image.filename);
+        let ext = path.extname(image.filename);
+        
+        // Fallback to .jpg if no extension found or malformed
+        if (!ext || ext === '.' || ext === '') {
+          ext = '.jpg';
+          console.log(`⚠️ Using fallback extension .jpg for image ${image.id}: "${image.filename}"`);
+        }
         
         // Try to preserve existing sequence number or assign new one
         let sequenceNumber = null;
@@ -1648,7 +1667,13 @@ app.post('/api/images/:id/apply-suggestions', async (req, res) => {
     const baseDropboxFolder = serverSettings.dropboxFolder || process.env.DROPBOX_FOLDER || '/ARCHIER Team Folder/Support/Production/SnapTag';
     const normalizedBaseFolder = baseDropboxFolder.startsWith('/') ? baseDropboxFolder : `/${baseDropboxFolder}`;
     const newFolderPath = folderPathService.generateFolderPath(tags, normalizedBaseFolder);
-    const ext = path.extname(image.filename);
+    let ext = path.extname(image.filename);
+    
+    // Fallback to .jpg if no extension found or malformed
+    if (!ext || ext === '.' || ext === '') {
+      ext = '.jpg';
+      console.log(`⚠️ Using fallback extension .jpg for image ${image.id}: "${image.filename}"`);
+    }
     
     // Generate new filename with sequential number
     let sequenceNumber = await folderPathService.getNextSequenceNumber(databaseService);
@@ -1723,7 +1748,14 @@ async function processAndUploadImage({ filePath, originalName, tags, title, desc
   
   // Generate filename from tags
   const timestamp = Date.now();
-  const ext = path.extname(originalName);
+  let ext = path.extname(originalName);
+  
+  // Fallback to .jpg if no extension found
+  if (!ext || ext === '.' || ext === '') {
+    ext = '.jpg';
+    console.log(`⚠️ Using fallback extension .jpg for uploaded file: "${originalName}"`);
+  }
+  
   const filename = folderPathService.generateTagBasedFilename(tags, ext, timestamp);
   
   // Combine folder path and filename

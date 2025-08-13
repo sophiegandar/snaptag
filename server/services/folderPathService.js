@@ -5,13 +5,12 @@ class FolderPathService {
     // Define the EXACT folder structure as specified
     this.precedentCategories = [
       'art',
-      'bathrooms',
+      'bathrooms', 
       'details',
       'doors',
       'exterior',
       'exteriors',
       'furniture',
-      'general',
       'interiors',
       'joinery',
       'kitchens',
@@ -20,19 +19,20 @@ class FolderPathService {
       'spatial',
       'stairs',
       'structure'
+      // Note: 'general' is not included - it's the automatic fallback
     ];
     
     this.materialCategories = [
       'brick',
-      'carpet',
+      'carpet', 
       'concrete',
       'fabric',
-      'general',
       'landscape',
       'metal',
       'stone',
       'tile',
       'wood'
+      // Note: 'general' is not included - it's the automatic fallback
     ];
     
     // Archier project structure: [Project Name]/[Final|WIP]
@@ -46,7 +46,7 @@ class FolderPathService {
    * Generate folder path based on EXACT tag logic matching the provided structure
    * @param {Array} tags - Array of tags for the image
    * @param {string} baseFolder - Base SnapTag folder path
-   * @returns {string} Complete folder path
+   * @returns {string} Single folder path (first matching tag wins)
    */
   generateFolderPath(tags = [], baseFolder = '/SnapTag') {
     console.log('📁 Generating folder path for tags:', tags);
@@ -96,35 +96,42 @@ class FolderPathService {
       return folderPath;
     }
     
-    // Step 2: Check for Materials category
-    for (const material of this.materialCategories) {
-      if (normalizedTags.includes(material)) {
-        const folderPath = path.posix.join(baseFolder, 'Materials', this.toProperCase(material));
-        console.log('✅ Materials folder path:', folderPath);
+    // Step 2: Check for Texture category (first matching tag wins)
+    for (const tag of normalizedTags) {
+      if (this.materialCategories.includes(tag)) {
+        const folderPath = path.posix.join(baseFolder, 'Texture', this.toProperCase(tag));
+        console.log('✅ First matching texture category:', tag, '-> folder:', folderPath);
         return folderPath;
       }
     }
     
-    // Step 3: Default to Precedents with category subfolder
-    console.log('📂 Processing as Precedents (not Archier or Materials)');
-    let folderPath = path.posix.join(baseFolder, 'Precedents');
+    // If materials/texture tag found but no specific category, use Texture/General
+    if (normalizedTags.includes('materials') || normalizedTags.includes('texture')) {
+      const generalTexturePath = path.posix.join(baseFolder, 'Texture', 'General');
+      console.log('📁 Texture tag found but no specific category, using Texture/General:', generalTexturePath);
+      return generalTexturePath;
+    }
     
-    // Determine category subfolder
-    console.log('🔍 Looking for precedent category in:', normalizedTags);
+    // Step 3: Default to Precedent with category subfolder (first matching tag wins)
+    console.log('📂 Processing as Precedent (not Archier or Texture)');
+    const basePrecedentPath = path.posix.join(baseFolder, 'Precedent');
+    
+    // Find first matching precedent category in tag order
+    console.log('🔍 Looking for precedent categories in tag order:', normalizedTags);
     console.log('🔍 Available categories:', this.precedentCategories);
     
-    for (const category of this.precedentCategories) {
-      console.log(`🔍 Checking if tags include "${category.toLowerCase()}"`);
-      if (normalizedTags.includes(category.toLowerCase())) {
-        folderPath = path.posix.join(folderPath, this.toProperCase(category));
-        console.log('✅ Found category match:', category, '-> folder:', this.toProperCase(category));
-        console.log('📁 Precedents category folder:', this.toProperCase(category));
-        break;
+    for (const tag of normalizedTags) {
+      if (this.precedentCategories.includes(tag)) {
+        const categoryPath = path.posix.join(basePrecedentPath, this.toProperCase(tag));
+        console.log('✅ First matching precedent category:', tag, '-> folder:', categoryPath);
+        return categoryPath;
       }
     }
     
-    console.log('✅ Final folder path:', folderPath);
-    return folderPath;
+    // If no specific categories found, automatically use General
+    const generalPath = path.posix.join(basePrecedentPath, 'General');
+    console.log('📁 No specific precedent categories found, using automatic General folder:', generalPath);
+    return generalPath;
   }
 
   /**
@@ -308,20 +315,22 @@ class FolderPathService {
       paths.push(path.posix.join(projectPath, 'WIP'));
     }
     
-    // Precedents paths
-    const precedentsBase = path.posix.join(baseFolder, 'Precedents');
-    paths.push(precedentsBase);
+    // Precedent paths
+    const precedentBase = path.posix.join(baseFolder, 'Precedent');
+    paths.push(precedentBase);
+    paths.push(path.posix.join(precedentBase, 'General')); // Add General subfolder
     
     for (const category of this.precedentCategories) {
-      paths.push(path.posix.join(precedentsBase, this.toProperCase(category)));
+      paths.push(path.posix.join(precedentBase, this.toProperCase(category)));
     }
     
-    // Materials paths
-    const materialsBase = path.posix.join(baseFolder, 'Materials');
-    paths.push(materialsBase);
+    // Texture paths
+    const textureBase = path.posix.join(baseFolder, 'Texture');
+    paths.push(textureBase);
+    paths.push(path.posix.join(textureBase, 'General')); // Add General subfolder
     
     for (const material of this.materialCategories) {
-      paths.push(path.posix.join(materialsBase, this.toProperCase(material)));
+      paths.push(path.posix.join(textureBase, this.toProperCase(material)));
     }
     
     return paths;
