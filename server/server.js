@@ -2710,4 +2710,96 @@ app.post('/api/admin/fix-long-paths', async (req, res) => {
   }
 });
 
+// Fix old tag-based filenames
+app.post('/api/admin/fix-tag-filenames', async (req, res) => {
+  try {
+    console.log('🔄 Fixing old tag-based filenames...');
+    
+    // Fix materials -> texture in filenames and paths
+    const materialsResult = await databaseService.query(`
+      UPDATE images 
+      SET 
+        filename = REPLACE(filename, '-materials-', '-texture-'),
+        dropbox_path = REPLACE(dropbox_path, REPLACE(filename, '-materials-', '-texture-'), filename)
+      WHERE filename LIKE '%-materials-%'
+    `);
+    
+    // Fix precedents -> precedent in filenames and paths  
+    const precedentsResult = await databaseService.query(`
+      UPDATE images 
+      SET 
+        filename = REPLACE(filename, '-precedents-', '-precedent-'),
+        dropbox_path = REPLACE(dropbox_path, REPLACE(filename, '-precedents-', '-precedent-'), filename)
+      WHERE filename LIKE '%-precedents-%'
+    `);
+    
+    console.log(`✅ Fixed ${materialsResult.rowCount || 0} materials filenames`);
+    console.log(`✅ Fixed ${precedentsResult.rowCount || 0} precedents filenames`);
+    
+    // Get a sample of updated filenames
+    const sampleResult = await databaseService.query(`
+      SELECT filename, dropbox_path 
+      FROM images 
+      WHERE filename LIKE '%-texture-%' OR filename LIKE '%-precedent-%'
+      LIMIT 10
+    `);
+    
+    res.json({
+      success: true,
+      message: 'Tag-based filenames fixed successfully',
+      stats: {
+        materialsFixed: materialsResult.rowCount || 0,
+        precedentsFixed: precedentsResult.rowCount || 0,
+        sampleFilenames: sampleResult.rows
+      }
+    });
+  } catch (error) {
+    console.error('Error fixing tag filenames:', error);
+    res.status(500).json({ error: 'Failed to fix tag filenames' });
+  }
+});
+
+// Check and fix server Dropbox folder setting
+app.post('/api/admin/fix-server-settings', async (req, res) => {
+  try {
+    console.log('🔄 Checking server Dropbox folder settings...');
+    console.log('Current serverSettings.dropboxFolder:', serverSettings.dropboxFolder);
+    console.log('Current process.env.DROPBOX_FOLDER:', process.env.DROPBOX_FOLDER);
+    
+    // Update server settings to use simplified path
+    const oldSetting = serverSettings.dropboxFolder;
+    serverSettings.dropboxFolder = '/SnapTag';
+    
+    console.log('✅ Updated server Dropbox folder setting');
+    console.log('Old setting:', oldSetting);
+    console.log('New setting:', serverSettings.dropboxFolder);
+    
+    // Test generating a temporary link for verification
+    const testImage = await databaseService.query('SELECT * FROM images LIMIT 1');
+    let testUrl = null;
+    if (testImage.rows.length > 0) {
+      try {
+        testUrl = await dropboxService.getTemporaryLink(testImage.rows[0].dropbox_path);
+        console.log('✅ Test URL generation successful');
+      } catch (error) {
+        console.log('❌ Test URL generation failed:', error.message);
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: 'Server settings updated successfully',
+      settings: {
+        oldDropboxFolder: oldSetting,
+        newDropboxFolder: serverSettings.dropboxFolder,
+        testUrlGenerated: !!testUrl,
+        testPath: testImage.rows[0]?.dropbox_path
+      }
+    });
+  } catch (error) {
+    console.error('Error fixing server settings:', error);
+    res.status(500).json({ error: 'Failed to fix server settings' });
+  }
+});
+
 startServer(); 
