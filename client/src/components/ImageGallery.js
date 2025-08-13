@@ -1116,7 +1116,7 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
           <img
             src={imageUrl}
             alt={getDisplayName()}
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            className="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
             onError={handleImageError}
           />
         )}
