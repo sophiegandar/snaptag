@@ -2287,4 +2287,117 @@ app.post('/api/admin/re-embed-metadata', async (req, res) => {
   }
 });
 
+// Rename tag and update all associated images
+app.put('/api/tags/:tagId/rename', async (req, res) => {
+  try {
+    const { tagId } = req.params;
+    const { newName } = req.body;
+    
+    if (!newName || !newName.trim()) {
+      return res.status(400).json({ error: 'New tag name is required' });
+    }
+    
+    const trimmedNewName = newName.trim().toLowerCase();
+    console.log(`🏷️ Renaming tag ${tagId} to "${trimmedNewName}"`);
+    
+    // Get the current tag
+    const currentTagResult = await databaseService.query('SELECT * FROM tags WHERE id = $1', [tagId]);
+    if (currentTagResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Tag not found' });
+    }
+    
+    const currentTag = currentTagResult.rows[0];
+    const oldName = currentTag.name;
+    
+    console.log(`📝 Renaming "${oldName}" to "${trimmedNewName}"`);
+    
+    // Check if new tag name already exists
+    const existingTagResult = await databaseService.query('SELECT id FROM tags WHERE LOWER(name) = $1 AND id != $2', [trimmedNewName, tagId]);
+    if (existingTagResult.rows.length > 0) {
+      return res.status(409).json({ error: `Tag "${trimmedNewName}" already exists` });
+    }
+    
+    // Update the tag name
+    await databaseService.query('UPDATE tags SET name = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [trimmedNewName, tagId]);
+    
+    // Get all images that use this tag
+    const imagesWithTagResult = await databaseService.query(`
+      SELECT DISTINCT i.id, i.filename, i.dropbox_path,
+             STRING_AGG(DISTINCT t.name, ',') AS all_tags
+      FROM images i
+      JOIN image_tags it ON i.id = it.image_id
+      JOIN tags t ON it.tag_id = t.id
+      WHERE i.id IN (
+        SELECT DISTINCT i2.id 
+        FROM images i2 
+        JOIN image_tags it2 ON i2.id = it2.image_id 
+        WHERE it2.tag_id = $1
+      )
+      GROUP BY i.id, i.filename, i.dropbox_path
+    `, [tagId]);
+    
+    const affectedImages = imagesWithTagResult.rows;
+    console.log(`📊 Found ${affectedImages.length} images using this tag`);
+    
+    // Update metadata for each affected image
+    let metadataUpdatedCount = 0;
+    const metadataErrors = [];
+    
+    for (const image of affectedImages) {
+      try {
+        // Get updated tags list (replace old name with new name)
+        const currentTags = image.all_tags.split(',');
+        const updatedTags = currentTags.map(tag => tag === oldName ? trimmedNewName : tag);
+        
+        console.log(`📝 Updating metadata for ${image.filename}`);
+        
+        // Get focused tags for this image
+        const focusedTagsResult = await databaseService.query(`
+          SELECT tag_name, x_coordinate, y_coordinate, width, height
+          FROM focused_tags 
+          WHERE image_id = $1
+        `, [image.id]);
+        
+        const focusedTags = focusedTagsResult.rows;
+        
+        // Update file metadata in Dropbox
+        await metadataService.updateImageMetadata(image.dropbox_path, {
+          tags: updatedTags,
+          focusedTags: focusedTags,
+          title: image.filename,
+          description: `Tagged with: ${updatedTags.join(', ')}`
+        });
+        
+        metadataUpdatedCount++;
+        console.log(`✅ Updated metadata for ${image.filename}`);
+        
+      } catch (metadataError) {
+        console.error(`❌ Failed to update metadata for ${image.filename}:`, metadataError.message);
+        metadataErrors.push(`${image.filename}: ${metadataError.message}`);
+      }
+    }
+    
+    const message = `Tag renamed from "${oldName}" to "${trimmedNewName}"`;
+    console.log(`✅ ${message}`);
+    console.log(`📊 Updated metadata for ${metadataUpdatedCount}/${affectedImages.length} images`);
+    
+    res.json({
+      success: true,
+      message,
+      stats: {
+        oldName,
+        newName: trimmedNewName,
+        affectedImages: affectedImages.length,
+        metadataUpdated: metadataUpdatedCount,
+        metadataErrors: metadataErrors.length,
+        metadataErrorDetails: metadataErrors
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Tag rename error:', error);
+    res.status(500).json({ error: 'Tag rename failed: ' + error.message });
+  }
+});
+
 startServer(); 

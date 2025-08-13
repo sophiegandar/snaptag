@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { fabric } from 'fabric';
-import { Save, Tag, X, ArrowLeft, Trash2, Edit3 } from 'lucide-react';
+import { Save, Tag, X, ArrowLeft, Trash2, Edit3, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 const ImageEditor = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const canvasRef = useRef(null);
   const fabricCanvasRef = useRef(null);
   const fallbackTimeoutRef = useRef(null);
@@ -27,12 +28,26 @@ const ImageEditor = () => {
   const [dragging, setDragging] = useState(false);
   const [editingTagName, setEditingTagName] = useState(null);
   const [editingTagText, setEditingTagText] = useState('');
+  
+  // Navigation state
+  const [navigationContext, setNavigationContext] = useState(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [originalTags, setOriginalTags] = useState([]);
+  const [originalFocusedTags, setOriginalFocusedTags] = useState([]);
 
   useEffect(() => {
     if (id) {
       loadImage();
+      loadNavigationContext();
     }
   }, [id]);
+
+  // Check for unsaved changes
+  useEffect(() => {
+    const tagsChanged = JSON.stringify(tags.sort()) !== JSON.stringify(originalTags.sort());
+    const focusedTagsChanged = JSON.stringify(focusedTags) !== JSON.stringify(originalFocusedTags);
+    setHasUnsavedChanges(tagsChanged || focusedTagsChanged);
+  }, [tags, focusedTags, originalTags, originalFocusedTags]);
 
   useEffect(() => {
     // Start with fallback mode immediately if we detect potential issues

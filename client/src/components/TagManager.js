@@ -69,18 +69,58 @@ const TagManager = () => {
   };
 
   const updateTag = async (tagId, newName) => {
+    if (!newName.trim()) return;
+    
+    const oldTag = tags.find(tag => tag.id === tagId);
+    if (!oldTag) return;
+    
+    const oldName = oldTag.name;
+    const trimmedNewName = newName.trim();
+    
+    // Don't do anything if the name hasn't changed
+    if (oldName === trimmedNewName) {
+      setEditingTag(null);
+      setEditValue('');
+      return;
+    }
+    
     try {
-      // Update locally for now
+      setLoading(true);
+      
+      const response = await apiCall(`/api/tags/${tagId}/rename`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newName: trimmedNewName })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to rename tag');
+      }
+      
+      const result = await response.json();
+      
+      // Update the tag locally
       setTags(prev => prev.map(tag => 
-        tag.id === tagId ? { ...tag, name: newName.trim() } : tag
+        tag.id === tagId ? { ...tag, name: trimmedNewName } : tag
       ));
       
       setEditingTag(null);
       setEditValue('');
-      toast.success('Tag updated successfully');
+      
+      // Show success message with stats
+      toast.success(`Tag renamed successfully! Updated ${result.stats.affectedImages} images.`);
+      
+      if (result.stats.metadataErrors > 0) {
+        toast.warning(`${result.stats.metadataErrors} images had metadata update errors (check console)`);
+        console.warn('Metadata update errors:', result.stats.metadataErrorDetails);
+      }
+      
     } catch (error) {
       console.error('Error updating tag:', error);
-      toast.error('Failed to update tag');
+      toast.error(`Failed to rename tag: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
