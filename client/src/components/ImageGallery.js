@@ -954,6 +954,7 @@ const ImageGallery = () => {
 const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, onSelect }) => {
   const [imageUrl, setImageUrl] = useState('');
   const [imageError, setImageError] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
     // Reset error state when image changes
@@ -966,6 +967,49 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
     setImageError(true);
     // Don't retry automatically to prevent infinite reload loops
     // The user can refresh the page manually if needed
+  };
+
+  // Helper functions to extract metadata
+  const getImageType = () => {
+    const tags = image.tags || [];
+    if (tags.includes('archier')) return 'Archier';
+    if (tags.some(tag => ['materials', 'texture', 'metal', 'wood', 'stone', 'concrete', 'brick', 'tile', 'fabric', 'carpet'].includes(tag.toLowerCase()))) return 'Texture';
+    return 'Precedent';
+  };
+
+  const getProject = () => {
+    const tags = image.tags || [];
+    if (!tags.includes('archier')) return null;
+    
+    const projects = ['yandoit', 'ballarat', 'melbourne', 'geelong', 'bendigo'];
+    const projectTag = tags.find(tag => projects.includes(tag.toLowerCase()));
+    return projectTag ? projectTag.charAt(0).toUpperCase() + projectTag.slice(1) : null;
+  };
+
+  const getCategory = () => {
+    const tags = image.tags || [];
+    const type = getImageType();
+    
+    if (type === 'Archier') {
+      const archierCategories = ['complete', 'wip'];
+      const categoryTag = tags.find(tag => archierCategories.includes(tag.toLowerCase()));
+      return categoryTag ? categoryTag.charAt(0).toUpperCase() + categoryTag.slice(1) : 'Complete';
+    }
+    
+    if (type === 'Texture') {
+      const materialCategories = ['brick', 'carpet', 'concrete', 'fabric', 'general', 'landscape', 'metal', 'stone', 'tile', 'wood'];
+      const categoryTag = tags.find(tag => materialCategories.includes(tag.toLowerCase()));
+      return categoryTag ? categoryTag.charAt(0).toUpperCase() + categoryTag.slice(1) : 'General';
+    }
+    
+    // Precedent categories
+    const precedentCategories = ['art', 'bathrooms', 'details', 'doors', 'exteriors', 'furniture', 'general', 'interiors', 'joinery', 'kitchens', 'landscape', 'lighting', 'spatial', 'stairs', 'structure'];
+    const categoryTag = tags.find(tag => precedentCategories.includes(tag.toLowerCase()));
+    return categoryTag ? categoryTag.charAt(0).toUpperCase() + categoryTag.slice(1) : 'General';
+  };
+
+  const getName = () => {
+    return image.name || image.title || image.filename?.replace(/\.(jpg|jpeg|png|gif|webp)$/i, '') || 'Untitled';
   };
 
   if (viewMode === 'list') {
@@ -1036,43 +1080,78 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
     );
   }
 
+  // Architextures.org-style grid card
   return (
-    <div className={`image-card relative group ${isSelected ? 'ring-2 ring-blue-500' : ''}`}>
-      {/* Selection Checkbox */}
-      <div className="absolute top-2 left-2 z-10">
+    <div 
+      className={`relative group cursor-pointer transition-all duration-200 ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onClick={() => onEdit(image.id)}
+    >
+      {/* Selection Checkbox - only visible on hover or when selected */}
+      <div className={`absolute top-3 left-3 z-20 transition-opacity duration-200 ${isHovered || isSelected ? 'opacity-100' : 'opacity-0'}`}>
         <input
           type="checkbox"
           checked={isSelected}
           onChange={onSelect}
-          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded bg-white shadow"
+          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded bg-white shadow-lg"
           onClick={(e) => e.stopPropagation()}
         />
       </div>
-      <div className="relative">
+
+      {/* Image Container - Fixed aspect ratio like architextures.org */}
+      <div className="relative aspect-square bg-gray-100 overflow-hidden">
         {imageError ? (
-          <div className="w-full h-48 bg-gray-200 flex items-center justify-center cursor-pointer" onClick={() => onEdit(image.id)}>
-            <div className="text-center text-gray-500">
-              <div className="text-2xl mb-2">🖼️</div>
-              <div className="text-sm">Image not available</div>
-              <div className="text-xs mt-1">{image.filename}</div>
+          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+            <div className="text-center text-gray-400">
+              <div className="text-3xl mb-2">🖼️</div>
+              <div className="text-sm font-medium">Image not available</div>
             </div>
           </div>
         ) : (
           <img
             src={imageUrl}
-            alt={image.title || image.filename}
-            className="w-full h-48 object-cover cursor-pointer"
-            onClick={() => onEdit(image.id)}
+            alt={getName()}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             onError={handleImageError}
           />
         )}
-        <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+
+        {/* Hover Overlay with Type, Project, Category, Name */}
+        <div className={`absolute inset-0 bg-black bg-opacity-70 transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'} flex flex-col justify-end p-4`}>
+          <div className="text-white">
+            {/* Type */}
+            <div className="text-xs font-semibold text-blue-300 uppercase tracking-wide mb-1">
+              {getImageType()}
+            </div>
+            
+            {/* Project (only for Archier) */}
+            {getProject() && (
+              <div className="text-xs text-gray-300 mb-1">
+                <span className="font-medium">Project:</span> {getProject()}
+              </div>
+            )}
+            
+            {/* Category */}
+            <div className="text-xs text-gray-300 mb-2">
+              <span className="font-medium">Category:</span> {getCategory()}
+            </div>
+            
+            {/* Name */}
+            <div className="text-sm font-medium text-white truncate">
+              {getName()}
+            </div>
+          </div>
+        </div>
+
+        {/* Action buttons - only visible on hover */}
+        <div className={`absolute top-3 right-3 flex gap-2 transition-opacity duration-200 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
           <button
             onClick={(e) => {
               e.stopPropagation();
               onEdit(image.id);
             }}
-            className="p-1 bg-white rounded-full shadow-md text-gray-600 hover:text-blue-600"
+            className="p-2 bg-white bg-opacity-90 rounded-full shadow-lg text-gray-600 hover:text-blue-600 hover:bg-white transition-colors"
             title="Edit image"
           >
             <Edit className="h-4 w-4" />
@@ -1080,38 +1159,14 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onDelete(image.id, image.title || image.filename);
+              onDelete(image.id, getName());
             }}
-            className="p-1 bg-white rounded-full shadow-md text-gray-600 hover:text-red-600"
+            className="p-2 bg-white bg-opacity-90 rounded-full shadow-lg text-gray-600 hover:text-red-600 hover:bg-white transition-colors"
             title="Delete image"
           >
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
-      </div>
-      <div className="p-4">
-        <h3 className="font-semibold text-gray-900 mb-2">
-          {image.title || image.filename}
-        </h3>
-        {image.description && (
-          <p className="text-gray-600 text-sm mb-2 line-clamp-2">
-            {image.description}
-          </p>
-        )}
-        <div className="flex flex-wrap gap-1 mb-2">
-          {image.tags?.map(tag => (
-            <span
-              key={tag}
-              onClick={() => onTagClick(tag)}
-              className="tag-item cursor-pointer hover:bg-blue-200"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
-        <p className="text-gray-500 text-xs">
-          {new Date(image.upload_date).toLocaleDateString()}
-        </p>
       </div>
     </div>
   );

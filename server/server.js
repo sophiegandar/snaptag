@@ -2483,6 +2483,33 @@ app.post('/api/admin/fix-dropbox-paths', async (req, res) => {
   }
 });
 
+// Add name column to images table if it doesn't exist
+app.post('/api/admin/add-name-column', async (req, res) => {
+  try {
+    console.log('🔧 Adding name column to images table...');
+    
+    // Check if column exists
+    const checkResult = await databaseService.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'images' AND column_name = 'name'
+    `);
+    
+    if (checkResult.rows.length === 0) {
+      // Add the column
+      await databaseService.query('ALTER TABLE images ADD COLUMN name TEXT');
+      console.log('✅ Added name column to images table');
+      res.json({ success: true, message: 'Name column added successfully' });
+    } else {
+      console.log('✅ Name column already exists');
+      res.json({ success: true, message: 'Name column already exists' });
+    }
+    
+  } catch (error) {
+    console.error('❌ Error adding name column:', error);
+    res.status(500).json({ error: 'Failed to add name column: ' + error.message });
+  }
+});
 
 // Professional Workflow API Endpoints
 app.post('/api/workflow/batch-analyze', async (req, res) => {
