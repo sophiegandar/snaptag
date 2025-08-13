@@ -2802,4 +2802,128 @@ app.post('/api/admin/fix-server-settings', async (req, res) => {
   }
 });
 
+// Verify which files exist in Dropbox vs database
+app.post('/api/admin/verify-dropbox-files', async (req, res) => {
+  try {
+    console.log('🔍 Verifying which files exist in Dropbox...');
+    
+    // Get all images from database
+    const allImages = await databaseService.query('SELECT id, filename, dropbox_path FROM images ORDER BY id');
+    
+    const results = {
+      total: allImages.rows.length,
+      existing: [],
+      missing: [],
+      errors: []
+    };
+    
+    // Check each file in Dropbox (limit to first 10 for testing)
+    for (const image of allImages.rows.slice(0, 10)) {
+      try {
+        console.log(`Checking: ${image.dropbox_path}`);
+        
+        // Try to get file metadata from Dropbox
+        await dropboxService.dbx.filesGetMetadata({ path: image.dropbox_path });
+        const fileExists = true;
+        
+        if (fileExists) {
+          results.existing.push({
+            id: image.id,
+            filename: image.filename,
+            path: image.dropbox_path,
+            status: 'exists'
+          });
+        } else {
+          results.missing.push({
+            id: image.id,
+            filename: image.filename,
+            path: image.dropbox_path,
+            status: 'missing'
+          });
+        }
+      } catch (error) {
+        results.errors.push({
+          id: image.id,
+          filename: image.filename,
+          path: image.dropbox_path,
+          error: error.message
+        });
+      }
+    }
+    
+    console.log(`✅ Verification complete: ${results.existing.length} exist, ${results.missing.length} missing, ${results.errors.length} errors`);
+    
+    res.json({
+      success: true,
+      message: 'Dropbox file verification complete',
+      results
+    });
+  } catch (error) {
+    console.error('Error verifying Dropbox files:', error);
+    res.status(500).json({ error: 'Failed to verify Dropbox files' });
+  }
+});
+
+// Revert server setting to correct Dropbox path
+app.post('/api/admin/revert-server-settings', async (req, res) => {
+  try {
+    console.log('🔄 Reverting server Dropbox folder setting to correct path...');
+    
+    const oldSetting = serverSettings.dropboxFolder;
+    serverSettings.dropboxFolder = '/ARCHIER Team Folder/Support/Production/SnapTag';
+    
+    console.log('✅ Reverted server Dropbox folder setting');
+    console.log('Previous (incorrect) setting:', oldSetting);
+    console.log('Correct setting:', serverSettings.dropboxFolder);
+    
+    res.json({
+      success: true,
+      message: 'Server settings reverted to correct path',
+      settings: {
+        previousSetting: oldSetting,
+        correctSetting: serverSettings.dropboxFolder
+      }
+    });
+  } catch (error) {
+    console.error('Error reverting server settings:', error);
+    res.status(500).json({ error: 'Failed to revert server settings' });
+  }
+});
+
+// Revert database paths to match actual Dropbox structure
+app.post('/api/admin/revert-database-paths', async (req, res) => {
+  try {
+    console.log('🔄 Reverting database paths to match actual Dropbox structure...');
+    
+    // Revert paths from simplified format back to long format
+    const updateResult = await databaseService.query(`
+      UPDATE images 
+      SET dropbox_path = REPLACE(dropbox_path, '/SnapTag/', '/ARCHIER Team Folder/Support/Production/SnapTag/')
+      WHERE dropbox_path LIKE '/SnapTag/%'
+    `);
+    
+    console.log(`✅ Reverted ${updateResult.rowCount || 0} image paths`);
+    
+    // Get a sample of reverted paths for verification
+    const sampleResult = await databaseService.query(`
+      SELECT filename, dropbox_path 
+      FROM images 
+      WHERE dropbox_path LIKE '/ARCHIER Team Folder/Support/Production/SnapTag/%' 
+      LIMIT 10
+    `);
+    
+    res.json({
+      success: true,
+      message: 'Database paths reverted to match Dropbox structure',
+      stats: {
+        pathsReverted: updateResult.rowCount || 0,
+        samplePaths: sampleResult.rows
+      }
+    });
+  } catch (error) {
+    console.error('Error reverting database paths:', error);
+    res.status(500).json({ error: 'Failed to revert database paths' });
+  }
+});
+
 startServer(); 
