@@ -30,11 +30,7 @@ const ProfessionalWorkflow = () => {
 
   const loadImages = async () => {
     try {
-      const response = await fetch('/api/images/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
-      });
+      const response = await fetch('/api/images');
       const data = await response.json();
       setImages(data);
     } catch (error) {
@@ -221,7 +217,7 @@ const ProfessionalWorkflow = () => {
             className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center space-x-2"
           >
             {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-            <span>Analyze {selectedImages.length > 0 ? `${selectedImages.length} Selected` : 'All Images'}</span>
+            <span>Analyse {selectedImages.length > 0 ? `${selectedImages.length} Selected` : 'All Images'}</span>
           </button>
 
           <div className="flex space-x-2">
@@ -240,7 +236,7 @@ const ProfessionalWorkflow = () => {
           </div>
 
           <div className="text-sm text-gray-600">
-            {selectedImages.length > 0 ? `${selectedImages.length} images selected` : 'No selection - will analyze all images'}
+            {selectedImages.length > 0 ? `${selectedImages.length} images selected` : 'No selection - will analyse all images'}
           </div>
         </div>
       </div>

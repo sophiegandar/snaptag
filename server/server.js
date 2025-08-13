@@ -2483,4 +2483,151 @@ app.post('/api/admin/fix-dropbox-paths', async (req, res) => {
   }
 });
 
+// Professional Workflow API Endpoints
+app.post('/api/workflow/batch-analyze', async (req, res) => {
+  try {
+    const { workflow = 'both', imageIds } = req.body;
+    
+    console.log(`🔬 Starting batch workflow analysis: ${workflow}`);
+    
+    // Get images to analyze
+    let images;
+    if (imageIds && imageIds.length > 0) {
+      // Analyze specific images
+      const placeholders = imageIds.map((_, index) => `$${index + 1}`).join(',');
+      const result = await databaseService.query(`
+        SELECT * FROM images WHERE id IN (${placeholders})
+      `, imageIds);
+      images = result.rows;
+    } else {
+      // Analyze all images
+      const result = await databaseService.query('SELECT * FROM images ORDER BY created_at DESC');
+      images = result.rows;
+    }
+    
+    console.log(`📊 Analyzing ${images.length} images for ${workflow} workflow`);
+    
+    const analysis = {
+      readyForInDesign: 0,
+      readyForArchiCAD: 0,
+      needsOptimization: 0,
+      issues: []
+    };
+    
+    for (const image of images) {
+      // Mock analysis logic - in a real implementation, you'd analyze file properties
+      const isHighRes = image.file_size > 500000; // > 500KB
+      const hasProperExtension = image.filename?.toLowerCase().match(/\.(jpg|jpeg|png|tiff|tif)$/);
+      
+      if (workflow === 'indesign' || workflow === 'both') {
+        if (isHighRes && hasProperExtension) {
+          analysis.readyForInDesign++;
+        } else {
+          analysis.needsOptimization++;
+          analysis.issues.push({
+            imageId: image.id,
+            filename: image.filename,
+            issue: isHighRes ? 'Low resolution for print' : 'Unsupported format for InDesign'
+          });
+        }
+      }
+      
+      if (workflow === 'archicad' || workflow === 'both') {
+        if (hasProperExtension) {
+          analysis.readyForArchiCAD++;
+        } else {
+          analysis.needsOptimization++;
+          analysis.issues.push({
+            imageId: image.id,
+            filename: image.filename,
+            issue: 'Unsupported format for ArchiCAD'
+          });
+        }
+      }
+    }
+    
+    const report = {
+      success: true,
+      workflow,
+      summary: {
+        totalAnalyzed: images.length,
+        timestamp: new Date().toISOString()
+      },
+      report: analysis
+    };
+    
+    console.log(`✅ Batch analysis complete: ${analysis.readyForInDesign} InDesign ready, ${analysis.readyForArchiCAD} ArchiCAD ready`);
+    
+    res.json(report);
+    
+  } catch (error) {
+    console.error('❌ Batch workflow analysis error:', error);
+    res.status(500).json({ error: 'Batch analysis failed: ' + error.message });
+  }
+});
+
+app.post('/api/workflow/analyze-indesign/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await databaseService.query('SELECT * FROM images WHERE id = $1', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+    
+    const image = result.rows[0];
+    
+    // Mock InDesign analysis
+    const analysis = {
+      workflow: 'indesign',
+      imageId: id,
+      filename: image.filename,
+      ready: image.file_size > 500000 && image.filename?.toLowerCase().match(/\.(jpg|jpeg|tiff|tif)$/),
+      recommendations: [
+        'Ensure 300 DPI for print quality',
+        'Convert to CMYK color space',
+        'Use TIFF format for best quality'
+      ]
+    };
+    
+    res.json(analysis);
+    
+  } catch (error) {
+    console.error('❌ InDesign analysis error:', error);
+    res.status(500).json({ error: 'InDesign analysis failed: ' + error.message });
+  }
+});
+
+app.post('/api/workflow/analyze-archicad/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await databaseService.query('SELECT * FROM images WHERE id = $1', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+    
+    const image = result.rows[0];
+    
+    // Mock ArchiCAD analysis
+    const analysis = {
+      workflow: 'archicad',
+      imageId: id,
+      filename: image.filename,
+      ready: image.filename?.toLowerCase().match(/\.(jpg|jpeg|png)$/),
+      recommendations: [
+        'Keep dimensions under 2048px',
+        'Use power-of-2 sizing when possible',
+        'Optimize file size for 3D performance'
+      ]
+    };
+    
+    res.json(analysis);
+    
+  } catch (error) {
+    console.error('❌ ArchiCAD analysis error:', error);
+    res.status(500).json({ error: 'ArchiCAD analysis failed: ' + error.message });
+  }
+});
+
 startServer(); 
