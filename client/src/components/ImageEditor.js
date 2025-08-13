@@ -41,8 +41,49 @@ const ImageEditor = () => {
   useEffect(() => {
     if (id) {
       loadImage();
+      loadNavigationContext();
     }
   }, [id]);
+
+  const loadNavigationContext = useCallback(async () => {
+    try {
+      // Get current search/filter context from URL params or localStorage
+      const urlParams = new URLSearchParams(location.search);
+      const searchTerm = urlParams.get('search') || '';
+      const filterTags = urlParams.get('tags') ? urlParams.get('tags').split(',') : [];
+      
+      // Fetch all images with the same filter context
+      const queryParams = new URLSearchParams();
+      if (searchTerm) queryParams.append('search', searchTerm);
+      if (filterTags.length > 0) queryParams.append('tags', filterTags.join(','));
+      
+      const response = await fetch(`/api/images/search?${queryParams.toString()}`);
+      if (!response.ok) throw new Error('Failed to load navigation context');
+      
+      const images = await response.json();
+      const currentIndex = images.findIndex(img => img.id === parseInt(id));
+      
+      setNavigationContext({
+        images,
+        currentIndex,
+        searchTerm,
+        filterTags,
+        hasNext: currentIndex < images.length - 1,
+        hasPrevious: currentIndex > 0
+      });
+    } catch (error) {
+      console.error('Error loading navigation context:', error);
+      // Set minimal context if loading fails
+      setNavigationContext({
+        images: [],
+        currentIndex: -1,
+        searchTerm: '',
+        filterTags: [],
+        hasNext: false,
+        hasPrevious: false
+      });
+    }
+  }, [id, location.search]);
 
   // Check for unsaved changes
   useEffect(() => {
@@ -50,6 +91,28 @@ const ImageEditor = () => {
     const focusedTagsChanged = JSON.stringify(focusedTags) !== JSON.stringify(originalFocusedTags);
     setHasUnsavedChanges(tagsChanged || focusedTagsChanged);
   }, [tags, focusedTags, originalTags, originalFocusedTags]);
+
+  const navigateToNext = () => {
+    if (!navigationContext || !navigationContext.hasNext) return;
+    
+    const nextImage = navigationContext.images[navigationContext.currentIndex + 1];
+    if (nextImage) {
+      // Preserve search/filter context in URL
+      const urlParams = new URLSearchParams(location.search);
+      navigate(`/image/${nextImage.id}?${urlParams.toString()}`);
+    }
+  };
+
+  const navigateToPrevious = () => {
+    if (!navigationContext || !navigationContext.hasPrevious) return;
+    
+    const previousImage = navigationContext.images[navigationContext.currentIndex - 1];
+    if (previousImage) {
+      // Preserve search/filter context in URL
+      const urlParams = new URLSearchParams(location.search);
+      navigate(`/image/${previousImage.id}?${urlParams.toString()}`);
+    }
+  };
 
   useEffect(() => {
     // Start with fallback mode immediately if we detect potential issues
@@ -572,8 +635,12 @@ const ImageEditor = () => {
 
       if (!response.ok) throw new Error('Failed to save changes');
       
+      // Update original values to reflect saved state
+      setOriginalTags([...tags]);
+      setOriginalFocusedTags([...focusedTags]);
+      
       toast.success('Changes saved successfully');
-      navigate('/');
+      // Stay on editor page instead of navigating away
     } catch (error) {
       console.error('🔧 DEBUG: Error in saveChanges:', error);
       console.error('Error saving changes:', error);
@@ -646,13 +713,48 @@ const ImageEditor = () => {
           </div>
         </div>
         
-        <button
-          onClick={saveChanges}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-        >
-          <Save className="h-4 w-4" />
-          Save Changes
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Navigation buttons */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={navigateToPrevious}
+              disabled={!navigationContext?.hasPrevious}
+              className="p-2 text-gray-600 hover:text-gray-800 disabled:text-gray-300 disabled:cursor-not-allowed"
+              title="Previous image"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            
+            {navigationContext && (
+              <span className="text-sm text-gray-500 px-2">
+                {navigationContext.currentIndex + 1} of {navigationContext.images.length}
+              </span>
+            )}
+            
+            <button
+              onClick={navigateToNext}
+              disabled={!navigationContext?.hasNext}
+              className="p-2 text-gray-600 hover:text-gray-800 disabled:text-gray-300 disabled:cursor-not-allowed"
+              title="Next image"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+          
+          {/* Save button - greyed out when no changes */}
+          <button
+            onClick={saveChanges}
+            disabled={!hasUnsavedChanges}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
+              hasUnsavedChanges 
+                ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            <Save className="h-4 w-4" />
+            Save Changes
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

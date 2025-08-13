@@ -2926,4 +2926,79 @@ app.post('/api/admin/revert-database-paths', async (req, res) => {
   }
 });
 
+// Migrate misplaced images to correct folders using fixed logic
+app.post('/api/admin/migrate-misplaced-images', async (req, res) => {
+  try {
+    console.log('🔄 Migrating misplaced images using corrected folder logic...');
+    
+    // Get all images from database
+    const allImages = await databaseService.query('SELECT id, filename, dropbox_path, tags FROM images ORDER BY id');
+    
+    const results = {
+      total: allImages.rows.length,
+      toMigrate: [],
+      errors: [],
+      skipped: []
+    };
+    
+    for (const image of allImages.rows) {
+      try {
+        // Parse tags from database
+        const tags = image.tags || [];
+        console.log(`\n📋 Processing ${image.filename} with tags:`, tags);
+        
+        // Generate correct folder path using fixed logic
+        const baseFolder = serverSettings.dropboxFolder || '/ARCHIER Team Folder/Support/Production/SnapTag';
+        const correctPath = folderPathService.generateFolderPath(tags, baseFolder);
+        const correctFullPath = `${correctPath}/${image.filename}`;
+        
+        console.log(`   Current path: ${image.dropbox_path}`);
+        console.log(`   Correct path: ${correctFullPath}`);
+        
+        // Check if image needs to be moved
+        if (image.dropbox_path !== correctFullPath) {
+          console.log(`   ✅ NEEDS MIGRATION: ${image.filename}`);
+          results.toMigrate.push({
+            id: image.id,
+            filename: image.filename,
+            tags: tags,
+            currentPath: image.dropbox_path,
+            correctPath: correctFullPath,
+            reason: 'Path mismatch with corrected folder logic'
+          });
+        } else {
+          console.log(`   ✓ Already in correct location`);
+          results.skipped.push({
+            id: image.id,
+            filename: image.filename,
+            reason: 'Already in correct location'
+          });
+        }
+      } catch (error) {
+        console.error(`   ❌ Error processing ${image.filename}:`, error);
+        results.errors.push({
+          id: image.id,
+          filename: image.filename,
+          error: error.message
+        });
+      }
+    }
+    
+    console.log(`\n📊 Migration analysis complete:`);
+    console.log(`   Total images: ${results.total}`);
+    console.log(`   Need migration: ${results.toMigrate.length}`);
+    console.log(`   Already correct: ${results.skipped.length}`);
+    console.log(`   Errors: ${results.errors.length}`);
+    
+    res.json({
+      success: true,
+      message: 'Migration analysis complete',
+      results
+    });
+  } catch (error) {
+    console.error('Error analyzing misplaced images:', error);
+    res.status(500).json({ error: 'Failed to analyze misplaced images' });
+  }
+});
+
 startServer(); 
