@@ -2931,8 +2931,16 @@ app.post('/api/admin/migrate-misplaced-images', async (req, res) => {
   try {
     console.log('🔄 Migrating misplaced images using corrected folder logic...');
     
-    // Get all images from database
-    const allImages = await databaseService.query('SELECT id, filename, dropbox_path, tags FROM images ORDER BY id');
+    // Get all images with their tags from database
+    const allImages = await databaseService.query(`
+      SELECT i.id, i.filename, i.dropbox_path, 
+             COALESCE(array_agg(DISTINCT t.name) FILTER (WHERE t.name IS NOT NULL), ARRAY[]::text[]) as tags
+      FROM images i
+      LEFT JOIN image_tags it ON i.id = it.image_id
+      LEFT JOIN tags t ON it.tag_id = t.id
+      GROUP BY i.id, i.filename, i.dropbox_path
+      ORDER BY i.id
+    `);
     
     const results = {
       total: allImages.rows.length,
@@ -2943,7 +2951,7 @@ app.post('/api/admin/migrate-misplaced-images', async (req, res) => {
     
     for (const image of allImages.rows) {
       try {
-        // Parse tags from database
+        // Get tags array
         const tags = image.tags || [];
         console.log(`\n📋 Processing ${image.filename} with tags:`, tags);
         
@@ -2997,7 +3005,7 @@ app.post('/api/admin/migrate-misplaced-images', async (req, res) => {
     });
   } catch (error) {
     console.error('Error analyzing misplaced images:', error);
-    res.status(500).json({ error: 'Failed to analyze misplaced images' });
+    res.status(500).json({ error: 'Failed to analyze misplaced images', details: error.message });
   }
 });
 
