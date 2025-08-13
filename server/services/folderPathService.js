@@ -96,23 +96,26 @@ class FolderPathService {
       return folderPath;
     }
     
-    // Step 2: Check for Texture category (first matching tag wins)
-    for (const tag of normalizedTags) {
-      if (this.materialCategories.includes(tag)) {
-        const folderPath = path.posix.join(baseFolder, 'Texture', this.toProperCase(tag));
-        console.log('✅ First matching texture category:', tag, '-> folder:', folderPath);
-        return folderPath;
+    // Step 2: Check for Texture category (ONLY if "texture" tag exists)
+    if (normalizedTags.includes('texture')) {
+      console.log('🏷️ Texture tag found, looking for material categories');
+      
+      // Look for specific material category
+      for (const tag of normalizedTags) {
+        if (this.materialCategories.includes(tag)) {
+          const folderPath = path.posix.join(baseFolder, 'Texture', this.toProperCase(tag));
+          console.log('✅ Texture with material category:', tag, '-> folder:', folderPath);
+          return folderPath;
+        }
       }
-    }
-    
-    // If materials/texture tag found but no specific category, use Texture/General
-    if (normalizedTags.includes('materials') || normalizedTags.includes('texture')) {
+      
+      // Texture tag but no specific material category, use Texture/General
       const generalTexturePath = path.posix.join(baseFolder, 'Texture', 'General');
-      console.log('📁 Texture tag found but no specific category, using Texture/General:', generalTexturePath);
+      console.log('📁 Texture tag found but no specific material category, using Texture/General:', generalTexturePath);
       return generalTexturePath;
     }
     
-    // Step 3: Default to Precedent with category subfolder (first matching tag wins)
+    // Step 3: Check for Precedent category (explicit precedent tag OR default fallback)
     console.log('📂 Processing as Precedent (not Archier or Texture)');
     const basePrecedentPath = path.posix.join(baseFolder, 'Precedent');
     
@@ -128,9 +131,9 @@ class FolderPathService {
       }
     }
     
-    // If no specific categories found, automatically use General
+    // If no specific categories found, automatically use Precedent/General
     const generalPath = path.posix.join(basePrecedentPath, 'General');
-    console.log('📁 No specific precedent categories found, using automatic General folder:', generalPath);
+    console.log('📁 No specific precedent categories found, using automatic Precedent/General folder:', generalPath);
     return generalPath;
   }
 
