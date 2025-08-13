@@ -38,7 +38,6 @@ const ImageEditor = () => {
   useEffect(() => {
     if (id) {
       loadImage();
-      loadNavigationContext();
     }
   }, [id]);
 
