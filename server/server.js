@@ -2407,4 +2407,68 @@ app.put('/api/tags/:tagId/rename', async (req, res) => {
   }
 });
 
+// Fix Dropbox paths after manual folder rename
+app.post('/api/admin/fix-dropbox-paths', async (req, res) => {
+  try {
+    console.log('🔄 Starting Dropbox path updates...');
+    
+    // Update Precedents -> Precedent
+    const precedentsResult = await databaseService.query(`
+      UPDATE images 
+      SET dropbox_path = REPLACE(dropbox_path, '/SnapTag/Precedents/', '/SnapTag/Precedent/')
+      WHERE dropbox_path LIKE '%/SnapTag/Precedents/%'
+    `);
+    
+    console.log(`✅ Updated ${precedentsResult.rowCount} files: Precedents → Precedent`);
+    
+    // Update Materials -> Texture
+    const materialsResult = await databaseService.query(`
+      UPDATE images 
+      SET dropbox_path = REPLACE(dropbox_path, '/SnapTag/Materials/', '/SnapTag/Texture/')
+      WHERE dropbox_path LIKE '%/SnapTag/Materials/%'
+    `);
+    
+    console.log(`✅ Updated ${materialsResult.rowCount} files: Materials → Texture`);
+    
+    // Fix missing file extensions (add .jpg to files ending with just a dot)
+    const extensionResult = await databaseService.query(`
+      UPDATE images 
+      SET 
+        dropbox_path = REPLACE(dropbox_path, filename, filename || '.jpg'),
+        filename = filename || '.jpg'
+      WHERE filename LIKE '%.'
+    `);
+    
+    console.log(`✅ Fixed ${extensionResult.rowCount} files with missing extensions`);
+    
+    // Get some examples of updated paths
+    const sampleResult = await databaseService.query(`
+      SELECT filename, dropbox_path 
+      FROM images 
+      WHERE dropbox_path LIKE '%/SnapTag/Precedent/%' OR dropbox_path LIKE '%/SnapTag/Texture/%'
+      LIMIT 5
+    `);
+    
+    console.log('📋 Sample updated paths:');
+    sampleResult.rows.forEach(row => {
+      console.log(`  ${row.filename} → ${row.dropbox_path}`);
+    });
+    
+    res.json({
+      success: true,
+      message: 'Dropbox paths updated successfully',
+      stats: {
+        precedentsUpdated: precedentsResult.rowCount || 0,
+        materialsUpdated: materialsResult.rowCount || 0,
+        extensionsFixed: extensionResult.rowCount || 0,
+        samplePaths: sampleResult.rows
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error updating Dropbox paths:', error);
+    res.status(500).json({ error: 'Failed to update Dropbox paths: ' + error.message });
+  }
+});
+
 startServer(); 
