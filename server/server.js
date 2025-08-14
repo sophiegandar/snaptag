@@ -3009,4 +3009,95 @@ app.post('/api/admin/migrate-misplaced-images', async (req, res) => {
   }
 });
 
+// Fix specific misplaced precedent+metal images
+app.post('/api/admin/fix-precedent-metal-images', async (req, res) => {
+  try {
+    console.log('🔄 Fixing precedent+metal images misplaced in Texture/Metal...');
+    
+    // Find images that are tagged with both 'precedent' and 'metal' but NO 'texture' tag
+    const misplacedImages = await databaseService.query(`
+      SELECT DISTINCT i.id, i.filename, i.dropbox_path,
+             array_agg(DISTINCT t.name) as tags
+      FROM images i
+      JOIN image_tags it ON i.id = it.image_id
+      JOIN tags t ON it.tag_id = t.id
+      WHERE i.dropbox_path LIKE '%/Texture/Metal/%'
+      GROUP BY i.id, i.filename, i.dropbox_path
+      HAVING 
+        'precedent' = ANY(array_agg(DISTINCT t.name)) 
+        AND 'metal' = ANY(array_agg(DISTINCT t.name))
+        AND NOT ('texture' = ANY(array_agg(DISTINCT t.name)))
+    `);
+    
+    console.log(`Found ${misplacedImages.rows.length} misplaced precedent+metal images`);
+    
+    const results = {
+      totalFound: misplacedImages.rows.length,
+      moved: [],
+      errors: []
+    };
+    
+    for (const image of misplacedImages.rows) {
+      try {
+        console.log(`\n📋 Processing: ${image.filename}`);
+        console.log(`   Tags: ${image.tags.join(', ')}`);
+        console.log(`   Current path: ${image.dropbox_path}`);
+        
+        // Determine correct path - should be Precedent/General since no valid precedent categories
+        const baseFolder = serverSettings.dropboxFolder || '/ARCHIER Team Folder/Support/Production/SnapTag';
+        const correctPath = `${baseFolder}/Precedent/General/${image.filename}`;
+        
+        console.log(`   Correct path: ${correctPath}`);
+        
+        // Move file in Dropbox
+        console.log(`   🚚 Moving file in Dropbox...`);
+        await dropboxService.moveFile(image.dropbox_path, correctPath);
+        
+        // Update database path
+        console.log(`   💾 Updating database path...`);
+        await databaseService.query(
+          'UPDATE images SET dropbox_path = $1 WHERE id = $2',
+          [correctPath, image.id]
+        );
+        
+        results.moved.push({
+          id: image.id,
+          filename: image.filename,
+          from: image.dropbox_path,
+          to: correctPath,
+          tags: image.tags
+        });
+        
+        console.log(`   ✅ Successfully moved ${image.filename}`);
+        
+      } catch (error) {
+        console.error(`   ❌ Error moving ${image.filename}:`, error.message);
+        results.errors.push({
+          id: image.id,
+          filename: image.filename,
+          error: error.message
+        });
+      }
+    }
+    
+    console.log(`\n📊 Migration complete:`);
+    console.log(`   Total found: ${results.totalFound}`);
+    console.log(`   Successfully moved: ${results.moved.length}`);
+    console.log(`   Errors: ${results.errors.length}`);
+    
+    res.json({
+      success: true,
+      message: `Fixed ${results.moved.length} misplaced precedent+metal images`,
+      results
+    });
+    
+  } catch (error) {
+    console.error('Error fixing precedent+metal images:', error);
+    res.status(500).json({ 
+      error: 'Failed to fix precedent+metal images', 
+      details: error.message 
+    });
+  }
+});
+
 startServer(); 
