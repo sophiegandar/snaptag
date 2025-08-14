@@ -954,6 +954,17 @@ app.post('/api/images/search', async (req, res) => {
     }
     
     console.log(`✅ Search completed: ${filteredImages.length} images found`);
+    
+    // Debug: Check what we're actually sending to frontend
+    const urlStats = filteredImages.slice(0, 3).map(img => ({
+      id: img.id,
+      filename: img.filename,
+      hasUrl: !!img.url,
+      urlLength: img.url?.length || 0,
+      urlStart: img.url?.substring(0, 50) || 'empty'
+    }));
+    console.log('🔍 Sending to frontend:', urlStats);
+    
     res.json(filteredImages);
   } catch (error) {
     console.error('❌ Error searching images:', error);
