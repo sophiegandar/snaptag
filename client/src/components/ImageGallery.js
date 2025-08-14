@@ -67,6 +67,11 @@ const ImageGallery = () => {
       
       const data = await response.json();
       console.log('✅ Images loaded successfully:', data.length, 'images');
+      
+      // Debug: Check URLs in received data
+      const urlStats = data.map(img => ({ id: img.id, filename: img.filename, hasUrl: !!img.url, url: img.url?.substring(0, 50) }));
+      console.log('🔍 URL Debug - Received data:', urlStats.slice(0, 5));
+      
       setImages(data);
     } catch (error) {
       console.error('❌ Error loading images:', error);
@@ -973,6 +978,12 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
   useEffect(() => {
     // Reset error state when image changes
     setImageError(false);
+    
+    // Debug URL setting
+    if (!image.url) {
+      console.log('🚨 Empty URL for image:', { id: image.id, filename: image.filename, url: image.url, dropbox_path: image.dropbox_path });
+    }
+    
     setImageUrl(image.url || `${window.location.origin}/api/placeholder-image.jpg`);
   }, [image]);
 
