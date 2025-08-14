@@ -51,13 +51,26 @@ const ImageGallery = () => {
       
       console.log('🔍 Loading images with filters:', searchFilters);
       
-      const response = await apiCall('/api/images/search', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(searchFilters)
-      });
+      // Use regular endpoint for better performance when no filters
+      const hasFilters = searchFilters.searchTerm || 
+                        (searchFilters.tags && searchFilters.tags.length > 0) ||
+                        (searchFilters.sources && searchFilters.sources.length > 0) ||
+                        searchFilters.dateRange;
+      
+      let response;
+      if (hasFilters) {
+        console.log('📡 Using search endpoint (has filters)');
+        response = await apiCall('/api/images/search', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(searchFilters)
+        });
+      } else {
+        console.log('📡 Using regular endpoint (no filters)');
+        response = await apiCall('/api/images');
+      }
       
       if (!response.ok) {
         const errorText = await response.text();
