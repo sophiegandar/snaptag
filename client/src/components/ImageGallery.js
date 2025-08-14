@@ -492,18 +492,13 @@ const ImageGallery = () => {
       
       const result = await response.json();
       if (result.success) {
-        console.log('🤖 AI Suggestions received:', result.suggestions);
+        // console.log('🤖 AI Suggestions received:', result.suggestions);
         setImageSuggestions(prev => ({ ...prev, ...result.suggestions }));
         const suggestionCount = Object.keys(result.suggestions).length;
         
-        // Debug: Log what suggestions are being stored
-        Object.entries(result.suggestions).forEach(([imageId, suggestions]) => {
-          console.log(`🎯 Image ${imageId} suggestions:`, suggestions.map(s => `${s.tag} (${s.confidence}%)`));
-        });
-        
-        // Debug: Log selected images vs suggestion images
-        console.log(`📋 Selected images:`, selectedGalleryImages);
-        console.log(`🤖 Suggestion image IDs:`, Object.keys(result.suggestions));
+        // Debug: Log selected images vs suggestion images (disabled to reduce console noise)
+        // console.log(`📋 Selected images:`, selectedGalleryImages);
+        // console.log(`🤖 Suggestion image IDs:`, Object.keys(result.suggestions));
         
         toast.success(`Generated suggestions for ${suggestionCount} of ${selectedGalleryImages.length} selected image${selectedGalleryImages.length !== 1 ? 's' : ''}`);
       } else {
@@ -767,10 +762,7 @@ const ImageGallery = () => {
                       </div>
                       
                       {/* AI Suggestions */}
-                      {imageSuggestions[image.id] && imageSuggestions[image.id].length > 0 ? (
-                        console.log(`🎨 Rendering suggestions for image ${image.id}:`, imageSuggestions[image.id]),
-                        true
-                      ) : false}
+                      {/* AI Suggestions debugging disabled */}
                       {imageSuggestions[image.id] && imageSuggestions[image.id].length > 0 && (
                         <div className="absolute top-2 left-2 right-2">
                           <div className="bg-white/90 backdrop-blur-sm rounded-md p-2 shadow-sm">
@@ -887,6 +879,66 @@ const ImageGallery = () => {
               </button>
             </div>
           </div>
+
+          {/* AI Suggestions Panel - Appears above selection bar */}
+          {Object.keys(imageSuggestions).length > 0 && (
+            <div className="fixed bottom-20 left-0 right-0 bg-green-50 border-t border-green-200 p-4 shadow-lg z-40">
+              <div className="max-w-7xl mx-auto">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Lightbulb className="h-5 w-5 text-green-600" />
+                    <span className="text-green-800 font-medium">AI Tag Suggestions</span>
+                  </div>
+                  <button
+                    onClick={() => setImageSuggestions({})}
+                    className="text-green-600 hover:text-green-800 p-1"
+                    title="Dismiss all suggestions"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {Object.entries(imageSuggestions).map(([imageId, suggestions]) => {
+                    const image = images.find(img => img.id.toString() === imageId);
+                    return (
+                      <div key={imageId} className="flex items-center gap-3 bg-white p-2 rounded border border-green-200">
+                        <span className="text-sm text-green-700 font-medium min-w-0 truncate">
+                          {image?.filename || `Image ${imageId}`}:
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {suggestions.slice(0, 5).map((suggestion, index) => (
+                            <button
+                              key={index}
+                              onClick={() => applySuggestedTags(parseInt(imageId), [suggestion.tag])}
+                              className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded hover:bg-green-200 transition-colors border border-green-300"
+                              title={`${suggestion.confidence}% confidence - ${suggestion.reason}`}
+                            >
+                              {suggestion.tag} ({suggestion.confidence}%)
+                            </button>
+                          ))}
+                          {suggestions.length > 5 && (
+                            <button
+                              onClick={() => {
+                                const allTags = suggestions
+                                  .filter(s => s.confidence > 60)
+                                  .map(s => s.tag);
+                                if (allTags.length > 0) {
+                                  applySuggestedTags(parseInt(imageId), allTags);
+                                }
+                              }}
+                              className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition-colors"
+                            >
+                              Apply All High Confidence ({suggestions.filter(s => s.confidence > 60).length})
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Gallery Selection Bar - Fixed at bottom */}
           {selectedGalleryImages.length > 0 && (
@@ -1009,10 +1061,10 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
     // Reset error state when image changes
     setImageError(false);
     
-    // Debug URL setting
-    if (!image.url) {
-      console.log('🚨 Empty URL for image:', { id: image.id, filename: image.filename, url: image.url, dropbox_path: image.dropbox_path });
-    }
+    // Debug URL setting - temporarily disable to reduce console noise
+    // if (!image.url) {
+    //   console.log('🚨 Empty URL for image:', { id: image.id, filename: image.filename, url: image.url, dropbox_path: image.dropbox_path });
+    // }
     
     setImageUrl(image.url || `${window.location.origin}/api/placeholder-image.jpg`);
   }, [image]);
