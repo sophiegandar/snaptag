@@ -3154,4 +3154,131 @@ app.post('/api/admin/check-texture-metal-images', async (req, res) => {
   }
 });
 
+// Sync database paths with manually renamed files
+app.post('/api/admin/sync-renamed-files', async (req, res) => {
+  try {
+    console.log('🔄 Syncing database with manually renamed files...');
+    
+    // Find images with old filenames that might have been renamed
+    const potentiallyRenamed = await databaseService.query(`
+      SELECT id, filename, dropbox_path 
+      FROM images 
+      WHERE filename LIKE '%-materials-%' 
+         OR filename LIKE '%-precedents-%'
+         OR filename NOT LIKE 'A%'
+      ORDER BY filename
+    `);
+    
+    console.log(`Found ${potentiallyRenamed.rows.length} images that might need path updates`);
+    
+    const results = {
+      total: potentiallyRenamed.rows.length,
+      updated: [],
+      notFound: [],
+      errors: []
+    };
+    
+    for (const image of potentiallyRenamed.rows) {
+      try {
+        console.log(`\n📋 Checking: ${image.filename}`);
+        console.log(`   Current path: ${image.dropbox_path}`);
+        
+        // Try to find the file at its current path
+        let fileExists = false;
+        try {
+          await dropboxService.dbx.filesGetMetadata({ path: image.dropbox_path });
+          fileExists = true;
+          console.log(`   ✅ File found at current path`);
+        } catch (error) {
+          if (error.status === 409) {
+            console.log(`   ❌ File not found at current path`);
+            fileExists = false;
+          } else {
+            throw error;
+          }
+        }
+        
+        if (!fileExists) {
+          // File doesn't exist at current path - it was likely renamed
+          // Try to find files with similar structure in the same folder
+          const folderPath = image.dropbox_path.substring(0, image.dropbox_path.lastIndexOf('/'));
+          
+          try {
+            // List files in the folder
+            const folderContents = await dropboxService.dbx.filesListFolder({ path: folderPath });
+            
+            // Look for files that might be the renamed version
+            const possibleMatch = folderContents.result.entries.find(entry => {
+              return entry['.tag'] === 'file' && 
+                     (entry.name.includes('precedent') || entry.name.includes('general')) &&
+                     entry.name.endsWith('.jpg');
+            });
+            
+            if (possibleMatch) {
+              const newPath = `${folderPath}/${possibleMatch.name}`;
+              console.log(`   🔄 Found possible match: ${possibleMatch.name}`);
+              console.log(`   📝 Updating database path to: ${newPath}`);
+              
+              // Update database with new path and filename
+              await databaseService.query(
+                'UPDATE images SET dropbox_path = $1, filename = $2 WHERE id = $3',
+                [newPath, possibleMatch.name, image.id]
+              );
+              
+              results.updated.push({
+                id: image.id,
+                oldFilename: image.filename,
+                newFilename: possibleMatch.name,
+                oldPath: image.dropbox_path,
+                newPath: newPath
+              });
+            } else {
+              console.log(`   ❓ No matching file found in folder`);
+              results.notFound.push({
+                id: image.id,
+                filename: image.filename,
+                path: image.dropbox_path
+              });
+            }
+          } catch (folderError) {
+            console.log(`   ❌ Error accessing folder: ${folderError.message}`);
+            results.errors.push({
+              id: image.id,
+              filename: image.filename,
+              error: `Folder access error: ${folderError.message}`
+            });
+          }
+        }
+        
+      } catch (error) {
+        console.error(`   ❌ Error processing ${image.filename}:`, error.message);
+        results.errors.push({
+          id: image.id,
+          filename: image.filename,
+          error: error.message
+        });
+      }
+    }
+    
+    console.log(`\n📊 Sync complete:`);
+    console.log(`   Total checked: ${results.total}`);
+    console.log(`   Updated: ${results.updated.length}`);
+    console.log(`   Not found: ${results.notFound.length}`);
+    console.log(`   Errors: ${results.errors.length}`);
+    
+    res.json({
+      success: true,
+      message: `Synced ${results.updated.length} renamed files`,
+      results
+    });
+    
+  } catch (error) {
+    console.error('Error syncing renamed files:', error);
+    res.status(500).json({ 
+      error: 'Failed to sync renamed files', 
+      details: error.message 
+    });
+  }
+});
+
 startServer(); 
