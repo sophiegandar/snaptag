@@ -2116,6 +2116,42 @@ app.post('/api/admin/sync-dropbox-filenames', async (req, res) => {
   }
 });
 
+// Quick fix for Archier/Yandoit AXXXX filenames
+app.post('/api/admin/fix-archier-filenames', async (req, res) => {
+  try {
+    console.log('🔄 Fixing Archier/Yandoit filenames to AXXXX format...');
+    
+    // Update all 0XXX-archier-yandoit.jpg files to AXXXX-archier-yandoit.jpg
+    const updateQuery = `
+      UPDATE images 
+      SET 
+        filename = 'A' || filename,
+        dropbox_path = REPLACE(dropbox_path, '/' || filename, '/A' || filename)
+      WHERE filename LIKE '%archier-yandoit.jpg' 
+        AND filename NOT LIKE 'A%'
+      RETURNING id, filename, dropbox_path
+    `;
+    
+    const result = await databaseService.query(updateQuery);
+    const updatedFiles = result.rows;
+    
+    console.log(`✅ Updated ${updatedFiles.length} Archier/Yandoit files`);
+    
+    res.json({
+      success: true,
+      message: `Updated ${updatedFiles.length} Archier/Yandoit filenames to AXXXX format`,
+      updated: updatedFiles
+    });
+    
+  } catch (error) {
+    console.error('❌ Archier filename fix error:', error);
+    res.status(500).json({ 
+      error: 'Failed to fix Archier filenames', 
+      details: error.message 
+    });
+  }
+});
+
 // Initialize database and start server
 async function startServer() {
   try {
