@@ -1957,6 +1957,17 @@ app.post('/api/admin/sync-dropbox-filenames', async (req, res) => {
         let actualPath = dbImage.dropbox_path;
         let actualFilename = dbImage.filename;
         
+        // Skip files that are already in AXXXX format and exist
+        if (dbImage.filename.startsWith('A') && dbImage.filename.match(/^A\d{4}-/)) {
+          try {
+            await dropboxService.dbx.filesGetMetadata({ path: actualPath });
+            console.log(`✅ ${dbImage.filename} already in correct AXXXX format and exists`);
+            continue;
+          } catch (error) {
+            console.log(`❌ AXXXX file ${dbImage.filename} not found at ${actualPath} - investigating...`);
+          }
+        }
+        
         try {
           // Check if current path exists
           await dropboxService.dbx.filesGetMetadata({ path: actualPath });
@@ -1969,24 +1980,67 @@ app.post('/api/admin/sync-dropbox-filenames', async (req, res) => {
           const basePath = actualPath.substring(0, actualPath.lastIndexOf('/') + 1);
           const extension = actualPath.substring(actualPath.lastIndexOf('.'));
           
-          // Extract ID from original filename (e.g., 0087 from 0087-materials-metal.jpg)
-          const idMatch = dbImage.filename.match(/^(\d{4})/);
+          // Extract ID from original filename 
+          // Handle both AXXXX format (A0087 -> 0087) and 0XXX format (0087 -> 0087)
+          let idMatch = dbImage.filename.match(/^A(\d{4})/); // AXXXX format
+          if (!idMatch) {
+            idMatch = dbImage.filename.match(/^(\d{4})/); // 0XXX format
+          }
           if (idMatch) {
             const fileId = idMatch[1];
-            
-            // Try different AXXXX patterns
-            const possibleFilenames = [
-              `A${fileId}-precedent-general${extension}`,
-              `A${fileId}-precedent-exteriors${extension}`,
-              `A${fileId}-precedent-stairs${extension}`,
-              `A${fileId}-texture-metal${extension}`,
-              `A${fileId}-texture-wood${extension}`,
-              `A${fileId}-archier-yandoit${extension}`,
-              `A${fileId}-archier-complete${extension}`
-            ];
-            
             let found = false;
-            for (const possibleFilename of possibleFilenames) {
+            
+            // Try to list files in the directory to see what's actually there
+            try {
+              const folderContents = await dropboxService.dbx.filesListFolder({ path: basePath.slice(0, -1) }); // Remove trailing slash
+              const filesInFolder = folderContents.result.entries
+                .filter(entry => entry['.tag'] === 'file')
+                .map(entry => entry.name);
+              
+              console.log(`📂 Files in ${basePath}: ${filesInFolder.join(', ')}`);
+              
+              // Look for files that start with A${fileId}
+              const matchingFiles = filesInFolder.filter(filename => filename.startsWith(`A${fileId}-`));
+              
+              if (matchingFiles.length > 0) {
+                const newFilename = matchingFiles[0]; // Take the first match
+                const newPath = basePath + newFilename;
+                
+                console.log(`✅ Found matching file: ${newFilename}`);
+                
+                // Update database
+                await databaseService.query(
+                  'UPDATE images SET filename = $1, dropbox_path = $2 WHERE id = $3',
+                  [newFilename, newPath, dbImage.id]
+                );
+                
+                updates.push({
+                  id: dbImage.id,
+                  oldFilename: dbImage.filename,
+                  newFilename: newFilename,
+                  oldPath: dbImage.dropbox_path,
+                  newPath: newPath
+                });
+                
+                found = true;
+              }
+            } catch (listError) {
+              console.log(`❌ Could not list folder ${basePath}: ${listError.message}`);
+            }
+            
+            if (!found) {
+              // Try different AXXXX patterns as fallback
+              const possibleFilenames = [
+                `A${fileId}-precedent-general${extension}`,
+                `A${fileId}-precedent-exteriors${extension}`,
+                `A${fileId}-precedent-stairs${extension}`,
+                `A${fileId}-texture-metal${extension}`,
+                `A${fileId}-texture-wood${extension}`,
+                `A${fileId}-archier-yandoit${extension}`,
+                `A${fileId}-archier-complete${extension}`
+              ];
+            
+              for (const possibleFilename of possibleFilenames) {
               const possiblePath = basePath + possibleFilename;
               try {
                 await dropboxService.dbx.filesGetMetadata({ path: possiblePath });
@@ -2011,6 +2065,7 @@ app.post('/api/admin/sync-dropbox-filenames', async (req, res) => {
               } catch (checkError) {
                 // File doesn't exist with this name, try next
                 continue;
+                }
               }
             }
             
