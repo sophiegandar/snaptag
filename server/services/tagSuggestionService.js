@@ -1,6 +1,7 @@
 class TagSuggestionService {
   constructor(databaseService) {
     this.databaseService = databaseService;
+    this.openaiApiKey = process.env.OPENAI_API_KEY;
   }
 
   /**
@@ -12,33 +13,127 @@ class TagSuggestionService {
     const suggestions = [];
     
     try {
-      // 1. Source-based suggestions
+      // 1. AI VISUAL ANALYSIS (Primary - highest priority)
+      if (this.openaiApiKey && image.url && !image.url.includes('placeholder')) {
+        console.log('🤖 Using OpenAI Vision API for intelligent analysis...');
+        const visualSuggestions = await this.getVisualAnalysisSuggestions(image);
+        suggestions.push(...visualSuggestions);
+      }
+      
+      // 2. Source-based suggestions (fallback)
       const sourceSuggestions = await this.getSuggestionsFromSource(image.source_url);
       suggestions.push(...sourceSuggestions);
       
-      // 2. Filename-based suggestions  
+      // 3. Filename-based suggestions  
       const filenameSuggestions = await this.getSuggestionsFromFilename(image.filename);
       suggestions.push(...filenameSuggestions);
       
-      // 3. Description-based suggestions
+      // 4. Description-based suggestions
       if (image.description) {
         const descriptionSuggestions = await this.getSuggestionsFromDescription(image.description);
         suggestions.push(...descriptionSuggestions);
       }
       
-      // 4. Pattern-based suggestions from similar images
+      // 5. Pattern-based suggestions from similar images
       const patternSuggestions = await this.getSuggestionsFromPatterns(image);
       suggestions.push(...patternSuggestions);
       
-      // 5. Common tag combinations
-      const combinationSuggestions = await this.getSuggestionsFromCombinations();
-      suggestions.push(...combinationSuggestions);
-      
-      // Consolidate and rank suggestions
+      // Consolidate and rank suggestions (visual analysis gets highest priority)
       return this.consolidateAndRankSuggestions(suggestions);
       
     } catch (error) {
       console.error('Error generating tag suggestions:', error);
+      return [];
+    }
+  }
+
+  /**
+   * INTELLIGENT VISUAL ANALYSIS using OpenAI Vision API
+   * Provides actual image understanding, not just keyword matching
+   */
+  async getVisualAnalysisSuggestions(image) {
+    try {
+      if (!this.openaiApiKey) {
+        console.log('⚠️ OpenAI API key not configured - skipping visual analysis');
+        return [];
+      }
+
+      console.log(`🔍 Analyzing image: ${image.filename}`);
+      
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.openaiApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: "gpt-4-vision-preview",
+          messages: [{
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `You are an expert architectural photographer and designer analyzing images for a professional architecture firm. 
+
+Analyze this image and suggest 3-8 relevant tags from these architectural categories:
+
+SPACES: exteriors, interiors, bathrooms, kitchens, stairs, spatial
+ELEMENTS: doors, windows, lighting, joinery, furniture, structure
+MATERIALS: wood, metal, concrete, stone, brick, tile, fabric
+DETAILS: details, art
+FUNCTIONS: landscape
+
+Focus on what you can ACTUALLY SEE in the image. Be specific and accurate.
+Respond ONLY with a JSON array of objects like this:
+[{"tag": "exteriors", "confidence": 95, "reason": "Clear view of building exterior facade"}, {"tag": "concrete", "confidence": 85, "reason": "Prominent concrete walls and structure visible"}]
+
+Do not include generic tags like "architecture" or "building". Be specific about what architectural elements, materials, and spaces are actually visible.`
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: image.url
+                }
+              }
+            ]
+          }],
+          max_tokens: 500
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        console.error('❌ OpenAI Vision API error:', error);
+        return [];
+      }
+
+      const result = await response.json();
+      const content = result.choices?.[0]?.message?.content;
+      
+      if (!content) {
+        console.error('❌ No content in OpenAI response');
+        return [];
+      }
+
+      // Parse the JSON response
+      try {
+        const visualTags = JSON.parse(content);
+        console.log(`✅ Visual analysis complete: ${visualTags.length} tags identified`);
+        
+        // Add priority and source info
+        return visualTags.map(tag => ({
+          ...tag,
+          priority: 0, // HIGHEST priority for visual AI analysis (0 = top priority)
+          source: 'visual_ai'
+        }));
+        
+      } catch (parseError) {
+        console.error('❌ Failed to parse OpenAI response:', content);
+        return [];
+      }
+
+    } catch (error) {
+      console.error('❌ Visual analysis error:', error);
       return [];
     }
   }
