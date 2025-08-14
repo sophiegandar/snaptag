@@ -348,9 +348,7 @@ app.get('/api/images', async (req, res) => {
         console.log(`✅ Generated URL for ${image.filename}: ${image.url ? 'success' : 'null'}`);
       } catch (error) {
         console.error(`❌ Failed to generate URL for ${image.filename}:`, error.message);
-        console.error(`❌ Dropbox path: ${image.dropbox_path}`);
-        console.error(`❌ Error details:`, error);
-        image.url = null; // Set to null if failed
+        image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`; // Use absolute placeholder URL
       }
     }
     

@@ -1018,7 +1018,10 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
   }, [image]);
 
   const handleImageError = () => {
-    console.warn(`Failed to load image: ${image.filename}`, { url: imageUrl, dropbox_path: image.dropbox_path });
+    // Only log warnings for actual image URLs (not placeholders or empty URLs)
+    if (image.url && !image.url.includes('placeholder-image') && image.url.length > 10) {
+      console.warn(`Failed to load image: ${image.filename}`, { url: imageUrl, dropbox_path: image.dropbox_path });
+    }
     setImageError(true);
     // Don't retry automatically to prevent infinite reload loops
     // The user can refresh the page manually if needed
