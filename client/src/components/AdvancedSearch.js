@@ -16,6 +16,7 @@ import { apiCall } from '../utils/apiConfig';
 
 const AdvancedSearch = ({ onSearch, initialFilters = {} }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isTagsDropdownOpen, setIsTagsDropdownOpen] = useState(false);
   const [filters, setFilters] = useState({
     searchTerm: '',
     tags: [],
@@ -64,13 +65,28 @@ const AdvancedSearch = ({ onSearch, initialFilters = {} }) => {
     loadAvailableSources();
   }, []);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isTagsDropdownOpen && !event.target.closest('.tags-dropdown')) {
+        setIsTagsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isTagsDropdownOpen]);
+
   // Removed auto-search - searches now only happen on explicit user action
 
   const loadAvailableTags = async () => {
     try {
       const response = await apiCall('/api/tags');
       const tags = await response.json();
-      setAvailableTags(tags.map(tag => ({ ...tag, selected: false })));
+      // Convert to simple array of tag names for dropdown
+      setAvailableTags(tags.map(tag => tag.name || tag));
     } catch (error) {
       console.error('Error loading tags:', error);
     }
@@ -121,14 +137,7 @@ const AdvancedSearch = ({ onSearch, initialFilters = {} }) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
-  const toggleTag = (tagName) => {
-    setFilters(prev => ({
-      ...prev,
-      tags: prev.tags.includes(tagName)
-        ? prev.tags.filter(t => t !== tagName)
-        : [...prev.tags, tagName]
-    }));
-  };
+
 
   const toggleContentType = (type) => {
     setFilters(prev => ({
@@ -191,11 +200,78 @@ const AdvancedSearch = ({ onSearch, initialFilters = {} }) => {
             />
           </div>
           
+          {/* Tags Dropdown */}
+          <div className="relative tags-dropdown">
+            <button
+              onClick={() => setIsTagsDropdownOpen(!isTagsDropdownOpen)}
+              className="flex items-center space-x-2 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors min-w-[120px] justify-between"
+            >
+              <div className="flex items-center space-x-2">
+                <Tag className="h-4 w-4 text-gray-500" />
+                <span className="text-gray-700">
+                  {filters.tags.length > 0 ? `${filters.tags.length} tag${filters.tags.length > 1 ? 's' : ''}` : 'Tags'}
+                </span>
+              </div>
+              <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${isTagsDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {isTagsDropdownOpen && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
+                <div className="p-2">
+                  <div 
+                    className="flex items-center space-x-2 px-3 py-2 hover:bg-gray-50 rounded cursor-pointer"
+                    onClick={() => {
+                      updateFilter('tags', []);
+                      setIsTagsDropdownOpen(false);
+                    }}
+                  >
+                    <div className="w-4 h-4 border-2 border-dashed border-gray-400 rounded"></div>
+                    <span className="text-gray-600">All Tags</span>
+                  </div>
+                  {availableTags.map((tag) => (
+                    <div
+                      key={tag}
+                      className="flex items-center space-x-2 px-3 py-2 hover:bg-gray-50 rounded cursor-pointer"
+                      onClick={() => {
+                        const newTags = filters.tags.includes(tag)
+                          ? filters.tags.filter(t => t !== tag)
+                          : [...filters.tags, tag];
+                        updateFilter('tags', newTags);
+                      }}
+                    >
+                      <div className={`w-4 h-4 border-2 rounded ${
+                        filters.tags.includes(tag) 
+                          ? 'bg-blue-500 border-blue-500' 
+                          : 'border-gray-300'
+                      }`}>
+                        {filters.tags.includes(tag) && (
+                          <svg className="w-3 h-3 text-white ml-0.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
+                      <span className="text-gray-700 capitalize">{tag}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          
           <button
             onClick={handleSearch}
             className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
           >
             Search
+          </button>
+          
+          <button
+            onClick={clearFilters}
+            className="flex items-center space-x-2 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-gray-600 hover:text-gray-800"
+            title="Clear all search terms and filters"
+          >
+            <X className="h-4 w-4" />
+            <span>Clear</span>
           </button>
           
           <button
@@ -248,44 +324,7 @@ const AdvancedSearch = ({ onSearch, initialFilters = {} }) => {
             </div>
           </div>
 
-          {/* Tags Filter */}
-          <div>
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Tags</h3>
-            <div className="flex flex-wrap gap-2">
-              {availableTags.slice(0, 12).map(tag => (
-                <button
-                  key={tag.name}
-                  onClick={() => toggleTag(tag.name)}
-                  className={`px-3 py-1 text-sm rounded-full border transition-colors ${
-                    filters.tags.includes(tag.name)
-                      ? 'bg-blue-500 text-white border-blue-500'
-                      : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100'
-                  }`}
-                >
-                  {tag.name}
-                  {tag.usage_count && (
-                    <span className="ml-1 text-xs opacity-75">({tag.usage_count})</span>
-                  )}
-                </button>
-              ))}
-            </div>
-            {filters.tags.length > 0 && (
-              <div className="mt-2">
-                <span className="text-sm text-gray-500">Selected: </span>
-                {filters.tags.map(tag => (
-                  <span
-                    key={tag}
-                    className="inline-flex items-center space-x-1 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full mr-1"
-                  >
-                    <span>{tag}</span>
-                    <button onClick={() => toggleTag(tag)}>
-                      <X className="h-3 w-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
+
 
           {/* Content Type Filter */}
           <div>

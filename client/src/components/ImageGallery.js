@@ -47,6 +47,8 @@ const ImageGallery = () => {
   const loadImages = async (searchFilters = {}) => {
     try {
       setLoading(true);
+      // Auto-dismiss AI suggestions when loading new images
+      setImageSuggestions({});
       setCurrentFilters(searchFilters);
       
       console.log('🔍 Loading images with filters:', searchFilters);
@@ -279,11 +281,18 @@ const ImageGallery = () => {
     setPollingEnabled(false);
     setTimeout(() => setPollingEnabled(true), 30000); // Re-enable after 30 seconds of inactivity
     
-    setSelectedGalleryImages(prev => 
-      prev.includes(imageId) 
+    setSelectedGalleryImages(prev => {
+      const newSelection = prev.includes(imageId) 
         ? prev.filter(id => id !== imageId)
-        : [...prev, imageId]
-    );
+        : [...prev, imageId];
+      
+      // Auto-dismiss AI suggestions if no images are selected
+      if (newSelection.length === 0) {
+        setImageSuggestions({});
+      }
+      
+      return newSelection;
+    });
   };
 
   const selectAllGalleryImages = () => {
@@ -293,6 +302,8 @@ const ImageGallery = () => {
   const clearGallerySelection = () => {
     setSelectedGalleryImages([]);
     setGalleryQuickTags('');
+    // Auto-dismiss AI suggestions when clearing selection
+    setImageSuggestions({});
   };
 
   const applyGalleryQuickTags = async () => {
@@ -897,30 +908,68 @@ const ImageGallery = () => {
                     <X className="h-4 w-4" />
                   </button>
                 </div>
-                <div className="space-y-2 max-h-32 overflow-y-auto">
+                <div className="space-y-3 max-h-40 overflow-y-auto">
                   {Object.entries(imageSuggestions).map(([imageId, suggestions]) => {
                     const image = images.find(img => img.id.toString() === imageId);
                     return (
-                      <div key={imageId} className="flex items-center gap-3 bg-white p-2 rounded border border-green-200">
-                        <span className="text-sm text-green-700 font-medium min-w-0 truncate">
-                          {image?.filename || `Image ${imageId}`}:
-                        </span>
+                      <div key={imageId} className="bg-white p-3 rounded-lg border border-green-200">
+                        {/* Image filename header */}
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-green-700 font-medium">
+                            {image?.filename || `Image ${imageId}`}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {suggestions.length} suggestion{suggestions.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                        
+                        {/* Current Tags Display */}
+                        <div className="mb-3 p-2 bg-blue-50 rounded border-l-3 border-blue-400">
+                          <div className="flex items-center mb-1">
+                            <svg className="h-3 w-3 text-blue-500 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                            </svg>
+                            <span className="text-xs font-medium text-blue-600">Current Tags:</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {image?.tags && image.tags.length > 0 ? (
+                              image.tags.map((tag, index) => (
+                                <span key={index} className="inline-block px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
+                                  {tag}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-xs text-gray-400 italic">No tags yet</span>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* AI Suggestions */}
                         <div className="flex flex-wrap gap-1">
-                          {suggestions.slice(0, 5).map((suggestion, index) => (
-                            <button
-                              key={index}
-                              onClick={() => applySuggestedTags(parseInt(imageId), [suggestion.tag])}
-                              className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded hover:bg-green-200 transition-colors border border-green-300"
-                              title={`${suggestion.confidence}% confidence - ${suggestion.reason}`}
-                            >
-                              {suggestion.tag} ({suggestion.confidence}%)
-                            </button>
-                          ))}
+                          {suggestions.slice(0, 5).map((suggestion, index) => {
+                            const isAlreadyTagged = image?.tags?.includes(suggestion.tag);
+                            return (
+                              <button
+                                key={index}
+                                onClick={() => applySuggestedTags(parseInt(imageId), [suggestion.tag])}
+                                disabled={isAlreadyTagged}
+                                className={`text-xs px-2 py-1 rounded transition-colors border ${
+                                  isAlreadyTagged 
+                                    ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' 
+                                    : 'bg-green-100 text-green-800 border-green-300 hover:bg-green-200'
+                                }`}
+                                title={isAlreadyTagged ? 'Already tagged' : `${suggestion.confidence}% confidence - ${suggestion.reason}`}
+                              >
+                                {suggestion.tag} ({suggestion.confidence}%)
+                                {isAlreadyTagged && ' ✓'}
+                              </button>
+                            );
+                          })}
                           {suggestions.length > 5 && (
                             <button
                               onClick={() => {
                                 const allTags = suggestions
-                                  .filter(s => s.confidence > 60)
+                                  .filter(s => s.confidence > 60 && !image?.tags?.includes(s.tag))
                                   .map(s => s.tag);
                                 if (allTags.length > 0) {
                                   applySuggestedTags(parseInt(imageId), allTags);
@@ -928,7 +977,7 @@ const ImageGallery = () => {
                               }}
                               className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition-colors"
                             >
-                              Apply All High Confidence ({suggestions.filter(s => s.confidence > 60).length})
+                              Apply All New ({suggestions.filter(s => s.confidence > 60 && !image?.tags?.includes(s.tag)).length})
                             </button>
                           )}
                         </div>
