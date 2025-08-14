@@ -848,7 +848,7 @@ const ImageEditor = () => {
               
               {/* Fallback Mode: Simple Image with Overlays */}
               {useFallbackMode ? (
-                <div className="relative inline-block bg-gray-100">
+                <div className="relative flex justify-center bg-gray-100">
                   <img
                     src={image.url}
                     alt={image.title || image.filename}
@@ -1174,7 +1174,7 @@ const ImageEditor = () => {
           There was an error loading the image editor. Using simplified mode.
         </p>
         {image && image.url && (
-          <div className="mt-6">
+          <div className="mt-6 flex flex-col items-center">
             <img
               src={image.url}
               alt={image.title || image.filename}
