@@ -205,7 +205,8 @@ const ImageGallery = () => {
           if (selectedUntagged.includes(img.id)) {
             return {
               ...img,
-              tags: [...new Set([...(img.tags || []), ...tags])]
+              tags: [...new Set([...(img.tags || []), ...tags])],
+              url: img.url // Preserve the URL
             };
           }
           return img;
@@ -220,7 +221,8 @@ const ImageGallery = () => {
                 ...img,
                 tags: [...new Set([...(img.tags || []), ...tags])], // Merge tags
                 dropbox_path: updatedImg.newPath || img.dropbox_path,
-                filename: updatedImg.newFilename || img.filename
+                filename: updatedImg.newFilename || img.filename,
+                url: img.url // Preserve the URL
               };
             }
             return img;
@@ -231,7 +233,8 @@ const ImageGallery = () => {
             if (selectedUntagged.includes(img.id)) {
               return {
                 ...img,
-                tags: [...new Set([...(img.tags || []), ...tags])]
+                tags: [...new Set([...(img.tags || []), ...tags])],
+                url: img.url // Preserve the URL
               };
             }
             return img;
@@ -332,7 +335,8 @@ const ImageGallery = () => {
                 ...img,
                 tags: [...new Set([...(img.tags || []), ...tags])], // Merge tags
                 dropbox_path: updatedImg.newPath || img.dropbox_path,
-                filename: updatedImg.newFilename || img.filename
+                filename: updatedImg.newFilename || img.filename,
+                url: img.url // Preserve the URL
               };
             }
             return img;
@@ -343,7 +347,8 @@ const ImageGallery = () => {
             if (selectedGalleryImages.includes(img.id)) {
               return {
                 ...img,
-                tags: [...new Set([...(img.tags || []), ...tags])]
+                tags: [...new Set([...(img.tags || []), ...tags])],
+                url: img.url // Preserve the URL
               };
             }
             return img;
@@ -513,7 +518,8 @@ const ImageGallery = () => {
                   ...img,
                   tags: [...new Set([...(img.tags || []), ...tags])],
                   dropbox_path: updatedImg.newPath || img.dropbox_path,
-                  filename: updatedImg.newFilename || img.filename
+                  filename: updatedImg.newFilename || img.filename,
+                url: img.url // Preserve the URL
                 };
               }
               return img;
