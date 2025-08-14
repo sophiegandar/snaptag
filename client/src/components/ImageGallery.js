@@ -881,7 +881,7 @@ const ImageGallery = () => {
                     <button
                       onClick={applyGalleryQuickTags}
                       disabled={loading || !galleryQuickTags.trim()}
-                      className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 disabled:opacity-50 flex items-center"
+                      className="bg-stone-700 text-white px-4 py-2 rounded-md hover:bg-stone-800 disabled:opacity-50 flex items-center border border-stone-600"
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Apply Tags
@@ -889,7 +889,8 @@ const ImageGallery = () => {
                     <button
                       onClick={loadGallerySelectionSuggestions}
                       disabled={loadingSuggestions || selectedGalleryImages.length === 0}
-                      className="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600 disabled:opacity-50 flex items-center"
+                      className="bg-stone-600 text-stone-100 px-4 py-2 rounded-md hover:bg-stone-700 disabled:opacity-50 flex items-center border border-stone-500"
+                      style={{backgroundColor: loadingSuggestions || selectedGalleryImages.length === 0 ? '#6b7280' : '#57534e'}}
                     >
                       {loadingSuggestions ? (
                         <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
@@ -901,7 +902,7 @@ const ImageGallery = () => {
                     <button
                       onClick={downloadSelectedImages}
                       disabled={loading}
-                      className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 disabled:opacity-50 flex items-center"
+                      className="bg-stone-800 text-stone-100 px-4 py-2 rounded-md hover:bg-black disabled:opacity-50 flex items-center border border-stone-700"
                     >
                       <Download className="h-4 w-4 mr-2" />
                       Download ZIP
@@ -998,7 +999,11 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
   const getImageType = () => {
     const tags = image.tags || [];
     if (tags.includes('archier')) return 'Archier';
-    if (tags.some(tag => ['materials', 'texture', 'metal', 'wood', 'stone', 'concrete', 'brick', 'tile', 'fabric', 'carpet'].includes(tag.toLowerCase()))) return 'Texture';
+    
+    // Only classify as Texture if there's an explicit 'texture' or 'materials' tag
+    const hasTextureContext = tags.some(tag => ['materials', 'texture'].includes(tag.toLowerCase()));
+    
+    if (hasTextureContext) return 'Texture';
     return 'Precedent';
   };
 
