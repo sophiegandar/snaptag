@@ -1935,6 +1935,132 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
+// Sync database filenames with actual Dropbox files
+app.post('/api/admin/sync-dropbox-filenames', async (req, res) => {
+  try {
+    console.log('🔄 Starting database filename sync with Dropbox...');
+    
+    // Get all images from database
+    const result = await databaseService.query('SELECT id, filename, dropbox_path FROM images ORDER BY id');
+    const dbImages = result.rows;
+    
+    console.log(`📊 Found ${dbImages.length} images in database`);
+    
+    const updates = [];
+    const errors = [];
+    
+    for (const dbImage of dbImages) {
+      try {
+        console.log(`🔍 Checking ${dbImage.filename}...`);
+        
+        // Try to get file info from Dropbox using current path
+        let actualPath = dbImage.dropbox_path;
+        let actualFilename = dbImage.filename;
+        
+        try {
+          // Check if current path exists
+          await dropboxService.dbx.filesGetMetadata({ path: actualPath });
+          console.log(`✅ ${dbImage.filename} exists at current path`);
+          continue; // File exists, no update needed
+        } catch (error) {
+          console.log(`❌ ${dbImage.filename} not found at ${actualPath}`);
+          
+          // Try to find the file with AXXXX format
+          const basePath = actualPath.substring(0, actualPath.lastIndexOf('/') + 1);
+          const extension = actualPath.substring(actualPath.lastIndexOf('.'));
+          
+          // Extract ID from original filename (e.g., 0087 from 0087-materials-metal.jpg)
+          const idMatch = dbImage.filename.match(/^(\d{4})/);
+          if (idMatch) {
+            const fileId = idMatch[1];
+            
+            // Try different AXXXX patterns
+            const possibleFilenames = [
+              `A${fileId}-precedent-general${extension}`,
+              `A${fileId}-precedent-exteriors${extension}`,
+              `A${fileId}-precedent-stairs${extension}`,
+              `A${fileId}-texture-metal${extension}`,
+              `A${fileId}-texture-wood${extension}`,
+              `A${fileId}-archier-yandoit${extension}`,
+              `A${fileId}-archier-complete${extension}`
+            ];
+            
+            let found = false;
+            for (const possibleFilename of possibleFilenames) {
+              const possiblePath = basePath + possibleFilename;
+              try {
+                await dropboxService.dbx.filesGetMetadata({ path: possiblePath });
+                console.log(`✅ Found renamed file: ${possibleFilename}`);
+                
+                // Update database
+                await databaseService.query(
+                  'UPDATE images SET filename = $1, dropbox_path = $2 WHERE id = $3',
+                  [possibleFilename, possiblePath, dbImage.id]
+                );
+                
+                updates.push({
+                  id: dbImage.id,
+                  oldFilename: dbImage.filename,
+                  newFilename: possibleFilename,
+                  oldPath: dbImage.dropbox_path,
+                  newPath: possiblePath
+                });
+                
+                found = true;
+                break;
+              } catch (checkError) {
+                // File doesn't exist with this name, try next
+                continue;
+              }
+            }
+            
+            if (!found) {
+              console.log(`❌ Could not find any AXXXX variant for ${dbImage.filename}`);
+              errors.push({
+                id: dbImage.id,
+                filename: dbImage.filename,
+                error: 'No AXXXX variant found'
+              });
+            }
+          } else {
+            errors.push({
+              id: dbImage.id,
+              filename: dbImage.filename,
+              error: 'Could not extract ID from filename'
+            });
+          }
+        }
+      } catch (error) {
+        console.error(`❌ Error processing ${dbImage.filename}:`, error.message);
+        errors.push({
+          id: dbImage.id,
+          filename: dbImage.filename,
+          error: error.message
+        });
+      }
+    }
+    
+    console.log(`✅ Sync complete: ${updates.length} updated, ${errors.length} errors`);
+    
+    res.json({
+      success: true,
+      message: `Synced ${updates.length} filenames with Dropbox`,
+      results: {
+        totalChecked: dbImages.length,
+        updated: updates,
+        errors: errors
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Filename sync error:', error);
+    res.status(500).json({ 
+      error: 'Failed to sync filenames with Dropbox', 
+      details: error.message 
+    });
+  }
+});
+
 // Initialize database and start server
 async function startServer() {
   try {
