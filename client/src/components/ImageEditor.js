@@ -57,7 +57,7 @@ const ImageEditor = () => {
       if (searchTerm) queryParams.append('search', searchTerm);
       if (filterTags.length > 0) queryParams.append('tags', filterTags.join(','));
       
-      const response = await fetch(`/api/images/search?${queryParams.toString()}`);
+      const response = await fetch(`/api/images?${queryParams.toString()}`);
       if (!response.ok) throw new Error('Failed to load navigation context');
       
       const images = await response.json();
@@ -852,7 +852,7 @@ const ImageEditor = () => {
                   <img
                     src={image.url}
                     alt={image.title || image.filename}
-                    className="max-w-full h-auto"
+                    className="max-w-full h-auto mx-auto block"
                     style={{ 
                       maxHeight: '600px', 
                       maxWidth: '800px',
@@ -1178,7 +1178,7 @@ const ImageEditor = () => {
             <img
               src={image.url}
               alt={image.title || image.filename}
-              className="max-w-full h-auto mx-auto"
+              className="max-w-full h-auto mx-auto block"
               style={{ maxHeight: '400px' }}
             />
             <div className="mt-4">
