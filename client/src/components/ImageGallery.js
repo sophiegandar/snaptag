@@ -488,6 +488,10 @@ const ImageGallery = () => {
           console.log(`🎯 Image ${imageId} suggestions:`, suggestions.map(s => `${s.tag} (${s.confidence}%)`));
         });
         
+        // Debug: Log selected images vs suggestion images
+        console.log(`📋 Selected images:`, selectedGalleryImages);
+        console.log(`🤖 Suggestion image IDs:`, Object.keys(result.suggestions));
+        
         toast.success(`Generated suggestions for ${suggestionCount} of ${selectedGalleryImages.length} selected image${selectedGalleryImages.length !== 1 ? 's' : ''}`);
       } else {
         toast.error('Failed to generate suggestions');
@@ -750,6 +754,10 @@ const ImageGallery = () => {
                       </div>
                       
                       {/* AI Suggestions */}
+                      {imageSuggestions[image.id] && imageSuggestions[image.id].length > 0 ? (
+                        console.log(`🎨 Rendering suggestions for image ${image.id}:`, imageSuggestions[image.id]),
+                        true
+                      ) : false}
                       {imageSuggestions[image.id] && imageSuggestions[image.id].length > 0 && (
                         <div className="absolute top-2 left-2 right-2">
                           <div className="bg-white/90 backdrop-blur-sm rounded-md p-2 shadow-sm">
@@ -888,28 +896,29 @@ const ImageGallery = () => {
                     <button
                       onClick={applyGalleryQuickTags}
                       disabled={loading || !galleryQuickTags.trim()}
-                      className="bg-stone-700 text-white px-4 py-2 rounded-md hover:bg-stone-800 disabled:opacity-50 flex items-center border border-stone-600"
+                      className="bg-stone-700 text-white px-3 py-2 rounded-md hover:bg-stone-800 disabled:opacity-50 flex items-center border border-stone-600 text-sm"
                     >
-                      <Plus className="h-4 w-4 mr-2" />
+                      <Plus className="h-3 w-3 mr-2" />
                       Apply Tags
                     </button>
                     <button
                       onClick={loadGallerySelectionSuggestions}
                       disabled={loadingSuggestions || selectedGalleryImages.length === 0}
-                      className="bg-stone-600 text-stone-100 px-4 py-2 rounded-md hover:bg-stone-700 disabled:opacity-50 flex items-center border border-stone-500"
+                      className="bg-stone-600 text-stone-100 px-3 py-2 rounded-md hover:bg-stone-700 disabled:opacity-50 flex items-center border border-stone-500 text-sm"
                       style={{backgroundColor: loadingSuggestions || selectedGalleryImages.length === 0 ? '#6b7280' : '#57534e'}}
                     >
                       {loadingSuggestions ? (
-                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        <RefreshCw className="h-3 w-3 mr-2 animate-spin" />
                       ) : (
-                        <Lightbulb className="h-4 w-4 mr-2" />
+                        <Lightbulb className="h-3 w-3 mr-2" />
                       )}
                       Suggest Tags
                     </button>
                     <button
                       onClick={downloadSelectedImages}
                       disabled={loading}
-                      className="bg-stone-800 text-stone-100 px-4 py-2 rounded-md hover:bg-black disabled:opacity-50 flex items-center border border-stone-700"
+                      className="bg-olive-700 text-white px-3 py-2 rounded-md hover:bg-olive-800 disabled:opacity-50 flex items-center border border-olive-600 text-sm"
+                      style={{backgroundColor: loading ? '#6b7280' : '#6b7249', borderColor: '#84823a'}}
                     >
                       <Download className="h-4 w-4 mr-2" />
                       Download ZIP
