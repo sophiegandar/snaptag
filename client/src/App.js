@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
-import { Search, Upload, Tag, Settings as SettingsIcon, FileText } from 'lucide-react';
+import { Search, Upload, Tag, Settings as SettingsIcon, FileText, FolderOpen } from 'lucide-react';
 
 import ImageGallery from './components/ImageGallery';
 import ImageUpload from './components/ImageUpload';
@@ -9,6 +9,7 @@ import ImageEditor from './components/ImageEditor';
 import TagManager from './components/TagManager';
 import Settings from './components/Settings';
 import ProfessionalWorkflow from './components/ProfessionalWorkflow';
+import Projects from './components/Projects';
 
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
@@ -68,6 +69,14 @@ function App() {
                 </Link>
                 
                 <Link
+                  to="/projects"
+                  className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                >
+                  <FolderOpen className="h-4 w-4" />
+                  <span>Projects</span>
+                </Link>
+                
+                <Link
                   to="/settings"
                   className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
                 >
@@ -87,6 +96,7 @@ function App() {
                 <Route path="/image/:id" element={<ImageEditor />} />
                 <Route path="/tags" element={<TagManager />} />
                 <Route path="/workflow" element={<ProfessionalWorkflow />} />
+                <Route path="/projects" element={<Projects />} />
                 <Route path="/settings" element={<Settings />} />
           </Routes>
         </main>
