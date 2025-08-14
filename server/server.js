@@ -3406,4 +3406,57 @@ app.post('/api/admin/update-renamed-paths', async (req, res) => {
   }
 });
 
+// Refresh Dropbox token and test connection
+app.post('/api/admin/refresh-dropbox-token', async (req, res) => {
+  try {
+    console.log('🔄 Refreshing Dropbox access token...');
+    
+    // Refresh the access token
+    await dropboxService.refreshAccessToken();
+    console.log('✅ Dropbox token refreshed successfully');
+    
+    // Test the connection by listing a folder
+    console.log('🧪 Testing Dropbox connection...');
+    const testResult = await dropboxService.dbx.filesListFolder({ 
+      path: '/ARCHIER Team Folder/Support/Production/SnapTag',
+      limit: 1
+    });
+    
+    console.log('✅ Dropbox connection test successful');
+    
+    // Test generating a temporary link for the first file found
+    let testUrl = null;
+    if (testResult.result.entries.length > 0) {
+      const testFile = testResult.result.entries[0];
+      if (testFile['.tag'] === 'file') {
+        try {
+          testUrl = await dropboxService.getTemporaryLink(testFile.path_lower);
+          console.log('✅ Temporary URL generation test successful');
+        } catch (urlError) {
+          console.log('❌ Temporary URL generation failed:', urlError.message);
+        }
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: 'Dropbox token refreshed and connection tested',
+      results: {
+        tokenRefreshed: true,
+        connectionTest: 'passed',
+        filesFound: testResult.result.entries.length,
+        testUrlGenerated: !!testUrl,
+        testFile: testResult.result.entries[0]?.name || 'none'
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error refreshing Dropbox token:', error);
+    res.status(500).json({ 
+      error: 'Failed to refresh Dropbox token', 
+      details: error.message 
+    });
+  }
+});
+
 startServer(); 
