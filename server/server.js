@@ -3281,4 +3281,129 @@ app.post('/api/admin/sync-renamed-files', async (req, res) => {
   }
 });
 
+// Update database paths for manually renamed files (simple approach)
+app.post('/api/admin/update-renamed-paths', async (req, res) => {
+  try {
+    console.log('🔄 Updating database paths for manually renamed files...');
+    
+    const updates = [];
+    
+    // Update materials-metal files to precedent-general
+    const materialFiles = await databaseService.query(`
+      SELECT id, filename, dropbox_path 
+      FROM images 
+      WHERE filename LIKE '%-materials-metal.jpg'
+    `);
+    
+    for (const file of materialFiles.rows) {
+      // Extract the number part (e.g., 0087 from 0087-materials-metal.jpg)
+      const numberMatch = file.filename.match(/(\d+)-materials-metal\.jpg/);
+      if (numberMatch) {
+        const number = numberMatch[1];
+        const newFilename = `A${number}-precedent-general.jpg`;
+        const newPath = file.dropbox_path.replace(file.filename, newFilename);
+        
+        updates.push({
+          id: file.id,
+          oldFilename: file.filename,
+          newFilename: newFilename,
+          oldPath: file.dropbox_path,
+          newPath: newPath
+        });
+      }
+    }
+    
+    // Update precedents-exteriors files to precedent-exteriors  
+    const precedentFiles = await databaseService.query(`
+      SELECT id, filename, dropbox_path 
+      FROM images 
+      WHERE filename LIKE '%-precedents-exteriors.jpg'
+    `);
+    
+    for (const file of precedentFiles.rows) {
+      // Extract the number part (e.g., 0124 from 0124-precedents-exteriors.jpg)
+      const numberMatch = file.filename.match(/(\d+)-precedents-exteriors\.jpg/);
+      if (numberMatch) {
+        const number = numberMatch[1];
+        const newFilename = `A${number}-precedent-exteriors.jpg`;
+        const newPath = file.dropbox_path.replace(file.filename, newFilename);
+        
+        updates.push({
+          id: file.id,
+          oldFilename: file.filename,
+          newFilename: newFilename,
+          oldPath: file.dropbox_path,
+          newPath: newPath
+        });
+      }
+    }
+    
+    // Update precedents-stairs files
+    const stairFiles = await databaseService.query(`
+      SELECT id, filename, dropbox_path 
+      FROM images 
+      WHERE filename LIKE '%-precedents-stairs.jpg'
+    `);
+    
+    for (const file of stairFiles.rows) {
+      const numberMatch = file.filename.match(/(\d+)-precedents-stairs\.jpg/);
+      if (numberMatch) {
+        const number = numberMatch[1];
+        const newFilename = `A${number}-precedent-stairs.jpg`;
+        const newPath = file.dropbox_path.replace(file.filename, newFilename);
+        
+        updates.push({
+          id: file.id,
+          oldFilename: file.filename,
+          newFilename: newFilename,
+          oldPath: file.dropbox_path,
+          newPath: newPath
+        });
+      }
+    }
+    
+    console.log(`Found ${updates.length} files to update`);
+    
+    // Apply all updates
+    const results = { updated: [], errors: [] };
+    
+    for (const update of updates) {
+      try {
+        await databaseService.query(
+          'UPDATE images SET filename = $1, dropbox_path = $2 WHERE id = $3',
+          [update.newFilename, update.newPath, update.id]
+        );
+        
+        results.updated.push(update);
+        console.log(`✅ Updated: ${update.oldFilename} → ${update.newFilename}`);
+      } catch (error) {
+        results.errors.push({
+          ...update,
+          error: error.message
+        });
+        console.error(`❌ Error updating ${update.oldFilename}: ${error.message}`);
+      }
+    }
+    
+    console.log(`📊 Update complete: ${results.updated.length} updated, ${results.errors.length} errors`);
+    
+    res.json({
+      success: true,
+      message: `Updated ${results.updated.length} file paths`,
+      results: {
+        total: updates.length,
+        updated: results.updated,
+        errors: results.errors
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error updating renamed paths:', error);
+    res.status(500).json({ 
+      error: 'Failed to update renamed paths', 
+      details: error.message 
+    });
+  }
+});
+
 startServer(); 
