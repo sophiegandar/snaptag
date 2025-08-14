@@ -137,6 +137,23 @@ const AdvancedSearch = ({ onSearch, initialFilters = {} }) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
+  const clearFilters = () => {
+    setFilters({
+      searchTerm: '',
+      tags: [],
+      dateRange: { start: '', end: '' },
+      sizeRange: { min: 0, max: 10000000 },
+      dimensions: { minWidth: 0, minHeight: 0 },
+      contentType: [],
+      sourceFilter: '',
+      sortBy: 'upload_date',
+      sortOrder: 'desc'
+    });
+    // Also close the tags dropdown
+    setIsTagsDropdownOpen(false);
+    // Trigger search with empty filters
+    onSearch({});
+  };
 
 
   const toggleContentType = (type) => {
