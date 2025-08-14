@@ -3100,4 +3100,58 @@ app.post('/api/admin/fix-precedent-metal-images', async (req, res) => {
   }
 });
 
+// Check what images are in Texture/Metal folder
+app.post('/api/admin/check-texture-metal-images', async (req, res) => {
+  try {
+    console.log('🔍 Checking images in Texture/Metal folder...');
+    
+    // Find all images in Texture/Metal folder
+    const textureMetalImages = await databaseService.query(`
+      SELECT DISTINCT i.id, i.filename, i.dropbox_path,
+             array_agg(DISTINCT t.name ORDER BY t.name) as tags
+      FROM images i
+      LEFT JOIN image_tags it ON i.id = it.image_id
+      LEFT JOIN tags t ON it.tag_id = t.id
+      WHERE i.dropbox_path LIKE '%/Texture/Metal/%'
+      GROUP BY i.id, i.filename, i.dropbox_path
+      ORDER BY i.filename
+    `);
+    
+    console.log(`Found ${textureMetalImages.rows.length} images in Texture/Metal folder`);
+    
+    const results = textureMetalImages.rows.map(image => ({
+      id: image.id,
+      filename: image.filename,
+      path: image.dropbox_path,
+      tags: image.tags || [],
+      hasPrecedent: (image.tags || []).includes('precedent'),
+      hasMetal: (image.tags || []).includes('metal'),
+      hasTexture: (image.tags || []).includes('texture'),
+      shouldBeMoved: (image.tags || []).includes('precedent') && 
+                     (image.tags || []).includes('metal') && 
+                     !(image.tags || []).includes('texture')
+    }));
+    
+    res.json({
+      success: true,
+      message: `Found ${results.length} images in Texture/Metal folder`,
+      images: results,
+      summary: {
+        total: results.length,
+        withPrecedent: results.filter(img => img.hasPrecedent).length,
+        withMetal: results.filter(img => img.hasMetal).length,
+        withTexture: results.filter(img => img.hasTexture).length,
+        shouldBeMoved: results.filter(img => img.shouldBeMoved).length
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error checking Texture/Metal images:', error);
+    res.status(500).json({ 
+      error: 'Failed to check Texture/Metal images', 
+      details: error.message 
+    });
+  }
+});
+
 startServer(); 
