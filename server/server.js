@@ -392,7 +392,7 @@ app.get('/api/images/untagged', async (req, res) => {
           console.error(`❌ Failed to get URL for ${image.filename}:`, error.message);
           return {
             ...image,
-            url: '/api/placeholder-image.jpg',
+            url: `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`,
             tags: []
           };
         }
@@ -937,7 +937,7 @@ app.post('/api/images/search', async (req, res) => {
         
         if (!image.url || image.url.length < 10) {
           console.warn(`⚠️ Generated URL seems invalid for ${image.filename}: "${image.url}"`);
-          image.url = '/api/placeholder-image.jpg';
+          image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`;
         } else {
           console.log(`✅ Generated valid URL for ${image.filename} (${image.url.length} chars)`);
         }
@@ -949,7 +949,7 @@ app.post('/api/images/search', async (req, res) => {
       } catch (error) {
         console.error(`❌ Failed to generate URL for ${image.filename}:`, error.message);
         console.error(`❌ Error details:`, error);
-        image.url = '/api/placeholder-image.jpg'; // Use placeholder instead of null
+        image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`; // Use absolute placeholder URL
       }
     }
     

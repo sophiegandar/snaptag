@@ -973,7 +973,7 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
   useEffect(() => {
     // Reset error state when image changes
     setImageError(false);
-    setImageUrl(image.url || '/api/placeholder-image.jpg');
+    setImageUrl(image.url || `${window.location.origin}/api/placeholder-image.jpg`);
   }, [image]);
 
   const handleImageError = () => {
