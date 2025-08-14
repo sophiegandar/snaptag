@@ -2558,26 +2558,58 @@ app.post('/api/workflow/batch-analyze', async (req, res) => {
       issues: []
     };
     
+    const analyses = []; // Detailed per-image analyses for frontend
+    
     for (const image of images) {
       // Mock analysis logic - in a real implementation, you'd analyze file properties
       const isHighRes = image.file_size > 500000; // > 500KB
       const hasProperExtension = image.filename?.toLowerCase().match(/\.(jpg|jpeg|png|tiff|tif)$/);
       
+      const imageAnalysis = {
+        id: image.id,
+        filename: image.filename,
+        fileSize: image.file_size,
+        indesign: null,
+        archicad: null
+      };
+      
       if (workflow === 'indesign' || workflow === 'both') {
-        if (isHighRes && hasProperExtension) {
+        const readyForInDesign = isHighRes && hasProperExtension;
+        imageAnalysis.indesign = {
+          readyForProduction: readyForInDesign,
+          fileSize: image.file_size,
+          resolution: isHighRes ? 'High' : 'Low',
+          format: hasProperExtension ? 'Supported' : 'Unsupported',
+          recommendations: readyForInDesign ? [] : [
+            !isHighRes ? 'Increase resolution for print quality' : null,
+            !hasProperExtension ? 'Convert to supported format (JPG, PNG, TIFF)' : null
+          ].filter(Boolean)
+        };
+        
+        if (readyForInDesign) {
           analysis.readyForInDesign++;
         } else {
           analysis.needsOptimization++;
           analysis.issues.push({
             imageId: image.id,
             filename: image.filename,
-            issue: isHighRes ? 'Low resolution for print' : 'Unsupported format for InDesign'
+            issue: !isHighRes ? 'Low resolution for print' : 'Unsupported format for InDesign'
           });
         }
       }
       
       if (workflow === 'archicad' || workflow === 'both') {
-        if (hasProperExtension) {
+        const readyForArchiCAD = hasProperExtension;
+        imageAnalysis.archicad = {
+          readyForProduction: readyForArchiCAD,
+          fileSize: image.file_size,
+          format: hasProperExtension ? 'Supported' : 'Unsupported',
+          recommendations: readyForArchiCAD ? [] : [
+            'Convert to supported format (JPG, PNG, TIFF)'
+          ]
+        };
+        
+        if (readyForArchiCAD) {
           analysis.readyForArchiCAD++;
         } else {
           analysis.needsOptimization++;
@@ -2588,6 +2620,8 @@ app.post('/api/workflow/batch-analyze', async (req, res) => {
           });
         }
       }
+      
+      analyses.push(imageAnalysis);
     }
     
     const report = {
@@ -2597,7 +2631,8 @@ app.post('/api/workflow/batch-analyze', async (req, res) => {
         totalAnalyzed: images.length,
         timestamp: new Date().toISOString()
       },
-      report: analysis
+      report: analysis,
+      analyses: analyses // Add detailed per-image analyses
     };
     
     console.log(`✅ Batch analysis complete: ${analysis.readyForInDesign} InDesign ready, ${analysis.readyForArchiCAD} ArchiCAD ready`);
