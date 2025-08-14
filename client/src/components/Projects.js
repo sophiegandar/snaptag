@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FolderOpen, Image as ImageIcon, Calendar, MapPin, Users } from 'lucide-react';
+import { FolderOpen, Image as ImageIcon } from 'lucide-react';
 import { apiCall } from '../utils/apiConfig';
 
 const Projects = () => {
@@ -7,39 +7,11 @@ const Projects = () => {
   const [projectImages, setProjectImages] = useState({});
   const [loading, setLoading] = useState(true);
 
-  // Archier project tabs
+  // Archier project tabs - only showing Yandoit for now
   const projects = [
     { 
       id: 'yandoit', 
-      name: 'Yandoit', 
-      description: 'Sustainable family home in rural Victoria',
-      location: 'Yandoit, VIC',
-      status: 'Complete',
-      year: '2023'
-    },
-    { 
-      id: 'malvern', 
-      name: 'Malvern', 
-      description: 'Contemporary renovation and extension',
-      location: 'Malvern, VIC',
-      status: 'In Progress',
-      year: '2024'
-    },
-    { 
-      id: 'richmond', 
-      name: 'Richmond', 
-      description: 'Urban infill development',
-      location: 'Richmond, VIC',
-      status: 'Design Phase',
-      year: '2024'
-    },
-    { 
-      id: 'brunswick', 
-      name: 'Brunswick', 
-      description: 'Multi-residential development',
-      location: 'Brunswick, VIC',
-      status: 'Planning',
-      year: '2024'
+      name: 'Yandoit'
     }
   ];
 
@@ -54,6 +26,8 @@ const Projects = () => {
       // Load images for each project
       const imagePromises = projects.map(async (project) => {
         try {
+          console.log(`🔍 Searching for images with tags: ['archier', '${project.id}']`);
+          
           // Search for images tagged with both 'archier' and the project name
           const response = await apiCall('/api/images/search', {
             method: 'POST',
@@ -65,9 +39,11 @@ const Projects = () => {
           
           if (response.ok) {
             const data = await response.json();
+            console.log(`✅ Found ${data.images?.length || 0} images for ${project.name}`);
             return { projectId: project.id, images: data.images || [] };
           } else {
-            console.warn(`Failed to load images for ${project.name}`);
+            const errorText = await response.text();
+            console.warn(`Failed to load images for ${project.name}:`, response.status, errorText);
             return { projectId: project.id, images: [] };
           }
         } catch (error) {
@@ -89,16 +65,6 @@ const Projects = () => {
       console.error('Error loading project images:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status.toLowerCase()) {
-      case 'complete': return 'bg-green-100 text-green-800';
-      case 'in progress': return 'bg-blue-100 text-blue-800';
-      case 'design phase': return 'bg-yellow-100 text-yellow-800';
-      case 'planning': return 'bg-purple-100 text-purple-800';
-      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -151,39 +117,6 @@ const Projects = () => {
       ) : (
         /* Project Content */
         <div>
-          {/* Project Info Header */}
-          {activeProject && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-              <div className="flex flex-col md:flex-row md:items-start md:justify-between">
-                <div className="flex-1">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-2">{activeProject.name} Project</h2>
-                  <p className="text-gray-600 mb-4">{activeProject.description}</p>
-                  
-                  <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                    <div className="flex items-center space-x-1">
-                      <MapPin className="h-4 w-4" />
-                      <span>{activeProject.location}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <Calendar className="h-4 w-4" />
-                      <span>{activeProject.year}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <ImageIcon className="h-4 w-4" />
-                      <span>{activeImages.length} images</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="mt-4 md:mt-0">
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(activeProject.status)}`}>
-                    {activeProject.status}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Project Images Grid */}
           {activeImages.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
