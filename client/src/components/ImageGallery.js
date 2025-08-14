@@ -849,67 +849,75 @@ const ImageGallery = () => {
             </div>
           </div>
 
-          {/* Gallery Selection Bar */}
+          {/* Gallery Selection Bar - Fixed at bottom */}
           {selectedGalleryImages.length > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <span className="text-blue-800 font-medium">
-                    {selectedGalleryImages.length} image{selectedGalleryImages.length !== 1 ? 's' : ''} selected
-                  </span>
-                  <input
-                    type="text"
-                    value={galleryQuickTags}
-                    onChange={(e) => setGalleryQuickTags(e.target.value)}
-                    placeholder="Add tags: precedents, materials etc"
-                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    style={{ width: '300px' }}
-                  />
-                  <button
-                    onClick={applyGalleryQuickTags}
-                    disabled={loading || !galleryQuickTags.trim()}
-                    className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 disabled:opacity-50 flex items-center"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Apply Tags
-                  </button>
-                  <button
-                    onClick={loadGallerySelectionSuggestions}
-                    disabled={loadingSuggestions || selectedGalleryImages.length === 0}
-                    className="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600 disabled:opacity-50 flex items-center"
-                  >
-                    {loadingSuggestions ? (
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Lightbulb className="h-4 w-4 mr-2" />
-                    )}
-                    Suggest Tags
-                  </button>
-                  <button
-                    onClick={downloadSelectedImages}
-                    disabled={loading}
-                    className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 disabled:opacity-50 flex items-center"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Download ZIP
-                  </button>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={selectAllGalleryImages}
-                    className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-md hover:bg-blue-200"
-                  >
-                    Select All
-                  </button>
-                  <button
-                    onClick={clearGallerySelection}
-                    className="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded-md hover:bg-gray-200"
-                  >
-                    Unselect All
-                  </button>
+            <div className="fixed bottom-0 left-0 right-0 bg-blue-50 border-t border-blue-200 p-4 shadow-lg z-50">
+              <div className="max-w-7xl mx-auto">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <span className="text-blue-800 font-medium">
+                      {selectedGalleryImages.length} image{selectedGalleryImages.length !== 1 ? 's' : ''} selected
+                    </span>
+                    <input
+                      type="text"
+                      value={galleryQuickTags}
+                      onChange={(e) => setGalleryQuickTags(e.target.value)}
+                      placeholder="Add tags: precedents, materials etc"
+                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      style={{ width: '300px' }}
+                      onKeyPress={(e) => e.key === 'Enter' && applyGalleryQuickTags()}
+                    />
+                    <button
+                      onClick={applyGalleryQuickTags}
+                      disabled={loading || !galleryQuickTags.trim()}
+                      className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 disabled:opacity-50 flex items-center"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Apply Tags
+                    </button>
+                    <button
+                      onClick={loadGallerySelectionSuggestions}
+                      disabled={loadingSuggestions || selectedGalleryImages.length === 0}
+                      className="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600 disabled:opacity-50 flex items-center"
+                    >
+                      {loadingSuggestions ? (
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Lightbulb className="h-4 w-4 mr-2" />
+                      )}
+                      Suggest Tags
+                    </button>
+                    <button
+                      onClick={downloadSelectedImages}
+                      disabled={loading}
+                      className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 disabled:opacity-50 flex items-center"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download ZIP
+                    </button>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={selectAllGalleryImages}
+                      className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-md hover:bg-blue-200"
+                    >
+                      Select All
+                    </button>
+                    <button
+                      onClick={clearGallerySelection}
+                      className="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded-md hover:bg-gray-200"
+                    >
+                      Unselect All
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
+          )}
+
+          {/* Add bottom padding when sticky bar is visible */}
+          {selectedGalleryImages.length > 0 && (
+            <div className="h-20"></div>
           )}
 
           {/* Images Grid */}
