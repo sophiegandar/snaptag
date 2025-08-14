@@ -43,8 +43,8 @@ const ProfessionalWorkflow = () => {
     setLoading(true);
     try {
       const endpoint = workflow === 'indesign' ? 
-        `/api/workflow/analyze-indesign/${imageId}` :
-        `/api/workflow/analyze-archicad/${imageId}`;
+        `/api/workflow/analyse-indesign/${imageId}` :
+        `/api/workflow/analyse-archicad/${imageId}`;
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -59,7 +59,7 @@ const ProfessionalWorkflow = () => {
       toast.success(`${workflow} analysis completed!`);
     } catch (error) {
       console.error('Error analyzing image:', error);
-      toast.error(`Failed to analyze for ${workflow}`);
+      toast.error(`Failed to analyse for ${workflow}`);
     } finally {
       setLoading(false);
     }
@@ -70,7 +70,7 @@ const ProfessionalWorkflow = () => {
     setBatchReport(null);
     
     try {
-      const response = await fetch('/api/workflow/batch-analyze', {
+      const response = await fetch('/api/workflow/batch-analyse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -148,7 +148,7 @@ const ProfessionalWorkflow = () => {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Professional Workflow</h1>
         <p className="text-gray-600">
-          Optimize your images for InDesign, ArchiCAD, and other professional architectural software.
+          Optimise your images for InDesign, ArchiCAD, and other professional architectural software.
         </p>
       </div>
 
@@ -165,7 +165,7 @@ const ProfessionalWorkflow = () => {
               <h3 className="font-semibold">InDesign</h3>
             </div>
             <p className="text-sm text-gray-600">
-              Optimize for print layouts, brochures, and publications
+              Optimise for print layouts, brochures, and publications
             </p>
             <div className="mt-2 text-xs text-gray-500">
               • 300 DPI minimum<br/>
@@ -182,7 +182,7 @@ const ProfessionalWorkflow = () => {
               <h3 className="font-semibold">ArchiCAD</h3>
             </div>
             <p className="text-sm text-gray-600">
-              Optimize for 3D modeling, textures, and CAD workflows
+              Optimise for 3D modeling, textures, and CAD workflows
             </p>
             <div className="mt-2 text-xs text-gray-500">
               • Max 2048px dimensions<br/>
@@ -416,7 +416,7 @@ const ProfessionalWorkflow = () => {
                       analyzeImage(image.id, 'indesign');
                     }}
                     className="p-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
-                    title="Analyze for InDesign"
+                    title="Analyse for InDesign"
                   >
                     <FileText className="h-3 w-3" />
                   </button>
@@ -426,7 +426,7 @@ const ProfessionalWorkflow = () => {
                       analyzeImage(image.id, 'archicad');
                     }}
                     className="p-1 bg-green-500 text-white rounded text-xs hover:bg-green-600"
-                    title="Analyze for ArchiCAD"
+                    title="Analyse for ArchiCAD"
                   >
                     <Cpu className="h-3 w-3" />
                   </button>

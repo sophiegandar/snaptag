@@ -142,7 +142,7 @@ const Settings = () => {
       toast.info('Starting tag normalization...');
       
       const serverUrl = settings.serverUrl || window.location.origin;
-      const response = await fetch(`${serverUrl}/api/admin/normalize-tags`, {
+      const response = await fetch(`${serverUrl}/api/admin/normalise-tags`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -170,7 +170,7 @@ const Settings = () => {
   };
 
   const scanVisualDuplicates = async () => {
-    if (!window.confirm('This will analyze all images to find visual duplicates based on image content (not source). This process may take several minutes depending on the number of images. Continue?')) {
+    if (!window.confirm('This will analyse all images to find visual duplicates based on image content (not source). This process may take several minutes depending on the number of images. Continue?')) {
       return;
     }
     
@@ -579,7 +579,7 @@ const Settings = () => {
               ) : (
                 <Tag className="h-4 w-4" />
               )}
-              Normalize Tags
+              Normalise Tags
             </button>
 
             <button
@@ -635,7 +635,7 @@ const Settings = () => {
           </div>
 
           <div className="space-y-2 text-sm text-gray-600">
-            <p><strong>Normalize Tags:</strong> Converts all tags to lowercase and merges duplicates (e.g., "Yandoit" and "yandoit" become one "yandoit" tag).</p>
+            <p><strong>Normalise Tags:</strong> Converts all tags to lowercase and merges duplicates (e.g., "Yandoit" and "yandoit" become one "yandoit" tag).</p>
             <p><strong>Visual Duplicate Scan:</strong> Analyzes image content to find visually similar images from different sources. Uses perceptual hashing to compare actual image appearance.</p>
           </div>
 

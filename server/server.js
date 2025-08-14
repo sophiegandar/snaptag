@@ -2060,7 +2060,7 @@ app.post('/api/admin/cleanup-orphaned-records', async (req, res) => {
 });
 
 // Cleanup and normalize existing tags
-app.post('/api/admin/normalize-tags', async (req, res) => {
+app.post('/api/admin/normalise-tags', async (req, res) => {
   try {
     console.log('🏷️ Starting tag normalization process...');
     
@@ -2528,7 +2528,7 @@ app.post('/api/admin/add-name-column', async (req, res) => {
 });
 
 // Professional Workflow API Endpoints
-app.post('/api/workflow/batch-analyze', async (req, res) => {
+app.post('/api/workflow/batch-analyse', async (req, res) => {
   try {
     const { workflow = 'both', imageIds } = req.body;
     
@@ -2645,7 +2645,7 @@ app.post('/api/workflow/batch-analyze', async (req, res) => {
   }
 });
 
-app.post('/api/workflow/analyze-indesign/:id', async (req, res) => {
+app.post('/api/workflow/analyse-indesign/:id', async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -2677,7 +2677,7 @@ app.post('/api/workflow/analyze-indesign/:id', async (req, res) => {
   }
 });
 
-app.post('/api/workflow/analyze-archicad/:id', async (req, res) => {
+app.post('/api/workflow/analyse-archicad/:id', async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -2697,7 +2697,7 @@ app.post('/api/workflow/analyze-archicad/:id', async (req, res) => {
       recommendations: [
         'Keep dimensions under 2048px',
         'Use power-of-2 sizing when possible',
-        'Optimize file size for 3D performance'
+        'Optimise file size for 3D performance'
       ]
     };
     
@@ -3040,7 +3040,7 @@ app.post('/api/admin/migrate-misplaced-images', async (req, res) => {
     });
   } catch (error) {
     console.error('Error analyzing misplaced images:', error);
-    res.status(500).json({ error: 'Failed to analyze misplaced images', details: error.message });
+    res.status(500).json({ error: 'Failed to analyse misplaced images', details: error.message });
   }
 });
 

@@ -74,7 +74,7 @@ All team images save to:
 ### **Permissions:**
 - ✅ **Save images** from any website
 - ✅ **View** all team images
-- ✅ **Tag and organize** images
+- ✅ **Tag and organise** images
 - ✅ **Search** the entire collection
 - ✅ **Download** images for projects
 

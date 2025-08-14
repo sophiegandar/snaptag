@@ -44,7 +44,7 @@ class TagSuggestionService {
   }
 
   /**
-   * Analyze source URL for tag suggestions
+   * Analyse source URL for tag suggestions
    */
   async getSuggestionsFromSource(sourceUrl) {
     const suggestions = [];
@@ -92,7 +92,7 @@ class TagSuggestionService {
   }
 
   /**
-   * Analyze filename for tag suggestions
+   * Analyse filename for tag suggestions
    */
   async getSuggestionsFromFilename(filename) {
     const suggestions = [];
@@ -102,7 +102,7 @@ class TagSuggestionService {
     const cleanFilename = filename.toLowerCase()
       .replace(/\.(jpg|jpeg|png|gif|webp|heic|heif|tiff|avif|svg)$/i, '') // Remove extension
       .replace(/[^a-z0-9\s-]/g, ' ') // Replace special chars with spaces
-      .replace(/\s+/g, ' ') // Normalize spaces
+      .replace(/\s+/g, ' ') // Normalise spaces
       .trim();
     
     console.log(`🔍 Analyzing filename: "${filename}" -> cleaned: "${cleanFilename}"`);
@@ -233,7 +233,7 @@ class TagSuggestionService {
   }
 
   /**
-   * Analyze description for tag suggestions
+   * Analyse description for tag suggestions
    */
   async getSuggestionsFromDescription(description) {
     const suggestions = [];
