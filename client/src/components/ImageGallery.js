@@ -479,8 +479,15 @@ const ImageGallery = () => {
       
       const result = await response.json();
       if (result.success) {
+        console.log('🤖 AI Suggestions received:', result.suggestions);
         setImageSuggestions(prev => ({ ...prev, ...result.suggestions }));
         const suggestionCount = Object.keys(result.suggestions).length;
+        
+        // Debug: Log what suggestions are being stored
+        Object.entries(result.suggestions).forEach(([imageId, suggestions]) => {
+          console.log(`🎯 Image ${imageId} suggestions:`, suggestions.map(s => `${s.tag} (${s.confidence}%)`));
+        });
+        
         toast.success(`Generated suggestions for ${suggestionCount} of ${selectedGalleryImages.length} selected image${selectedGalleryImages.length !== 1 ? 's' : ''}`);
       } else {
         toast.error('Failed to generate suggestions');
