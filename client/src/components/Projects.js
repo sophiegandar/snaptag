@@ -23,6 +23,23 @@ const Projects = () => {
     try {
       setLoading(true);
       
+      // First, let's check what tags actually exist in the database
+      console.log('🔍 Checking what tags actually exist in database...');
+      try {
+        const tagsResponse = await apiCall('/api/debug/tags');
+        if (tagsResponse.ok) {
+          const tagsData = await tagsResponse.json();
+          console.log('📊 Database tags summary:', {
+            totalTags: tagsData.totalTags,
+            archierTags: tagsData.archierTags,
+            yandoitTags: tagsData.yandoitTags,
+            topTags: tagsData.topTags?.slice(0, 10)
+          });
+        }
+      } catch (error) {
+        console.error('Failed to get tags debug info:', error);
+      }
+      
       // Load images for each project
       const imagePromises = projects.map(async (project) => {
         try {

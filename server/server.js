@@ -185,6 +185,41 @@ app.get('/api/debug/paths', async (req, res) => {
   }
 });
 
+// Debug endpoint to check what tags exist
+app.get('/api/debug/tags', async (req, res) => {
+  try {
+    console.log('🔍 Debug: Checking all tags in database...');
+    
+    const allTags = await databaseService.all('SELECT * FROM tags ORDER BY name');
+    const tagCounts = await databaseService.all(`
+      SELECT t.name, COUNT(it.image_id) as image_count
+      FROM tags t
+      LEFT JOIN image_tags it ON t.id = it.tag_id
+      GROUP BY t.id, t.name
+      ORDER BY image_count DESC, t.name
+    `);
+    
+    console.log(`📊 Found ${allTags.length} total tags`);
+    
+    // Look specifically for archier and yandoit variants
+    const archierTags = allTags.filter(t => t.name.toLowerCase().includes('archier'));
+    const yandoitTags = allTags.filter(t => t.name.toLowerCase().includes('yandoit'));
+    
+    res.json({
+      success: true,
+      totalTags: allTags.length,
+      archierTags: archierTags,
+      yandoitTags: yandoitTags,
+      topTags: tagCounts.slice(0, 20),
+      allTags: allTags.map(t => t.name)
+    });
+    
+  } catch (error) {
+    console.error('❌ Debug tags error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Debug endpoint to test individual image URL generation
 app.get('/api/debug/image/:id', async (req, res) => {
   try {
