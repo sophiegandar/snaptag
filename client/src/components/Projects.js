@@ -29,12 +29,11 @@ const Projects = () => {
           console.log(`🔍 First, let's search for just 'archier' images...`);
           
           // First search for just 'archier' images to see what we have
-          // Try both lowercase and capitalized versions
           const archierResponse = await apiCall('/api/images/search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              tags: ['Archier'] // Try capitalized first since that's likely how it's tagged
+              tags: ['archier'] // Use lowercase as confirmed by user
             })
           });
           
@@ -52,12 +51,12 @@ const Projects = () => {
           
           console.log(`🔍 Now searching for images with 'archier' AND '${project.id}'...`);
           
-          // Now try the original search with proper capitalization
+          // Now search for images with both 'archier' AND 'yandoit'
           const response = await apiCall('/api/images/search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              tags: ['Archier', 'Yandoit'] // Use proper capitalization
+              tags: ['archier', 'yandoit'] // Use lowercase as confirmed by user
             })
           });
           
