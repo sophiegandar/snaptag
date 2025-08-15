@@ -253,6 +253,51 @@ app.get('/api/debug/tags', async (req, res) => {
   }
 });
 
+// Debug endpoint to check specific images and their tags
+app.get('/api/debug/image-types', async (req, res) => {
+  try {
+    console.log('🔍 Debug: Checking image types and tags...');
+    
+    // Get all images with their tags
+    const images = await databaseService.searchImages();
+    
+    // Focus on images that might be misclassified - show first 20
+    const debugInfo = images.slice(0, 20).map(image => {
+      const tags = image.tags || [];
+      
+      // Apply the same logic as getImageType function
+      let type = 'Unknown';
+      if (tags.includes('archier')) {
+        type = 'Archier';
+      } else if (tags.some(tag => ['materials', 'texture'].includes(tag.toLowerCase()))) {
+        type = 'Texture';
+      } else {
+        type = 'Precedent'; // Default fallback
+      }
+      
+      return {
+        id: image.id,
+        filename: image.filename,
+        tags: tags,
+        calculatedType: type,
+        hasArchier: tags.includes('archier'),
+        hasTexture: tags.some(tag => ['materials', 'texture'].includes(tag.toLowerCase())),
+        hasPrecedent: tags.some(tag => tag.toLowerCase() === 'precedent'),
+        hasMetal: tags.some(tag => tag.toLowerCase() === 'metal')
+      };
+    });
+
+    res.json({
+      success: true,
+      totalImages: images.length,
+      sampleImages: debugInfo
+    });
+  } catch (error) {
+    console.error('❌ Debug image types error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Debug endpoint to test individual image URL generation
 app.get('/api/debug/image/:id', async (req, res) => {
   try {
