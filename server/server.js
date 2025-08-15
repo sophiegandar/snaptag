@@ -205,13 +205,61 @@ app.get('/api/debug/tags', async (req, res) => {
     const archierTags = allTags.filter(t => t.name.toLowerCase().includes('archier'));
     const yandoitTags = allTags.filter(t => t.name.toLowerCase().includes('yandoit'));
     
+    // Also check which images have these tags
+    let archierImages = [];
+    let yandoitImages = [];
+    let bothImages = [];
+    
+    if (archierTags.length > 0) {
+      archierImages = await databaseService.all(`
+        SELECT i.id, i.filename, t.name as tag_name
+        FROM images i
+        JOIN image_tags it ON i.id = it.image_id
+        JOIN tags t ON it.tag_id = t.id
+        WHERE LOWER(t.name) = 'archier'
+      `);
+      
+      yandoitImages = await databaseService.all(`
+        SELECT i.id, i.filename, t.name as tag_name
+        FROM images i
+        JOIN image_tags it ON i.id = it.image_id
+        JOIN tags t ON it.tag_id = t.id
+        WHERE LOWER(t.name) = 'yandoit'
+      `);
+      
+      // Find images with BOTH tags
+      bothImages = await databaseService.all(`
+        SELECT DISTINCT i.id, i.filename,
+               GROUP_CONCAT(t.name) as all_tags
+        FROM images i
+        JOIN image_tags it ON i.id = it.image_id
+        JOIN tags t ON it.tag_id = t.id
+        WHERE i.id IN (
+          SELECT i1.id FROM images i1
+          JOIN image_tags it1 ON i1.id = it1.image_id
+          JOIN tags t1 ON it1.tag_id = t1.id
+          WHERE LOWER(t1.name) = 'archier'
+        ) AND i.id IN (
+          SELECT i2.id FROM images i2
+          JOIN image_tags it2 ON i2.id = it2.image_id
+          JOIN tags t2 ON it2.tag_id = t2.id
+          WHERE LOWER(t2.name) = 'yandoit'
+        )
+        GROUP BY i.id, i.filename
+      `);
+    }
+    
     res.json({
       success: true,
       totalTags: allTags.length,
       archierTags: archierTags,
       yandoitTags: yandoitTags,
       topTags: tagCounts.slice(0, 20),
-      allTags: allTags.map(t => t.name)
+      allTags: allTags.map(t => t.name),
+      archierImageCount: archierImages.length,
+      yandoitImageCount: yandoitImages.length,
+      bothImageCount: bothImages.length,
+      sampleBothImages: bothImages.slice(0, 5)
     });
     
   } catch (error) {
