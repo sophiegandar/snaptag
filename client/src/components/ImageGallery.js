@@ -889,12 +889,12 @@ const ImageGallery = () => {
               className="flex items-center space-x-3 px-6 py-4 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm min-w-[200px] justify-between"
             >
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                  <Tag className="h-5 w-5 text-blue-600" />
+                <div className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center">
+                  <Tag className="h-5 w-5 text-white" />
                 </div>
                 <div className="text-left">
                   <div className="font-medium text-gray-900">
-                    {currentFilters.tags?.length > 0 ? `${currentFilters.tags.length} tag${currentFilters.tags.length > 1 ? 's' : ''}` : 'All Categories'}
+                    {currentFilters.tags?.length > 0 ? `${currentFilters.tags.length} tag${currentFilters.tags.length > 1 ? 's' : ''}` : 'Categories'}
                   </div>
                   <div className="text-sm text-gray-500">
                     {currentFilters.tags?.length > 0 ? currentFilters.tags.slice(0, 2).join(', ') + (currentFilters.tags.length > 2 ? '...' : '') : 'Filter by tags'}
@@ -922,7 +922,7 @@ const ImageGallery = () => {
                       <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
                     </div>
                     <div>
-                      <div className="font-medium text-gray-900">All</div>
+                      <div className="font-medium text-gray-900">Categories</div>
                       <div className="text-sm text-gray-500">Show all images</div>
                     </div>
                   </div>
