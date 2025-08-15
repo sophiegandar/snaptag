@@ -51,14 +51,14 @@ const Projects = () => {
       // Load images for each project
       const imagePromises = projects.map(async (project) => {
         try {
-          console.log(`🔍 Searching for Yandoit project images using searchTerm...`);
+          console.log(`🔍 Searching for Yandoit project images...`);
           
-          // Use searchTerm method that works in main gallery
+          // Try searching for 'complete' tag since that showed 19 images in the Tags page
           const response = await apiCall('/api/images/search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              searchTerm: 'yandoit'
+              searchTerm: 'complete'
             })
           });
           
