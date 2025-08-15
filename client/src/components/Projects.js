@@ -40,6 +40,9 @@ const Projects = () => {
           console.log('🔍 Exact archier tag names:', tagsData.archierTags.map(t => `"${t.name}"`));
           console.log('🔍 Exact yandoit tag names:', tagsData.yandoitTags.map(t => `"${t.name}"`));
           console.log('🔍 All tags:', tagsData.allTags?.slice(0, 20));
+          
+          // Show which tags actually have images
+          console.log('📊 Tags with image counts:', tagsData.topTags?.map(t => `${t.name}: ${t.image_count} images`));
         }
       } catch (error) {
         console.error('Failed to get tags debug info:', error);
