@@ -272,19 +272,26 @@ class DatabaseService {
         }
       }
 
-      // Tag filter (case-insensitive)
+      // Tag filter (case-insensitive) - requires ALL tags to match (AND logic)
       if (tagFilter) {
         const tagArray = Array.isArray(tagFilter) ? tagFilter : tagFilter.split(',');
         const validTags = tagArray.filter(tag => tag && tag.toString().trim());
         
         if (validTags.length > 0) {
-          const regularTagConditions = validTags.map(() => 'LOWER(t.name) LIKE LOWER(?)').join(' OR ');
-          const focusedTagConditions = validTags.map(() => 'LOWER(ft.tag_name) LIKE LOWER(?)').join(' OR ');
+          console.log('🔍 Tag filter - looking for ALL of these tags:', validTags);
           
-          conditions.push(`(${regularTagConditions} OR ${focusedTagConditions})`);
+          // For multiple tags, we need ALL tags to match (AND logic)
+          // Each tag can be either a regular tag OR a focused tag
+          validTags.forEach(tag => {
+            const tagCondition = `(LOWER(t.name) = LOWER(?) OR LOWER(ft.tag_name) = LOWER(?))`;
+            conditions.push(tagCondition);
+            
+            // Use exact match (=) instead of LIKE for more precise matching
+            const normalizedTag = tag.toString().trim().toLowerCase();
+            params.push(normalizedTag, normalizedTag);
+          });
           
-          validTags.forEach(tag => params.push(`%${tag.toString().trim()}%`));
-          validTags.forEach(tag => params.push(`%${tag.toString().trim()}%`));
+          console.log('🔍 Added', validTags.length, 'tag conditions (AND logic)');
         }
       }
 
