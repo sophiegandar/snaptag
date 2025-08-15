@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Grid, List, Trash2, Edit, RefreshCw, AlertTriangle, Tag, Plus, CheckCircle, Download, Lightbulb, Check, X } from 'lucide-react';
+import { Search, Filter, Grid, List, Trash2, Edit, RefreshCw, AlertTriangle, Tag, Plus, CheckCircle, Download, Lightbulb, Check, X, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import AdvancedSearch from './AdvancedSearch';
@@ -26,10 +26,15 @@ const ImageGallery = () => {
   const [imageSuggestions, setImageSuggestions] = useState({});
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [updatingTags, setUpdatingTags] = useState(false);
+  
+  // Tags dropdown state
+  const [isTagsDropdownOpen, setIsTagsDropdownOpen] = useState(false);
+  const [availableTags, setAvailableTags] = useState([]);
 
   useEffect(() => {
     loadImages();
     loadUntaggedImages();
+    loadAvailableTags();
     
     // Set up polling for real-time updates every 5 minutes (reduced frequency)
     const pollInterval = setInterval(() => {
@@ -43,6 +48,20 @@ const ImageGallery = () => {
     
     return () => clearInterval(pollInterval);
   }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isTagsDropdownOpen && !event.target.closest('.tags-dropdown')) {
+        setIsTagsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isTagsDropdownOpen]);
 
   const loadImages = async (searchFilters = {}) => {
     try {
@@ -109,6 +128,16 @@ const ImageGallery = () => {
   const clearFilters = () => {
     setCurrentFilters({});
     loadImages({});
+  };
+
+  const loadAvailableTags = async () => {
+    try {
+      const response = await apiCall('/api/tags');
+      const tags = await response.json();
+      setAvailableTags(tags.map(tag => tag.name || tag));
+    } catch (error) {
+      console.error('Error loading tags:', error);
+    }
   };
 
   const handleTagClick = (tagName) => {
@@ -852,6 +881,84 @@ const ImageGallery = () => {
               </div>
             </div>
           )}
+
+          {/* Tags Filter Dropdown */}
+          <div className="relative mb-4 tags-dropdown">
+            <button
+              onClick={() => setIsTagsDropdownOpen(!isTagsDropdownOpen)}
+              className="flex items-center space-x-3 px-6 py-4 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm min-w-[200px] justify-between"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                  <Tag className="h-5 w-5 text-blue-600" />
+                </div>
+                <div className="text-left">
+                  <div className="font-medium text-gray-900">
+                    {currentFilters.tags?.length > 0 ? `${currentFilters.tags.length} tag${currentFilters.tags.length > 1 ? 's' : ''}` : 'All Categories'}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {currentFilters.tags?.length > 0 ? currentFilters.tags.slice(0, 2).join(', ') + (currentFilters.tags.length > 2 ? '...' : '') : 'Filter by tags'}
+                  </div>
+                </div>
+              </div>
+              <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform ${isTagsDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {isTagsDropdownOpen && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-80 overflow-y-auto min-w-[400px]">
+                <div className="p-4">
+                  <div className="mb-3">
+                    <h3 className="font-medium text-gray-900 mb-2">Categories</h3>
+                  </div>
+                  
+                  <div 
+                    className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 rounded-lg cursor-pointer mb-1"
+                    onClick={() => {
+                      handleAdvancedSearch({...currentFilters, tags: []});
+                      setIsTagsDropdownOpen(false);
+                    }}
+                  >
+                    <div className="w-6 h-6 border-2 border-dashed border-gray-400 rounded-md flex items-center justify-center">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-900">All</div>
+                      <div className="text-sm text-gray-500">Show all images</div>
+                    </div>
+                  </div>
+                  
+                  {availableTags.map((tag) => {
+                    const isSelected = currentFilters.tags?.includes(tag);
+                    return (
+                      <div
+                        key={tag}
+                        className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 rounded-lg cursor-pointer mb-1"
+                        onClick={() => {
+                          const newTags = isSelected
+                            ? currentFilters.tags?.filter(t => t !== tag) || []
+                            : [...(currentFilters.tags || []), tag];
+                          handleAdvancedSearch({...currentFilters, tags: newTags});
+                        }}
+                      >
+                        <div className={`w-6 h-6 border-2 rounded-md flex items-center justify-center ${
+                          isSelected 
+                            ? 'bg-blue-500 border-blue-500' 
+                            : 'border-gray-300'
+                        }`}>
+                          {isSelected && (
+                            <Check className="h-4 w-4 text-white" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900 capitalize">{tag}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Results Summary & View Controls */}
           <div className="flex justify-between items-center">

@@ -73,12 +73,13 @@ const Projects = () => {
           
           console.log(`🔍 Now searching for images with 'archier' AND '${project.id}'...`);
           
-          // Now search for images with both 'archier' AND 'yandoit'
+          // Search for images with 'yandoit' tag (which should include archier+yandoit images)
+          // Since we know images tagged with 'yandoit' are the Yandoit project images
           const response = await apiCall('/api/images/search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              tags: ['archier', 'yandoit'] // Use lowercase as confirmed by user
+              searchTerm: 'yandoit' // Use searchTerm instead of tags array for now
             })
           });
           

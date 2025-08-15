@@ -16,7 +16,6 @@ import { apiCall } from '../utils/apiConfig';
 
 const AdvancedSearch = ({ onSearch, initialFilters = {} }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isTagsDropdownOpen, setIsTagsDropdownOpen] = useState(false);
   const [filters, setFilters] = useState({
     searchTerm: '',
     tags: [],
@@ -30,7 +29,6 @@ const AdvancedSearch = ({ onSearch, initialFilters = {} }) => {
     ...initialFilters
   });
 
-  const [availableTags, setAvailableTags] = useState([]);
   const [availableSources, setAvailableSources] = useState([]);
   const [searchStats, setSearchStats] = useState(null);
 
@@ -61,36 +59,12 @@ const AdvancedSearch = ({ onSearch, initialFilters = {} }) => {
   ];
 
   useEffect(() => {
-    loadAvailableTags();
     loadAvailableSources();
   }, []);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (isTagsDropdownOpen && !event.target.closest('.tags-dropdown')) {
-        setIsTagsDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isTagsDropdownOpen]);
-
   // Removed auto-search - searches now only happen on explicit user action
 
-  const loadAvailableTags = async () => {
-    try {
-      const response = await apiCall('/api/tags');
-      const tags = await response.json();
-      // Convert to simple array of tag names for dropdown
-      setAvailableTags(tags.map(tag => tag.name || tag));
-    } catch (error) {
-      console.error('Error loading tags:', error);
-    }
-  };
+
 
   const loadAvailableSources = async () => {
     try {
@@ -149,8 +123,6 @@ const AdvancedSearch = ({ onSearch, initialFilters = {} }) => {
       sortBy: 'upload_date',
       sortOrder: 'desc'
     });
-    // Also close the tags dropdown
-    setIsTagsDropdownOpen(false);
     // Trigger search with empty filters
     onSearch({});
   };
@@ -217,63 +189,7 @@ const AdvancedSearch = ({ onSearch, initialFilters = {} }) => {
             />
           </div>
           
-          {/* Tags Dropdown */}
-          <div className="relative tags-dropdown">
-            <button
-              onClick={() => setIsTagsDropdownOpen(!isTagsDropdownOpen)}
-              className="flex items-center space-x-2 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors min-w-[120px] justify-between"
-            >
-              <div className="flex items-center space-x-2">
-                <Tag className="h-4 w-4 text-gray-500" />
-                <span className="text-gray-700">
-                  {filters.tags.length > 0 ? `${filters.tags.length} tag${filters.tags.length > 1 ? 's' : ''}` : 'Tags'}
-                </span>
-              </div>
-              <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${isTagsDropdownOpen ? 'rotate-180' : ''}`} />
-            </button>
-            
-            {isTagsDropdownOpen && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
-                <div className="p-2">
-                  <div 
-                    className="flex items-center space-x-2 px-3 py-2 hover:bg-gray-50 rounded cursor-pointer"
-                    onClick={() => {
-                      updateFilter('tags', []);
-                      setIsTagsDropdownOpen(false);
-                    }}
-                  >
-                    <div className="w-4 h-4 border-2 border-dashed border-gray-400 rounded"></div>
-                    <span className="text-gray-600">All Tags</span>
-                  </div>
-                  {availableTags.map((tag) => (
-                    <div
-                      key={tag}
-                      className="flex items-center space-x-2 px-3 py-2 hover:bg-gray-50 rounded cursor-pointer"
-                      onClick={() => {
-                        const newTags = filters.tags.includes(tag)
-                          ? filters.tags.filter(t => t !== tag)
-                          : [...filters.tags, tag];
-                        updateFilter('tags', newTags);
-                      }}
-                    >
-                      <div className={`w-4 h-4 border-2 rounded ${
-                        filters.tags.includes(tag) 
-                          ? 'bg-blue-500 border-blue-500' 
-                          : 'border-gray-300'
-                      }`}>
-                        {filters.tags.includes(tag) && (
-                          <svg className="w-3 h-3 text-white ml-0.5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        )}
-                      </div>
-                      <span className="text-gray-700 capitalize">{tag}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+
           
           <button
             onClick={handleSearch}
