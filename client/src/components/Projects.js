@@ -26,9 +26,32 @@ const Projects = () => {
       // Load images for each project
       const imagePromises = projects.map(async (project) => {
         try {
-          console.log(`🔍 Searching for images with tags: ['archier', '${project.id}']`);
+          console.log(`🔍 First, let's search for just 'archier' images...`);
           
-          // Search for images tagged with both 'archier' and the project name
+          // First search for just 'archier' images to see what we have
+          const archierResponse = await apiCall('/api/images/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tags: ['archier']
+            })
+          });
+          
+          if (archierResponse.ok) {
+            const archierData = await archierResponse.json();
+            console.log(`📊 Found ${archierData.images?.length || 0} total 'archier' images`);
+            
+            // Debug: Show tags of first few archier images
+            if (archierData.images && archierData.images.length > 0) {
+              archierData.images.slice(0, 5).forEach(img => {
+                console.log(`📋 Archier image ${img.id}: ${img.filename} - tags: [${img.tags?.join(', ') || 'none'}]`);
+              });
+            }
+          }
+          
+          console.log(`🔍 Now searching for images with 'archier' AND '${project.id}'...`);
+          
+          // Now try the original search
           const response = await apiCall('/api/images/search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
