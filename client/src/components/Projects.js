@@ -48,38 +48,14 @@ const Projects = () => {
       // Load images for each project
       const imagePromises = projects.map(async (project) => {
         try {
-          console.log(`🔍 First, let's search for just 'archier' images...`);
+          console.log(`🔍 Searching for Yandoit project images using searchTerm...`);
           
-          // First search for just 'archier' images to see what we have
-          const archierResponse = await apiCall('/api/images/search', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              tags: ['archier'] // Use lowercase as confirmed by user
-            })
-          });
-          
-          if (archierResponse.ok) {
-            const archierData = await archierResponse.json();
-            console.log(`📊 Found ${archierData.images?.length || 0} total 'archier' images`);
-            
-            // Debug: Show tags of first few archier images
-            if (archierData.images && archierData.images.length > 0) {
-              archierData.images.slice(0, 5).forEach(img => {
-                console.log(`📋 Archier image ${img.id}: ${img.filename} - tags: [${img.tags?.join(', ') || 'none'}]`);
-              });
-            }
-          }
-          
-          console.log(`🔍 Now searching for images with 'archier' AND '${project.id}'...`);
-          
-          // Search for images with 'yandoit' tag (which should include archier+yandoit images)
-          // Since we know images tagged with 'yandoit' are the Yandoit project images
+          // Use searchTerm method that works in main gallery
           const response = await apiCall('/api/images/search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              searchTerm: 'yandoit' // Use searchTerm instead of tags array for now
+              searchTerm: 'yandoit'
             })
           });
           
