@@ -1237,9 +1237,14 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
     
     // Only classify as Texture if there's an explicit 'texture' or 'materials' tag
     const hasTextureContext = tags.some(tag => ['materials', 'texture'].includes(tag.toLowerCase()));
-    
     if (hasTextureContext) return 'Texture';
-    return 'Precedent';
+    
+    // Only classify as Precedent if there's an explicit 'precedent' tag
+    const hasPrecedentTag = tags.some(tag => tag.toLowerCase() === 'precedent');
+    if (hasPrecedentTag) return 'Precedent';
+    
+    // If no specific type tag, return 'General' or based on most prominent tag
+    return 'General';
   };
 
   const getProject = () => {
@@ -1267,10 +1272,17 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
       return categoryTag ? categoryTag.charAt(0).toUpperCase() + categoryTag.slice(1) : 'General';
     }
     
-    // Precedent categories
-    const precedentCategories = ['art', 'bathrooms', 'details', 'doors', 'exteriors', 'furniture', 'general', 'interiors', 'joinery', 'kitchens', 'landscape', 'lighting', 'spatial', 'stairs', 'structure'];
-    const categoryTag = tags.find(tag => precedentCategories.includes(tag.toLowerCase()));
-    return categoryTag ? categoryTag.charAt(0).toUpperCase() + categoryTag.slice(1) : 'General';
+    if (type === 'Precedent') {
+      // Precedent categories
+      const precedentCategories = ['art', 'bathrooms', 'details', 'doors', 'exteriors', 'furniture', 'general', 'interiors', 'joinery', 'kitchens', 'landscape', 'lighting', 'spatial', 'stairs', 'structure'];
+      const categoryTag = tags.find(tag => precedentCategories.includes(tag.toLowerCase()));
+      return categoryTag ? categoryTag.charAt(0).toUpperCase() + categoryTag.slice(1) : 'General';
+    }
+    
+    // For 'General' type, try to find the most relevant category from any tag
+    const allCategories = ['art', 'bathrooms', 'details', 'doors', 'exteriors', 'furniture', 'general', 'interiors', 'joinery', 'kitchens', 'landscape', 'lighting', 'spatial', 'stairs', 'structure', 'brick', 'carpet', 'concrete', 'fabric', 'metal', 'stone', 'tile', 'wood'];
+    const categoryTag = tags.find(tag => allCategories.includes(tag.toLowerCase()));
+    return categoryTag ? categoryTag.charAt(0).toUpperCase() + categoryTag.slice(1) : 'Uncategorised';
   };
 
   const getName = () => {
