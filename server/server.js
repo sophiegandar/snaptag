@@ -253,6 +253,89 @@ app.get('/api/debug/tags', async (req, res) => {
   }
 });
 
+// Fix missing yandoit and complete tags for Archier images based on folder structure
+app.post('/api/admin/fix-missing-archier-tags', async (req, res) => {
+  try {
+    console.log('🔧 Starting to fix missing tags for Archier images...');
+    
+    // Get all images tagged with 'archier'
+    const archierImages = await databaseService.searchImages('', ['archier']);
+    console.log(`📊 Found ${archierImages.length} Archier images to check`);
+    
+    let updatedCount = 0;
+    let errorCount = 0;
+    const errors = [];
+    const updates = [];
+    
+    for (const image of archierImages) {
+      try {
+        console.log(`🔍 Checking ${image.filename}...`);
+        console.log(`📂 Folder path: ${image.dropbox_path}`);
+        
+        let currentTags = [...(image.tags || [])];
+        let needsUpdate = false;
+        const addedTags = [];
+        
+        // Check if image is in Yandoit folder and add yandoit tag
+        if (image.dropbox_path.includes('/Yandoit/') && !currentTags.includes('yandoit')) {
+          currentTags.push('yandoit');
+          addedTags.push('yandoit');
+          needsUpdate = true;
+          console.log(`  ✅ Adding 'yandoit' tag`);
+        }
+        
+        // Check if image is in Final folder and add complete tag
+        if (image.dropbox_path.includes('/Final/') && !currentTags.includes('complete')) {
+          currentTags.push('complete');
+          addedTags.push('complete');
+          needsUpdate = true;
+          console.log(`  ✅ Adding 'complete' tag`);
+        }
+        
+        if (needsUpdate) {
+          // Update tags in database
+          await databaseService.updateImageTags(image.id, currentTags, image.focused_tags || []);
+          
+          updates.push({
+            id: image.id,
+            filename: image.filename,
+            addedTags: addedTags,
+            newTags: currentTags
+          });
+          updatedCount++;
+          console.log(`✅ Updated ${image.filename} with tags: ${currentTags.join(', ')}`);
+        } else {
+          console.log(`  ⏭️ No updates needed for ${image.filename}`);
+        }
+        
+      } catch (error) {
+        console.error(`❌ Failed to update tags for ${image.filename}:`, error.message);
+        errors.push(`${image.filename}: ${error.message}`);
+        errorCount++;
+      }
+    }
+    
+    const message = `Missing tags fix completed: ${updatedCount} updated, ${errorCount} errors`;
+    console.log(message);
+    
+    res.json({
+      success: true,
+      message,
+      stats: {
+        total: archierImages.length,
+        updated: updatedCount,
+        errors: errorCount,
+        errorDetails: errors,
+        updates: updates
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Fix missing Archier tags error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Debug endpoint to check what tags Archier images actually have
 app.get('/api/debug/archier-tags', async (req, res) => {
   try {
