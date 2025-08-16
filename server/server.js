@@ -253,6 +253,63 @@ app.get('/api/debug/tags', async (req, res) => {
   }
 });
 
+// Fix metadata for existing Archier images
+app.post('/api/admin/fix-archier-metadata', async (req, res) => {
+  try {
+    console.log('🔧 Starting metadata fix for Archier images...');
+    
+    // Get all images tagged with 'archier'
+    const archierImages = await databaseService.searchImages('', ['archier']);
+    console.log(`📊 Found ${archierImages.length} Archier images to update`);
+    
+    let successCount = 0;
+    let errorCount = 0;
+    const errors = [];
+    
+    for (const image of archierImages) {
+      try {
+        console.log(`📝 Updating metadata for ${image.filename}...`);
+        
+        await metadataService.updateImageMetadata(image.dropbox_path, {
+          tags: image.tags,
+          focusedTags: image.focused_tags || [],
+          title: image.title || image.filename,
+          description: image.description || `Tagged with: ${image.tags.join(', ')}`
+        });
+        
+        console.log(`✅ Updated metadata for ${image.filename}`);
+        successCount++;
+        
+        // Add small delay to avoid overwhelming Dropbox API
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+      } catch (error) {
+        console.error(`❌ Failed to update metadata for ${image.filename}:`, error.message);
+        errors.push(`${image.filename}: ${error.message}`);
+        errorCount++;
+      }
+    }
+    
+    const message = `Metadata fix completed: ${successCount} updated, ${errorCount} errors`;
+    console.log(message);
+    
+    res.json({
+      success: true,
+      message,
+      stats: {
+        total: archierImages.length,
+        successful: successCount,
+        errors: errorCount,
+        errorDetails: errors
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Fix Archier metadata error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Debug endpoint to check specific images and their tags
 app.get('/api/debug/image-types', async (req, res) => {
   try {
@@ -952,6 +1009,20 @@ app.post('/api/batch/apply-tags', async (req, res) => {
           }
         }
         
+        // Update metadata in the actual image file
+        try {
+          console.log(`📝 Embedding metadata in Dropbox file for image ${imageId}...`);
+          await metadataService.updateImageMetadata(newDropboxPath, {
+            tags: allTags,
+            focusedTags: image.focused_tags || [],
+            title: image.title,
+            description: image.description
+          });
+          console.log(`✅ Metadata embedded for image ${imageId}`);
+        } catch (metadataError) {
+          console.error(`⚠️ Failed to embed metadata for image ${imageId} (non-critical):`, metadataError.message);
+        }
+
         console.log(`✅ Updated tags for image ${imageId}`);
         successCount++;
         processedImages.push({
