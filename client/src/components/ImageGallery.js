@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Grid, List, Trash2, Edit, RefreshCw, AlertTriangle, Tag, Plus, CheckCircle, Download, Lightbulb, Check, X, ChevronDown } from 'lucide-react';
+import { Search, Filter, Grid, List, Trash2, Edit, RefreshCw, AlertTriangle, Tag, Plus, CheckCircle, Download, Lightbulb, Check, X, ChevronDown, SortAsc, SortDesc } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import AdvancedSearch from './AdvancedSearch';
@@ -30,6 +30,21 @@ const ImageGallery = () => {
   // Tags dropdown state
   const [isTagsDropdownOpen, setIsTagsDropdownOpen] = useState(false);
   const [availableTags, setAvailableTags] = useState([]);
+  
+  // Sort dropdown state
+  const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
+  const [sortOptions] = useState([
+    { value: 'upload_date', label: 'Upload Date' },
+    { value: 'title', label: 'Title' },
+    { value: 'filename', label: 'Filename' },
+    { value: 'file_size', label: 'File Size' },
+    { value: 'width', label: 'Width' },
+    { value: 'height', label: 'Height' }
+  ]);
+  const [currentSort, setCurrentSort] = useState({
+    sortBy: 'upload_date',
+    sortOrder: 'desc'
+  });
 
   useEffect(() => {
     loadImages();
@@ -49,11 +64,14 @@ const ImageGallery = () => {
     return () => clearInterval(pollInterval);
   }, []);
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (isTagsDropdownOpen && !event.target.closest('.tags-dropdown')) {
         setIsTagsDropdownOpen(false);
+      }
+      if (isSortDropdownOpen && !event.target.closest('.sort-dropdown')) {
+        setIsSortDropdownOpen(false);
       }
     };
 
@@ -61,7 +79,7 @@ const ImageGallery = () => {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isTagsDropdownOpen]);
+  }, [isTagsDropdownOpen, isSortDropdownOpen]);
 
   const loadImages = async (searchFilters = {}) => {
     try {
@@ -123,6 +141,24 @@ const ImageGallery = () => {
 
   const handleAdvancedSearch = (filters) => {
     loadImages(filters);
+  };
+
+  const handleSortChange = (newSort) => {
+    setCurrentSort(newSort);
+    const updatedFilters = {
+      ...currentFilters,
+      ...newSort
+    };
+    setCurrentFilters(updatedFilters);
+    loadImages(updatedFilters);
+  };
+
+  const toggleSortOrder = () => {
+    const newOrder = currentSort.sortOrder === 'asc' ? 'desc' : 'asc';
+    handleSortChange({
+      ...currentSort,
+      sortOrder: newOrder
+    });
   };
 
   const clearFilters = () => {
@@ -882,8 +918,10 @@ const ImageGallery = () => {
             </div>
           )}
 
-          {/* Tags Filter Dropdown */}
-          <div className="relative mb-4 tags-dropdown">
+          {/* Filter and Sort Controls */}
+          <div className="flex items-start space-x-4 mb-4">
+            {/* Tags Filter Dropdown */}
+            <div className="relative tags-dropdown">
             <button
               onClick={() => setIsTagsDropdownOpen(!isTagsDropdownOpen)}
               className="flex items-center space-x-3 px-6 py-4 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm min-w-[200px] justify-between"
@@ -958,6 +996,94 @@ const ImageGallery = () => {
                 </div>
               </div>
             )}
+            </div>
+
+            {/* Sort Dropdown */}
+            <div className="relative sort-dropdown">
+              <button
+                onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
+                className="flex items-center space-x-3 px-6 py-4 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm min-w-[200px] justify-between"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center">
+                    {currentSort.sortOrder === 'asc' ? 
+                      <SortAsc className="h-5 w-5 text-white" /> : 
+                      <SortDesc className="h-5 w-5 text-white" />
+                    }
+                  </div>
+                  <div className="text-left">
+                    <div className="font-medium text-gray-900">Sort</div>
+                    <div className="text-sm text-gray-500">
+                      {sortOptions.find(opt => opt.value === currentSort.sortBy)?.label} ({currentSort.sortOrder === 'asc' ? 'A-Z' : 'Z-A'})
+                    </div>
+                  </div>
+                </div>
+                <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform ${isSortDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {isSortDropdownOpen && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-50 min-w-[300px]">
+                  <div className="p-4">
+                    <div className="mb-3">
+                      <h3 className="font-medium text-gray-900 mb-2">Sort Options</h3>
+                    </div>
+                    
+                    {sortOptions.map((option) => {
+                      const isSelected = currentSort.sortBy === option.value;
+                      return (
+                        <div
+                          key={option.value}
+                          className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 rounded-lg cursor-pointer mb-1"
+                          onClick={() => {
+                            handleSortChange({
+                              sortBy: option.value,
+                              sortOrder: currentSort.sortOrder
+                            });
+                            setIsSortDropdownOpen(false);
+                          }}
+                        >
+                          <div className={`w-6 h-6 border-2 rounded-md flex items-center justify-center ${
+                            isSelected 
+                              ? 'bg-blue-500 border-blue-500' 
+                              : 'border-gray-300'
+                          }`}>
+                            {isSelected && (
+                              <Check className="h-4 w-4 text-white" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-900">{option.label}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    
+                    {/* Sort Order Toggle */}
+                    <div className="border-t border-gray-200 mt-3 pt-3">
+                      <button
+                        onClick={() => {
+                          toggleSortOrder();
+                          setIsSortDropdownOpen(false);
+                        }}
+                        className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 rounded-lg cursor-pointer w-full"
+                      >
+                        <div className="w-6 h-6 border-2 border-gray-300 rounded-md flex items-center justify-center">
+                          {currentSort.sortOrder === 'asc' ? 
+                            <SortAsc className="h-4 w-4 text-gray-600" /> : 
+                            <SortDesc className="h-4 w-4 text-gray-600" />
+                          }
+                        </div>
+                        <div className="flex-1 text-left">
+                          <div className="font-medium text-gray-900">
+                            {currentSort.sortOrder === 'asc' ? 'Switch to Descending' : 'Switch to Ascending'}
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Results Summary & View Controls */}
@@ -1402,7 +1528,7 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
         <div className={`absolute inset-0 bg-black bg-opacity-70 transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'} flex flex-col justify-end p-4`}>
           <div className="text-white">
             {/* Type */}
-            <div className="text-xs font-semibold text-blue-300 uppercase tracking-wide mb-1">
+            <div className="text-xs font-semibold text-green-400 uppercase tracking-wide mb-1">
               {getImageType()}
             </div>
             
