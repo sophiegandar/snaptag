@@ -1042,7 +1042,8 @@ app.post('/api/images/search', async (req, res) => {
     console.log(`🔗 Generating temporary URLs for ${filteredImages.length} images...`);
     
     // Quick fallback: if too many images, just use placeholders to prevent timeout
-    if (filteredImages.length > 10) {
+    // Increased limit from 10 to 50 to accommodate typical project sizes
+    if (filteredImages.length > 50) {
       console.log(`⚡ Too many images (${filteredImages.length}), using placeholders to prevent timeout`);
       for (const image of filteredImages) {
         image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`;
