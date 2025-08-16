@@ -269,15 +269,17 @@ app.post('/api/admin/fix-archier-metadata', async (req, res) => {
     for (const image of archierImages) {
       try {
         console.log(`📝 Updating metadata for ${image.filename}...`);
+        console.log(`🔍 Image tags:`, image.tags);
+        console.log(`🔍 Tag count:`, image.tags?.length || 0);
         
         await metadataService.updateImageMetadata(image.dropbox_path, {
           tags: image.tags,
           focusedTags: image.focused_tags || [],
           title: image.title || image.filename,
-          description: image.description || `Tagged with: ${image.tags.join(', ')}`
+          description: image.description || `Tagged with: ${image.tags?.join(', ') || 'no tags'}`
         });
         
-        console.log(`✅ Updated metadata for ${image.filename}`);
+        console.log(`✅ Updated metadata for ${image.filename} with tags: ${image.tags?.join(', ')}`);
         successCount++;
         
         // Add small delay to avoid overwhelming Dropbox API
@@ -627,10 +629,10 @@ app.get('/api/images/:id', async (req, res) => {
     // Generate temporary URL for this image
     try {
       console.log(`🔗 Generating URL for ${image.filename} at path: ${image.dropbox_path}`);
-      image.url = await dropboxService.getTemporaryLink(image.dropbox_path);
+    image.url = await dropboxService.getTemporaryLink(image.dropbox_path);
       console.log(`✅ Successfully generated URL for image ${id}`);
-      
-      res.json(image);
+    
+    res.json(image);
     } catch (urlError) {
       console.error(`❌ Failed to generate URL for image ${id}:`, urlError.message);
       console.error(`❌ Dropbox path: ${image.dropbox_path}`);
@@ -815,9 +817,9 @@ app.delete('/api/images/:id', async (req, res) => {
       console.error(`❌ Failed to delete from Dropbox:`, dropboxError.message);
       // Continue with database deletion even if Dropbox fails
     }
-    
+      
     console.log(`🗄️ Deleting from database...`);
-    await databaseService.deleteImage(id);
+      await databaseService.deleteImage(id);
     console.log(`✅ Deleted from database successfully`);
 
     res.json({ success: true });
@@ -1955,7 +1957,7 @@ async function processAndUploadImage({ filePath, originalName, tags, title, name
     focusedTags
   });
   console.log('✅ Metadata added, processed image:', processedImagePath);
-  
+
   // Check file size after processing
   const statsAfter = await fs.stat(processedImagePath);
   console.log('📊 File size after metadata processing:', statsAfter.size, 'bytes');
