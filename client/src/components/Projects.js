@@ -63,9 +63,10 @@ const Projects = () => {
           });
           
           if (response.ok) {
-            const data = await response.json();
-            console.log(`✅ Found ${data.images?.length || 0} images for ${project.name}`);
-            return { projectId: project.id, images: data.images || [] };
+            const images = await response.json();
+            console.log(`✅ Found ${images?.length || 0} images for ${project.name}`);
+            console.log(`📊 Sample image:`, images?.[0]);
+            return { projectId: project.id, images: images || [] };
           } else {
             const errorText = await response.text();
             console.warn(`Failed to load images for ${project.name}:`, response.status, errorText);
