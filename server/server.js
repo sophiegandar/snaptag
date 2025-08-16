@@ -253,6 +253,38 @@ app.get('/api/debug/tags', async (req, res) => {
   }
 });
 
+// Debug endpoint to check what tags Archier images actually have
+app.get('/api/debug/archier-tags', async (req, res) => {
+  try {
+    console.log('🔍 Checking tags for Archier images...');
+    
+    // Get all images tagged with 'archier'
+    const archierImages = await databaseService.searchImages('', ['archier']);
+    
+    const debugInfo = archierImages.map(image => ({
+      id: image.id,
+      filename: image.filename,
+      tags: image.tags,
+      tagCount: image.tags?.length || 0,
+      hasYandoit: image.tags?.includes('yandoit'),
+      hasComplete: image.tags?.includes('complete'),
+      hasArchier: image.tags?.includes('archier'),
+      dropboxPath: image.dropbox_path
+    }));
+    
+    res.json({
+      success: true,
+      totalImages: archierImages.length,
+      sampleImages: debugInfo.slice(0, 5), // First 5 for brevity
+      allImages: debugInfo
+    });
+    
+  } catch (error) {
+    console.error('❌ Debug Archier tags error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Fix metadata for existing Archier images
 app.post('/api/admin/fix-archier-metadata', async (req, res) => {
   try {
