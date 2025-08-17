@@ -1033,7 +1033,7 @@ app.get('/api/images', async (req, res) => {
     console.log(`🔗 Generating temporary URLs for ${images.length} images...`);
     
     // Performance optimization: if too many images, use placeholders to prevent timeout
-    if (images.length > 20) {
+    if (images.length > 100) {
       console.log(`⚡ Too many images (${images.length}), using placeholders to prevent timeout`);
       for (const image of images) {
         image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`;
@@ -1094,7 +1094,7 @@ app.get('/api/images/untagged', async (req, res) => {
     // Generate temporary URLs for display (with performance optimization)
     let imagesWithUrls;
     
-    if (images.length > 15) {
+    if (images.length > 50) {
       console.log(`⚡ Too many untagged images (${images.length}), using placeholders for speed`);
       imagesWithUrls = images.map(image => ({
         ...image,
