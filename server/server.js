@@ -336,6 +336,72 @@ app.post('/api/admin/fix-missing-archier-tags', async (req, res) => {
   }
 });
 
+// Test metadata embedding for specific images
+app.post('/api/admin/test-metadata', async (req, res) => {
+  try {
+    const { imageIds } = req.body; // Array of image IDs to test
+    
+    if (!imageIds || !Array.isArray(imageIds)) {
+      return res.status(400).json({ error: 'imageIds array required' });
+    }
+    
+    console.log(`🧪 Testing metadata for ${imageIds.length} images...`);
+    
+    const results = [];
+    
+    for (const imageId of imageIds.slice(0, 3)) { // Limit to 3 for testing
+      try {
+        // Get image from database
+        const image = await databaseService.getImageById(imageId);
+        if (!image) {
+          results.push({ imageId, error: 'Image not found' });
+          continue;
+        }
+        
+        console.log(`🔍 Testing metadata for ${image.filename}...`);
+        
+        // Read current metadata from the file
+        const currentMetadata = await metadataService.readMetadata(image.dropbox_path);
+        
+        results.push({
+          imageId: image.id,
+          filename: image.filename,
+          dropboxPath: image.dropbox_path,
+          databaseTags: image.tags || [],
+          embeddedTags: currentMetadata.tags || [],
+          metadataMatch: JSON.stringify(image.tags?.sort()) === JSON.stringify(currentMetadata.tags?.sort()),
+          currentMetadata: {
+            tags: currentMetadata.tags,
+            title: currentMetadata.title,
+            description: currentMetadata.description,
+            creator: currentMetadata.creator,
+            rights: currentMetadata.rights
+          }
+        });
+        
+        console.log(`📊 ${image.filename}:`);
+        console.log(`   DB Tags: ${(image.tags || []).join(', ')}`);
+        console.log(`   File Tags: ${(currentMetadata.tags || []).join(', ')}`);
+        console.log(`   Match: ${JSON.stringify(image.tags?.sort()) === JSON.stringify(currentMetadata.tags?.sort())}`);
+        
+      } catch (error) {
+        console.error(`❌ Error testing metadata for image ${imageId}:`, error.message);
+        results.push({ imageId, error: error.message });
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: `Tested metadata for ${results.length} images`,
+      results
+    });
+    
+  } catch (error) {
+    console.error('❌ Test metadata error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Debug endpoint to check what tags Archier images actually have
 app.get('/api/debug/archier-tags', async (req, res) => {
   try {
