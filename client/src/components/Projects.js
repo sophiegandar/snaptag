@@ -199,10 +199,8 @@ const Projects = () => {
                         <img
                           src={image.url || '/api/placeholder-image.jpg'}
                           alt={image.filename}
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                          style={{
-                            objectPosition: 'center center'
-                          }}
+                          loading="lazy"
+                          className="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
                           onError={(e) => {
                             e.target.src = '/api/placeholder-image.jpg';
                           }}
