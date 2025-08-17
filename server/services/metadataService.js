@@ -230,8 +230,28 @@ class MetadataService {
       
       console.log(`🔧 Running ExifTool command: ${exiftoolCmd}`);
       
-      // Execute ExifTool command
-      const cmdResult = await execPromise(exiftoolCmd);
+      // Execute ExifTool command using execFile for better argument handling
+      const { execFile } = require('child_process');
+      const execFilePromise = util.promisify(execFile);
+      
+      // Use execFile with array of arguments to avoid shell parsing issues
+      const cmdResult = await execFilePromise('exiftool', [
+        '-overwrite_original',
+        '-sep', ',',
+        `-Keywords=${tagsString}`,
+        `-Subject=${tagsString}`,
+        `-IPTC:Keywords=${tagsString}`,
+        `-XMP:Subject=${tagsString}`,
+        `-XMP:Title=${escapedTitle}`,
+        `-XMP:Description=${escapedDescription}`,
+        `-IPTC:Caption-Abstract=${escapedDescription}`,
+        `-IPTC:ObjectName=${escapedTitle}`,
+        `-XMP:Creator=Archier SnapTag`,
+        `-IPTC:By-line=Archier SnapTag`,
+        `-XMP:Rights=Copyright Archier`,
+        `-IPTC:CopyrightNotice=Copyright Archier`,
+        tempPath
+      ]);
       console.log(`✅ ExifTool output:`, cmdResult.stdout);
       if (cmdResult.stderr) {
         console.log(`⚠️ ExifTool stderr:`, cmdResult.stderr);
