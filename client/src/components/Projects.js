@@ -143,44 +143,90 @@ const Projects = () => {
       ) : (
         /* Project Content */
         <div>
-          {/* Project Images Grid */}
+          {/* Project Images Grid - Match Gallery Layout */}
           {activeImages.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {activeImages.map((image) => (
-                <div key={image.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden group hover:shadow-md transition-shadow">
-                  <div className="aspect-square relative overflow-hidden">
-                    <img
-                      src={image.url || '/api/placeholder-image.jpg'}
-                      alt={image.filename}
-                      className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-200"
-                      onError={(e) => {
-                        e.target.src = '/api/placeholder-image.jpg';
-                      }}
-                    />
-                    
-                    {/* Overlay with filename */}
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 flex items-end">
-                      <div className="w-full p-3 text-white transform translate-y-full group-hover:translate-y-0 transition-transform duration-200">
-                        <p className="text-sm font-medium truncate">{image.title || image.filename}</p>
-                        {image.tags && image.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {image.tags.slice(0, 3).map((tag, index) => (
-                              <span key={index} className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded">
-                                {tag}
-                              </span>
-                            ))}
-                            {image.tags.length > 3 && (
-                              <span className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded">
-                                +{image.tags.length - 3}
-                              </span>
-                            )}
+              {activeImages.map((image) => {
+                // Helper functions to match gallery behavior
+                const getImageType = () => {
+                  const tags = image.tags || [];
+                  if (tags.includes('archier')) return 'Archier';
+                  
+                  // Only classify as Texture if there's an explicit 'texture' or 'materials' tag
+                  const hasTextureContext = tags.some(tag => ['materials', 'texture'].includes(tag.toLowerCase()));
+                  if (hasTextureContext) return 'Texture';
+                  
+                  // Only classify as Precedent if there's an explicit 'precedent' tag
+                  const hasPrecedentTag = tags.some(tag => tag.toLowerCase() === 'precedent');
+                  if (hasPrecedentTag) return 'Precedent';
+                  
+                  // If no specific type tag, return 'General'
+                  return 'General';
+                };
+
+                const getCategory = () => {
+                  const tags = image.tags || [];
+                  const type = getImageType();
+                  
+                  if (type === 'Archier') {
+                    const archierCategories = ['complete', 'wip'];
+                    const categoryTag = tags.find(tag => archierCategories.includes(tag.toLowerCase()));
+                    return categoryTag ? categoryTag.charAt(0).toUpperCase() + categoryTag.slice(1) : 'Complete';
+                  }
+                  
+                  if (type === 'Texture') {
+                    const materialCategories = ['brick', 'carpet', 'concrete', 'fabric', 'general', 'landscape', 'metal', 'stone', 'tile', 'wood'];
+                    const categoryTag = tags.find(tag => materialCategories.includes(tag.toLowerCase()));
+                    return categoryTag ? categoryTag.charAt(0).toUpperCase() + categoryTag.slice(1) : 'General';
+                  }
+                  
+                  if (type === 'Precedent') {
+                    const precedentCategories = ['art', 'bathrooms', 'details', 'doors', 'exteriors', 'furniture', 'general', 'interiors', 'joinery', 'kitchens', 'landscape', 'lighting', 'spatial', 'stairs', 'structure'];
+                    const categoryTag = tags.find(tag => precedentCategories.includes(tag.toLowerCase()));
+                    return categoryTag ? categoryTag.charAt(0).toUpperCase() + categoryTag.slice(1) : 'General';
+                  }
+                  
+                  // For 'General' type, try to find the most relevant category from any tag
+                  const allCategories = ['art', 'bathrooms', 'details', 'doors', 'exteriors', 'furniture', 'general', 'interiors', 'joinery', 'kitchens', 'landscape', 'lighting', 'spatial', 'stairs', 'structure', 'brick', 'carpet', 'concrete', 'fabric', 'metal', 'stone', 'tile', 'wood'];
+                  const categoryTag = tags.find(tag => allCategories.includes(tag.toLowerCase()));
+                  return categoryTag ? categoryTag.charAt(0).toUpperCase() + categoryTag.slice(1) : 'Uncategorised';
+                };
+
+                return (
+                  <div key={image.id} className="relative group cursor-pointer">
+                    <div className="bg-white rounded-lg overflow-hidden shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 aspect-square">
+                      <div className="relative w-full h-full overflow-hidden">
+                        <img
+                          src={image.url || '/api/placeholder-image.jpg'}
+                          alt={image.filename}
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          style={{
+                            objectPosition: 'center'
+                          }}
+                          onError={(e) => {
+                            e.target.src = '/api/placeholder-image.jpg';
+                          }}
+                        />
+                        
+                        {/* Hover Overlay - Match Gallery Style */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end">
+                          <div className="p-4 text-white">
+                            <div className="text-xs font-semibold text-green-400 uppercase tracking-wide mb-1">
+                              {getImageType()}
+                            </div>
+                            <div className="text-sm font-medium text-white/90 mb-1">
+                              {getCategory()}
+                            </div>
+                            <div className="text-xs text-white/70 truncate">
+                              {image.title || image.filename}
+                            </div>
                           </div>
-                        )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             /* Empty State */
