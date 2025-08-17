@@ -336,6 +336,50 @@ app.post('/api/admin/fix-missing-archier-tags', async (req, res) => {
   }
 });
 
+// Test ExifTool availability and basic functionality
+app.get('/api/admin/test-exiftool', async (req, res) => {
+  try {
+    console.log('🧪 Testing ExifTool availability...');
+    
+    // Test if ExifTool is available
+    const exiftool = require('node-exiftool');
+    const ep = new exiftool.ExiftoolProcess();
+    
+    try {
+      await ep.open();
+      console.log('✅ ExifTool process opened successfully');
+      
+      // Test ExifTool version
+      const version = await ep.version();
+      console.log(`📋 ExifTool version: ${version}`);
+      
+      await ep.close();
+      
+      res.json({
+        success: true,
+        message: 'ExifTool is working',
+        version: version
+      });
+      
+    } catch (toolError) {
+      console.error('❌ ExifTool error:', toolError);
+      res.json({
+        success: false,
+        error: `ExifTool error: ${toolError.message}`,
+        details: toolError.stack
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ ExifTool test error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      details: error.stack 
+    });
+  }
+});
+
 // Test metadata embedding for one image
 app.post('/api/admin/test-single-metadata', async (req, res) => {
   try {
