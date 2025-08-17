@@ -194,31 +194,28 @@ const Projects = () => {
 
                 return (
                   <div key={image.id} className="relative group cursor-pointer">
-                    <div className="bg-white rounded-lg overflow-hidden shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 aspect-square">
+                    <div className="bg-white overflow-hidden shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 aspect-square">
                       <div className="relative w-full h-full overflow-hidden">
                         <img
                           src={image.url || '/api/placeholder-image.jpg'}
                           alt={image.filename}
                           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                           style={{
-                            objectPosition: 'center'
+                            objectPosition: 'center center'
                           }}
                           onError={(e) => {
                             e.target.src = '/api/placeholder-image.jpg';
                           }}
                         />
                         
-                        {/* Hover Overlay - Match Gallery Style */}
+                        {/* Hover Overlay - Match Gallery Style Exactly */}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end">
                           <div className="p-4 text-white">
                             <div className="text-xs font-semibold text-green-400 uppercase tracking-wide mb-1">
                               {getImageType()}
                             </div>
-                            <div className="text-sm font-medium text-white/90 mb-1">
+                            <div className="text-sm font-medium text-white/90">
                               {getCategory()}
-                            </div>
-                            <div className="text-xs text-white/70 truncate">
-                              {image.title || image.filename}
                             </div>
                           </div>
                         </div>

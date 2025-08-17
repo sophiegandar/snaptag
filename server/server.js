@@ -253,6 +253,83 @@ app.get('/api/debug/tags', async (req, res) => {
   }
 });
 
+// Process metadata for a batch of specific images
+app.post('/api/admin/fix-metadata-batch', async (req, res) => {
+  try {
+    const { imageIds } = req.body;
+    
+    if (!imageIds || !Array.isArray(imageIds)) {
+      return res.status(400).json({ error: 'imageIds array required' });
+    }
+    
+    console.log(`🔧 Processing metadata for batch of ${imageIds.length} images...`);
+    
+    let successCount = 0;
+    let errorCount = 0;
+    const errors = [];
+    const results = [];
+    
+    for (const imageId of imageIds) {
+      try {
+        // Get image from database
+        const image = await databaseService.getImageById(imageId);
+        if (!image) {
+          errors.push(`Image ${imageId}: not found`);
+          errorCount++;
+          continue;
+        }
+        
+        console.log(`📝 Processing metadata for ${image.filename}...`);
+        
+        // Update metadata
+        await metadataService.updateImageMetadata(image.dropbox_path, {
+          tags: image.tags,
+          focusedTags: image.focused_tags || [],
+          title: image.title || image.filename,
+          description: image.description || `Tagged with: ${image.tags?.join(', ') || 'no tags'}`
+        });
+        
+        results.push({
+          id: image.id,
+          filename: image.filename,
+          tags: image.tags,
+          status: 'success'
+        });
+        
+        successCount++;
+        console.log(`✅ Completed metadata for ${image.filename}`);
+        
+        // Small delay to prevent overwhelming the system
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+      } catch (error) {
+        console.error(`❌ Failed to process metadata for image ${imageId}:`, error.message);
+        errors.push(`Image ${imageId}: ${error.message}`);
+        errorCount++;
+      }
+    }
+    
+    const message = `Metadata batch completed: ${successCount} successful, ${errorCount} errors`;
+    console.log(message);
+    
+    res.json({
+      success: true,
+      message,
+      stats: {
+        total: imageIds.length,
+        successful: successCount,
+        errors: errorCount,
+        errorDetails: errors,
+        results: results
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Fix metadata batch error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Fix missing yandoit and complete tags for Archier images based on folder structure
 app.post('/api/admin/fix-missing-archier-tags', async (req, res) => {
   try {
