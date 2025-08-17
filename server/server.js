@@ -1029,17 +1029,42 @@ app.get('/api/images', async (req, res) => {
       console.log(`📊 Applied limit: showing ${images.length} of total images`);
     }
     
-    // Generate temporary Dropbox URLs for each image
+    // Generate temporary Dropbox URLs for each image (with performance optimization)
     console.log(`🔗 Generating temporary URLs for ${images.length} images...`);
-    for (const image of images) {
-      try {
-        console.log(`🔗 Generating URL for: ${image.dropbox_path}`);
-        image.url = await dropboxService.getTemporaryLink(image.dropbox_path);
-        console.log(`✅ Generated URL for ${image.filename}: ${image.url ? 'success' : 'null'}`);
-      } catch (error) {
-        console.error(`❌ Failed to generate URL for ${image.filename}:`, error.message);
-        image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`; // Use absolute placeholder URL
+    
+    // Performance optimization: if too many images, use placeholders to prevent timeout
+    if (images.length > 20) {
+      console.log(`⚡ Too many images (${images.length}), using placeholders to prevent timeout`);
+      for (const image of images) {
+        image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`;
       }
+    } else {
+      // For smaller sets, generate URLs in parallel for better performance
+      console.log(`🚀 Generating ${images.length} URLs in parallel...`);
+      const urlPromises = images.map(async (image) => {
+        try {
+          const url = await dropboxService.getTemporaryLink(image.dropbox_path);
+          return { image, url, success: true };
+        } catch (error) {
+          console.error(`❌ Failed to generate URL for ${image.filename}:`, error.message);
+          return { 
+            image, 
+            url: `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`, 
+            success: false 
+          };
+        }
+      });
+      
+      // Wait for all URLs to complete in parallel
+      const results = await Promise.all(urlPromises);
+      
+      // Apply URLs to images
+      results.forEach(({ image, url }) => {
+        image.url = url;
+      });
+      
+      const successCount = results.filter(r => r.success).length;
+      console.log(`✅ Generated URLs: ${successCount}/${images.length} successful`);
     }
     
     res.json(images);
@@ -1066,26 +1091,38 @@ app.get('/api/images/untagged', async (req, res) => {
     const images = untaggedImages.rows; // PostgreSQL returns .rows
     console.log(`📊 Found ${images.length} untagged images`);
     
-    // Generate temporary URLs for display
-    const imagesWithUrls = await Promise.all(
-      images.map(async (image) => {
-        try {
-          const url = await dropboxService.getTemporaryLink(image.dropbox_path);
-          return {
-            ...image,
-            url,
-            tags: [] // Ensure tags is empty array
-          };
-        } catch (error) {
-          console.error(`❌ Failed to get URL for ${image.filename}:`, error.message);
-          return {
-            ...image,
-            url: `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`,
-            tags: []
-          };
-        }
-      })
-    );
+    // Generate temporary URLs for display (with performance optimization)
+    let imagesWithUrls;
+    
+    if (images.length > 15) {
+      console.log(`⚡ Too many untagged images (${images.length}), using placeholders for speed`);
+      imagesWithUrls = images.map(image => ({
+        ...image,
+        url: `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`,
+        tags: []
+      }));
+    } else {
+      console.log(`🚀 Generating URLs in parallel for ${images.length} untagged images...`);
+      imagesWithUrls = await Promise.all(
+        images.map(async (image) => {
+          try {
+            const url = await dropboxService.getTemporaryLink(image.dropbox_path);
+            return {
+              ...image,
+              url,
+              tags: [] // Ensure tags is empty array
+            };
+          } catch (error) {
+            console.error(`❌ Failed to get URL for ${image.filename}:`, error.message);
+            return {
+              ...image,
+              url: `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`,
+              tags: []
+            };
+          }
+        })
+      );
+    }
     
     res.json({
       success: true,
