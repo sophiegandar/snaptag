@@ -46,7 +46,10 @@ class MetadataService {
       console.log(`🔧 Debug - tags input:`, tags);
       console.log(`🔧 Debug - tags type:`, typeof tags, Array.isArray(tags));
       
+      // Simple approach - try multiple metadata fields to ensure compatibility
       const metadataArgs = {
+        'Keywords': tags,
+        'Subject': tags,
         'IPTC:Keywords': tags,
         'XMP:Subject': tags,
         'XMP:Title': title || '',
@@ -56,7 +59,9 @@ class MetadataService {
         'XMP:Creator': 'Archier SnapTag',
         'IPTC:By-line': 'Archier SnapTag',
         'XMP:Rights': 'Copyright Archier',
-        'IPTC:CopyrightNotice': 'Copyright Archier'
+        'IPTC:CopyrightNotice': 'Copyright Archier',
+        'Creator': 'Archier SnapTag',
+        'Copyright': 'Copyright Archier'
       };
       
       console.log(`🔧 Debug - metadataArgs:`, JSON.stringify(metadataArgs, null, 2));
@@ -247,6 +252,8 @@ class MetadataService {
     
     // Try different metadata fields for tags
     const keywordFields = [
+      'Keywords',
+      'Subject', 
       'IPTC:Keywords',
       'XMP:Subject',
       'EXIF:Keywords',
