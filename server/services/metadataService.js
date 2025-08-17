@@ -202,24 +202,31 @@ class MetadataService {
       const title = newMetadata.title || '';
       const description = newMetadata.description || '';
       
-      // Build ExifTool command with proper escaping
-      const exiftoolCmd = [
+      // Build ExifTool command with proper escaping and quoting
+      const escapedTitle = title.replace(/"/g, '\\"');
+      const escapedDescription = description.replace(/"/g, '\\"');
+      
+      // Use individual tag arguments to avoid parsing issues
+      const exiftoolArgs = [
         'exiftool',
         '-overwrite_original',
-        `-Keywords=${tagsString}`,
-        `-Subject=${tagsString}`,
-        `-IPTC:Keywords=${tagsString}`,
-        `-XMP:Subject=${tagsString}`,
-        `-XMP:Title=${title}`,
-        `-XMP:Description=${description}`,
-        `-IPTC:Caption-Abstract=${description}`,
-        `-IPTC:ObjectName=${title}`,
-        `-XMP:Creator=Archier SnapTag`,
-        `-IPTC:By-line=Archier SnapTag`,
-        `-XMP:Rights=Copyright Archier`,
-        `-IPTC:CopyrightNotice=Copyright Archier`,
+        '-sep', ',',  // Set separator for multiple values
+        `-Keywords="${tagsString}"`,
+        `-Subject="${tagsString}"`,
+        `-IPTC:Keywords="${tagsString}"`,
+        `-XMP:Subject="${tagsString}"`,
+        `-XMP:Title="${escapedTitle}"`,
+        `-XMP:Description="${escapedDescription}"`,
+        `-IPTC:Caption-Abstract="${escapedDescription}"`,
+        `-IPTC:ObjectName="${escapedTitle}"`,
+        `-XMP:Creator="Archier SnapTag"`,
+        `-IPTC:By-line="Archier SnapTag"`,
+        `-XMP:Rights="Copyright Archier"`,
+        `-IPTC:CopyrightNotice="Copyright Archier"`,
         `"${tempPath}"`
-      ].join(' ');
+      ];
+      
+      const exiftoolCmd = exiftoolArgs.join(' ');
       
       console.log(`🔧 Running ExifTool command: ${exiftoolCmd}`);
       
