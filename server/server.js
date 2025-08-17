@@ -360,8 +360,24 @@ app.post('/api/admin/test-metadata', async (req, res) => {
         
         console.log(`🔍 Testing metadata for ${image.filename}...`);
         
-        // Read current metadata from the file
-        const currentMetadata = await metadataService.readMetadata(image.dropbox_path);
+        // Download file temporarily to read metadata (since ExifTool can't read Dropbox URLs directly)
+        const tempPath = `temp/verify-${Date.now()}-${image.filename}`;
+        let currentMetadata = {};
+        
+        try {
+          await dropboxService.downloadFile(image.dropbox_path, tempPath);
+          currentMetadata = await metadataService.readMetadata(tempPath);
+          // Clean up temp file
+          await require('fs').promises.unlink(tempPath);
+        } catch (metadataError) {
+          console.error(`⚠️ Could not read metadata for ${image.filename}:`, metadataError.message);
+          // Clean up temp file if it exists
+          try {
+            await require('fs').promises.unlink(tempPath);
+          } catch (cleanupError) {
+            // Ignore cleanup errors
+          }
+        }
         
         results.push({
           imageId: image.id,
