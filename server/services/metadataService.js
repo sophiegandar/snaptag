@@ -70,8 +70,21 @@ class MetadataService {
       console.log(`🔧 Debug - About to write metadata to: ${imagePath}`);
       console.log(`🔧 Debug - ExifTool process initialized:`, this.initialized);
       
-      const result = await ep.writeMetadata(imagePath, metadataArgs, ['-overwrite_original']);
+      // Use different approach - don't use -overwrite_original for temp files
+      const result = await ep.writeMetadata(imagePath, metadataArgs);
       console.log(`🔧 Debug - ExifTool result:`, result);
+      
+      // Verify the metadata was written
+      try {
+        const verifyResult = await ep.readMetadata(imagePath, ['-s', '-j']);
+        console.log(`🔧 Debug - Verification read result:`, JSON.stringify(verifyResult, null, 2));
+        if (verifyResult.data && verifyResult.data.length > 0) {
+          const writtenTags = this.extractTags(verifyResult.data[0]);
+          console.log(`✅ Verified tags written: ${writtenTags.join(', ')}`);
+        }
+      } catch (verifyError) {
+        console.error(`⚠️ Could not verify written metadata:`, verifyError.message);
+      }
 
       console.log(`✅ Metadata added to image: ${imagePath}`);
       return imagePath;
