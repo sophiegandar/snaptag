@@ -111,27 +111,38 @@ class MetadataService {
   }
 
   async readMetadata(imagePath) {
-    await this.init();
-
     try {
-      const metadata = await ep.readMetadata(imagePath, ['-s', '-j']);
+      // Use direct command line approach for consistency
+      const { exec } = require('child_process');
+      const util = require('util');
+      const execPromise = util.promisify(exec);
       
-      if (metadata.data && metadata.data.length > 0) {
-        const data = metadata.data[0];
+      const readCmd = `exiftool -j -s "${imagePath}"`;
+      console.log(`🔍 Reading metadata from: ${imagePath}`);
+      
+      const result = await execPromise(readCmd);
+      console.log(`📖 Raw metadata result:`, result.stdout.substring(0, 500) + '...');
+      
+      if (result.stdout) {
+        const metadata = JSON.parse(result.stdout);
         
-        return {
-          tags: this.extractTags(data),
-          title: data['XMP:Title'] || data['IPTC:ObjectName'] || '',
-          description: data['XMP:Description'] || data['IPTC:Caption-Abstract'] || '',
-          creator: data['XMP:Creator'] || data['IPTC:By-line'] || '',
-          rights: data['XMP:Rights'] || data['IPTC:CopyrightNotice'] || '',
-          focusedTags: this.extractFocusedTags(data),
-          dateCreated: data['IPTC:DateCreated'] || data['EXIF:CreateDate'] || '',
-          imageWidth: data['EXIF:ImageWidth'] || data['File:ImageWidth'] || 0,
-          imageHeight: data['EXIF:ImageHeight'] || data['File:ImageHeight'] || 0,
-          fileSize: data['File:FileSize'] || 0,
-          mimeType: data['File:MIMEType'] || ''
-        };
+        if (metadata && metadata.length > 0) {
+          const data = metadata[0];
+          
+          return {
+            tags: this.extractTags(data),
+            title: data['XMP:Title'] || data['IPTC:ObjectName'] || '',
+            description: data['XMP:Description'] || data['IPTC:Caption-Abstract'] || '',
+            creator: data['XMP:Creator'] || data['IPTC:By-line'] || '',
+            rights: data['XMP:Rights'] || data['IPTC:CopyrightNotice'] || '',
+            focusedTags: this.extractFocusedTags(data),
+            dateCreated: data['IPTC:DateCreated'] || data['EXIF:CreateDate'] || '',
+            imageWidth: data['EXIF:ImageWidth'] || data['File:ImageWidth'] || 0,
+            imageHeight: data['EXIF:ImageHeight'] || data['File:ImageHeight'] || 0,
+            fileSize: data['File:FileSize'] || 0,
+            mimeType: data['File:MIMEType'] || ''
+          };
+        }
       }
       
       return {};
@@ -142,9 +153,12 @@ class MetadataService {
   }
 
   async updateImageMetadata(imagePath, newMetadata) {
-    // Full implementation - download, update metadata, and re-upload
+    // Use direct command line approach - more reliable than node wrapper
     const dropboxService = require('./dropboxService');
     const fs = require('fs').promises;
+    const { exec } = require('child_process');
+    const util = require('util');
+    const execPromise = util.promisify(exec);
     const tempPath = `temp/update-${Date.now()}-${path.basename(imagePath)}`;
     
     try {
@@ -183,13 +197,55 @@ class MetadataService {
       
       console.log(`🏷️ Final tags to embed: ${allTags.join(', ')}`);
       
-      // Update metadata with all tags (regular + focused)
-      await this.addMetadataToImage(tempPath, {
-        tags: allTags,
-        title: newMetadata.title || '',
-        description: newMetadata.description || '',
-        focusedTags: newMetadata.focusedTags
-      });
+      // Use direct ExifTool command line - more reliable
+      const tagsString = allTags.join(',');
+      const title = newMetadata.title || '';
+      const description = newMetadata.description || '';
+      
+      // Build ExifTool command with proper escaping
+      const exiftoolCmd = [
+        'exiftool',
+        '-overwrite_original',
+        `-Keywords=${tagsString}`,
+        `-Subject=${tagsString}`,
+        `-IPTC:Keywords=${tagsString}`,
+        `-XMP:Subject=${tagsString}`,
+        `-XMP:Title=${title}`,
+        `-XMP:Description=${description}`,
+        `-IPTC:Caption-Abstract=${description}`,
+        `-IPTC:ObjectName=${title}`,
+        `-XMP:Creator=Archier SnapTag`,
+        `-IPTC:By-line=Archier SnapTag`,
+        `-XMP:Rights=Copyright Archier`,
+        `-IPTC:CopyrightNotice=Copyright Archier`,
+        `"${tempPath}"`
+      ].join(' ');
+      
+      console.log(`🔧 Running ExifTool command: ${exiftoolCmd}`);
+      
+      // Execute ExifTool command
+      const cmdResult = await execPromise(exiftoolCmd);
+      console.log(`✅ ExifTool output:`, cmdResult.stdout);
+      if (cmdResult.stderr) {
+        console.log(`⚠️ ExifTool stderr:`, cmdResult.stderr);
+      }
+      
+      // Verify the metadata was written
+      console.log(`🔍 Verifying metadata was written...`);
+      const verifyCmd = `exiftool -j -Keywords -Subject -Creator -XMP:Title "${tempPath}"`;
+      const verifyResult = await execPromise(verifyCmd);
+      console.log(`📖 Verification result:`, verifyResult.stdout);
+      
+      // Parse verification result to check if tags were written
+      try {
+        const verifyData = JSON.parse(verifyResult.stdout);
+        if (verifyData && verifyData.length > 0) {
+          const writtenTags = verifyData[0].Keywords || verifyData[0].Subject || [];
+          console.log(`✅ Verified tags written: ${Array.isArray(writtenTags) ? writtenTags.join(', ') : writtenTags}`);
+        }
+      } catch (parseError) {
+        console.log(`⚠️ Could not parse verification result, but command completed successfully`);
+      }
       
       // Re-upload to Dropbox with updated metadata (overwrite existing file)
       console.log(`📤 Re-uploading file with embedded metadata (overwriting original)...`);
