@@ -420,6 +420,49 @@ app.post('/api/admin/test-local-metadata', async (req, res) => {
   }
 });
 
+// Test ExifTool command line availability 
+app.get('/api/admin/test-exiftool-cli', async (req, res) => {
+  try {
+    console.log('🧪 Testing ExifTool command line availability...');
+    
+    const { exec } = require('child_process');
+    const util = require('util');
+    const execPromise = util.promisify(exec);
+    
+    try {
+      // Test if exiftool command is available
+      const versionResult = await execPromise('exiftool -ver');
+      console.log(`✅ ExifTool CLI version: ${versionResult.stdout.trim()}`);
+      
+      // Test if we can use it to read a simple file
+      const helpResult = await execPromise('exiftool -h');
+      console.log(`✅ ExifTool help available`);
+      
+      res.json({
+        success: true,
+        message: 'ExifTool CLI is working',
+        version: versionResult.stdout.trim(),
+        helpAvailable: !!helpResult.stdout
+      });
+      
+    } catch (cliError) {
+      console.error('❌ ExifTool CLI error:', cliError.message);
+      res.json({
+        success: false,
+        error: `ExifTool CLI error: ${cliError.message}`,
+        details: cliError
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ ExifTool CLI test error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message
+    });
+  }
+});
+
 // Test ExifTool availability and basic functionality
 app.get('/api/admin/test-exiftool', async (req, res) => {
   try {
