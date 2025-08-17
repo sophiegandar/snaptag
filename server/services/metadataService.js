@@ -70,9 +70,12 @@ class MetadataService {
       console.log(`🔧 Debug - About to write metadata to: ${imagePath}`);
       console.log(`🔧 Debug - ExifTool process initialized:`, this.initialized);
       
-      // Use different approach - don't use -overwrite_original for temp files
-      const result = await ep.writeMetadata(imagePath, metadataArgs);
+      // Write metadata using proper ExifTool syntax
+      const result = await ep.writeMetadata(imagePath, metadataArgs, ['-overwrite_original']);
       console.log(`🔧 Debug - ExifTool result:`, result);
+      
+      // Force a small delay to ensure write completes
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Verify the metadata was written
       try {
@@ -81,6 +84,14 @@ class MetadataService {
         if (verifyResult.data && verifyResult.data.length > 0) {
           const writtenTags = this.extractTags(verifyResult.data[0]);
           console.log(`✅ Verified tags written: ${writtenTags.join(', ')}`);
+          
+          // Check if tags were actually written
+          if (writtenTags.length === 0) {
+            console.error(`❌ No tags found after write operation!`);
+            console.error(`🔍 Raw verification data:`, verifyResult.data[0]);
+          }
+        } else {
+          console.error(`❌ No metadata found in verification result`);
         }
       } catch (verifyError) {
         console.error(`⚠️ Could not verify written metadata:`, verifyError.message);

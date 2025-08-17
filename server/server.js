@@ -349,16 +349,15 @@ app.get('/api/admin/test-exiftool', async (req, res) => {
       await ep.open();
       console.log('✅ ExifTool process opened successfully');
       
-      // Test ExifTool version
-      const version = await ep.version();
-      console.log(`📋 ExifTool version: ${version}`);
+      // Test basic ExifTool functionality (version might not be available)
+      console.log('🔧 ExifTool process methods:', Object.getOwnPropertyNames(ep));
       
       await ep.close();
       
       res.json({
         success: true,
         message: 'ExifTool is working',
-        version: version
+        methods: Object.getOwnPropertyNames(ep)
       });
       
     } catch (toolError) {
