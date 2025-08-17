@@ -336,6 +336,80 @@ app.post('/api/admin/fix-missing-archier-tags', async (req, res) => {
   }
 });
 
+// Test metadata embedding for one image
+app.post('/api/admin/test-single-metadata', async (req, res) => {
+  try {
+    const { imageId } = req.body;
+    
+    if (!imageId) {
+      return res.status(400).json({ error: 'imageId required' });
+    }
+    
+    console.log(`🧪 Testing metadata embedding for single image: ${imageId}...`);
+    
+    // Get image from database
+    const image = await databaseService.getImageById(imageId);
+    if (!image) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+    
+    console.log(`🔍 Image: ${image.filename}`);
+    console.log(`📂 Path: ${image.dropbox_path}`);
+    console.log(`🏷️ Database tags: ${(image.tags || []).join(', ')}`);
+    
+    // Test metadata embedding
+    try {
+      await metadataService.updateImageMetadata(image.dropbox_path, {
+        tags: image.tags,
+        focusedTags: image.focused_tags || [],
+        title: image.title || image.filename,
+        description: image.description || `Tagged with: ${image.tags?.join(', ') || 'no tags'}`
+      });
+      
+      // Verify by reading back
+      const tempPath = `temp/verify-${Date.now()}-${image.filename}`;
+      let verificationResult = {};
+      
+      try {
+        await dropboxService.downloadFile(image.dropbox_path, tempPath);
+        const readMetadata = await metadataService.readMetadata(tempPath);
+        verificationResult = {
+          success: true,
+          embeddedTags: readMetadata.tags || [],
+          creator: readMetadata.creator || '',
+          rights: readMetadata.rights || ''
+        };
+        await require('fs').promises.unlink(tempPath);
+      } catch (verifyError) {
+        verificationResult = { success: false, error: verifyError.message };
+        try {
+          await require('fs').promises.unlink(tempPath);
+        } catch (cleanupError) {
+          // Ignore
+        }
+      }
+      
+      res.json({
+        success: true,
+        image: {
+          id: image.id,
+          filename: image.filename,
+          databaseTags: image.tags || [],
+        },
+        verification: verificationResult
+      });
+      
+    } catch (embedError) {
+      console.error(`❌ Embedding failed:`, embedError.message);
+      res.status(500).json({ error: `Embedding failed: ${embedError.message}` });
+    }
+    
+  } catch (error) {
+    console.error('❌ Test single metadata error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Test metadata embedding for specific images
 app.post('/api/admin/test-metadata', async (req, res) => {
   try {
