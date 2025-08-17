@@ -336,6 +336,90 @@ app.post('/api/admin/fix-missing-archier-tags', async (req, res) => {
   }
 });
 
+// Simple test: download image and try writing tags locally
+app.post('/api/admin/test-local-metadata', async (req, res) => {
+  try {
+    const { imageId } = req.body;
+    
+    if (!imageId) {
+      return res.status(400).json({ error: 'imageId required' });
+    }
+    
+    console.log(`🧪 Testing local metadata writing for image: ${imageId}...`);
+    
+    // Get image from database
+    const image = await databaseService.getImageById(imageId);
+    if (!image) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+    
+    const tempPath = `temp/test-${Date.now()}-${image.filename}`;
+    const fs = require('fs').promises;
+    
+    try {
+      // Ensure temp directory exists
+      await fs.mkdir('temp', { recursive: true });
+      
+      // Download file
+      console.log(`📥 Downloading ${image.filename}...`);
+      await dropboxService.downloadFile(image.dropbox_path, tempPath);
+      
+      // Check file was downloaded
+      const stats = await fs.stat(tempPath);
+      console.log(`✅ Downloaded ${stats.size} bytes`);
+      
+      // Try writing metadata using simple exiftool command approach
+      const { exec } = require('child_process');
+      const util = require('util');
+      const execPromise = util.promisify(exec);
+      
+      const tags = (image.tags || []).join(',');
+      console.log(`🏷️ Writing tags: ${tags}`);
+      
+      // Try direct exiftool command
+      const exiftoolCmd = `exiftool -overwrite_original -Keywords="${tags}" -Subject="${tags}" -Creator="Archier SnapTag" "${tempPath}"`;
+      console.log(`🔧 Running: ${exiftoolCmd}`);
+      
+      const cmdResult = await execPromise(exiftoolCmd);
+      console.log(`✅ ExifTool output:`, cmdResult.stdout);
+      if (cmdResult.stderr) console.log(`⚠️ ExifTool stderr:`, cmdResult.stderr);
+      
+      // Read back the metadata to verify
+      const readCmd = `exiftool -j -Keywords -Subject -Creator "${tempPath}"`;
+      const readResult = await execPromise(readCmd);
+      console.log(`📖 Read back metadata:`, readResult.stdout);
+      
+      // Clean up
+      await fs.unlink(tempPath);
+      
+      res.json({
+        success: true,
+        message: 'Local metadata test completed',
+        writeOutput: cmdResult.stdout,
+        readOutput: readResult.stdout,
+        fileSize: stats.size,
+        tagsWritten: tags
+      });
+      
+    } catch (error) {
+      console.error(`❌ Local metadata test error:`, error);
+      
+      // Clean up on error
+      try {
+        await fs.unlink(tempPath);
+      } catch (cleanupError) {
+        // Ignore
+      }
+      
+      res.status(500).json({ error: error.message });
+    }
+    
+  } catch (error) {
+    console.error('❌ Test local metadata error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Test ExifTool availability and basic functionality
 app.get('/api/admin/test-exiftool', async (req, res) => {
   try {
