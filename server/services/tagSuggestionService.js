@@ -204,8 +204,8 @@ Do not include generic tags like "architecture" or "building". Be specific about
     
     // PRIORITY 1: Folder structure tags (high confidence)
     const folderStructureTags = {
-      // Archier project indicators
-      'archier': 0.95,
+      // NOTE: Internal filing tags like 'archier', 'precedent', 'texture', 'materials' 
+      // are excluded from suggestions as they are internal classification tags
       
       // Archier project names
       'yandoit': 0.9, 'ballarat': 0.9, 'melbourne': 0.9, 'brunswick': 0.9, 
@@ -240,9 +240,9 @@ Do not include generic tags like "architecture" or "building". Be specific about
       'fabric': 0.9,
       'carpet': 0.9,
       
-      // Base categories
-      'precedents': 0.85,
-      'materials': 0.85
+      // Base categories (note: avoid internal filing tags)
+      'complete': 0.85,
+      'wip': 0.85
     };
     
     // PRIORITY 2: Supplementary/descriptive tags (medium confidence)

@@ -2346,19 +2346,23 @@ app.get('/api/images/:id/suggestions', async (req, res) => {
       WHERE it.image_id = $1
     `, [id]);
     
-    if (tagsResult.rows.length > 0) {
-      return res.json({ 
-        suggestions: [],
-        message: 'Image already has tags',
-        existingTags: tagsResult.rows.map(row => row.name)
-      });
-    }
+    const existingTags = tagsResult.rows.map(row => row.name);
+    console.log(`🏷️ Existing tags for image ${id}:`, existingTags);
+    
+    // Always generate suggestions - AI should provide additional insights beyond existing tags
     
     // Generate suggestions
     const suggestions = await tagSuggestionService.generateSuggestions(image);
     
     console.log(`✅ Generated ${suggestions.length} tag suggestions for image ${id}`);
     
+    // Filter out internal filing tags and existing tags
+    const internalTags = ['precedent', 'archier', 'texture', 'materials'];
+    const filteredSuggestions = suggestions.filter(suggestion => 
+      !internalTags.includes(suggestion.tag.toLowerCase()) &&
+      !existingTags.some(existing => existing.toLowerCase() === suggestion.tag.toLowerCase())
+    );
+
     res.json({
       success: true,
       image: {
@@ -2366,7 +2370,11 @@ app.get('/api/images/:id/suggestions', async (req, res) => {
         filename: image.filename,
         source_url: image.source_url
       },
-      suggestions: suggestions
+      existingTags: existingTags,
+      suggestions: filteredSuggestions,
+      message: existingTags.length > 0 
+        ? `Found ${filteredSuggestions.length} additional suggestions beyond existing tags`
+        : `Generated ${filteredSuggestions.length} tag suggestions`
     });
     
   } catch (error) {
