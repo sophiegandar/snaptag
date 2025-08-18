@@ -79,31 +79,37 @@ export const ModeProvider = ({ children }) => {
     return () => clearInterval(interval);
   }, [isEditMode, timeRemaining]);
 
-  // Keyboard shortcut listener (Cmd+E for Edit mode)
+  // Keyboard shortcut listener (Escape key for mode toggle)
   useEffect(() => {
     const handleKeyDown = (event) => {
+      // Always log key presses to debug
       console.log('🔍 Key pressed:', {
         key: event.key,
+        code: event.code,
         metaKey: event.metaKey,
         ctrlKey: event.ctrlKey,
         shiftKey: event.shiftKey,
         target: event.target.tagName
       });
       
-      // Try simpler shortcut: Cmd+E (Mac) or Ctrl+E (Windows/Linux)
-      if ((event.metaKey || event.ctrlKey) && event.key === 'e' && !event.shiftKey) {
-        // Only trigger if not typing in an input field
+      // Use Escape key to toggle mode (safe key that won't conflict)
+      if (event.key === 'Escape') {
+        // Only trigger if not typing in an input field or modal
         if (!['INPUT', 'TEXTAREA'].includes(event.target.tagName)) {
-          console.log('🔄 Triggering mode toggle...');
+          console.log('🔄 Escape pressed - triggering mode toggle...');
           event.preventDefault();
           toggleEditMode();
         }
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isEditMode]);
+    console.log('🎧 Adding keyboard event listener...');
+    document.addEventListener('keydown', handleKeyDown, true); // Use capture phase
+    return () => {
+      console.log('🎧 Removing keyboard event listener...');
+      document.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, [toggleEditMode]); // Add toggleEditMode to dependencies
 
   // Cleanup timer on unmount
   useEffect(() => {
