@@ -92,22 +92,23 @@ class TagSuggestionService {
 
 Analyze what you can ACTUALLY SEE and suggest 4-8 specific, descriptive tags from these categories:
 
-SPACES & ROOMS: interior, exterior, living-room, kitchen, bathroom, bedroom, dining-room, office, stairway, courtyard, deck, balcony
+SPACES & ROOMS: interior, exterior, living room, kitchen, bathroom, bedroom, dining room, office, stairway, courtyard, deck, balcony
 ARCHITECTURAL ELEMENTS: windows, doors, stairs, ceiling, floor, walls, roof, columns, beams, railing, skylight, glazing
 MATERIALS: timber, wood, concrete, steel, metal, stone, brick, glass, tile, plaster, fabric, leather
-LIGHTING & ATMOSPHERE: natural-light, artificial-light, daylight, evening, moody, bright, shadowy
-DESIGN STYLES: modern, contemporary, minimalist, industrial, rustic, traditional, mid-century
-SPECIFIC FEATURES: built-in-storage, open-plan, double-height, exposed-beams, floor-to-ceiling-windows, polished-concrete
+LIGHTING & ATMOSPHERE: natural light, artificial light, daylight, evening, moody, bright, shadowy
+DESIGN STYLES: modern, contemporary, minimalist, industrial, rustic, traditional, mid century
+SPECIFIC FEATURES: built in storage, open plan, double height, exposed beams, floor to ceiling windows, polished concrete
 
 IMPORTANT: 
 - Focus on VISIBLE architectural elements, materials, and spatial qualities
 - Use descriptive terms that architects would search for
-- Be specific about materials (e.g., "timber" not just "wood", "polished-concrete" not just "floor")
+- Be specific about materials (e.g., "timber" not just "wood", "polished concrete" not just "floor")
 - Include lighting conditions and spatial qualities you can observe
+- Use spaces in multi-word tags, NOT hyphens (e.g., "natural light", "living room")
 - DO NOT suggest project names, locations, or internal filing categories
 
 Respond ONLY with a JSON array:
-[{"tag": "interior", "confidence": 95, "reason": "Indoor living space clearly visible"}, {"tag": "timber", "confidence": 90, "reason": "Exposed wooden ceiling beams and wall paneling"}, {"tag": "natural-light", "confidence": 85, "reason": "Bright daylight streaming through large windows"}]`
+[{"tag": "interior", "confidence": 95, "reason": "Indoor living space clearly visible"}, {"tag": "timber", "confidence": 90, "reason": "Exposed wooden ceiling beams and wall paneling"}, {"tag": "natural light", "confidence": 85, "reason": "Bright daylight streaming through large windows"}]`
               },
               {
                 type: "image_url",
@@ -172,7 +173,7 @@ Respond ONLY with a JSON array:
         fallbackSuggestions.push(
           { tag: 'interior', confidence: 85, reason: 'Fallback: Based on context and filename', source: 'fallback_ai' },
           { tag: 'timber', confidence: 80, reason: 'Fallback: Common in Archier projects', source: 'fallback_ai' },
-          { tag: 'natural-light', confidence: 75, reason: 'Fallback: Architectural emphasis', source: 'fallback_ai' },
+          { tag: 'natural light', confidence: 75, reason: 'Fallback: Architectural emphasis', source: 'fallback_ai' },
           { tag: 'contemporary', confidence: 70, reason: 'Fallback: Archier design style', source: 'fallback_ai' }
         );
       } else if (filename.includes('exterior') || filename.includes('precedent')) {
