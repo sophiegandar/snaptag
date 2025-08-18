@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { fabric } from 'fabric';
-import { Save, Tag, X, ArrowLeft, Trash2, Edit3, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Save, Tag, X, ArrowLeft, Trash2, Edit3, ChevronLeft, ChevronRight, Lightbulb } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 const ImageEditor = () => {
@@ -37,6 +37,11 @@ const ImageEditor = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [originalTags, setOriginalTags] = useState([]);
   const [originalFocusedTags, setOriginalFocusedTags] = useState([]);
+  
+  // AI suggestions state
+  const [aiSuggestions, setAiSuggestions] = useState([]);
+  const [loadingAiSuggestions, setLoadingAiSuggestions] = useState(false);
+  const [showAiSuggestions, setShowAiSuggestions] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -183,6 +188,35 @@ const ImageEditor = () => {
       setLoading(false);
     }
   }, [id, navigate]);
+
+  const loadAiSuggestions = async () => {
+    if (!image) return;
+    
+    try {
+      setLoadingAiSuggestions(true);
+      console.log('🤖 Loading AI suggestions for image:', image.id);
+      
+      const response = await fetch(`/api/images/${image.id}/suggestions`);
+      if (!response.ok) throw new Error('Failed to load AI suggestions');
+      
+      const data = await response.json();
+      console.log('🎯 AI suggestions received:', data);
+      
+      setAiSuggestions(data.suggestions || []);
+      setShowAiSuggestions(true);
+      
+      if (data.suggestions?.length > 0) {
+        toast.success(`Found ${data.suggestions.length} AI tag suggestions`);
+      } else {
+        toast.info('No additional AI suggestions found for this image');
+      }
+    } catch (error) {
+      console.error('Error loading AI suggestions:', error);
+      toast.error('Failed to load AI suggestions');
+    } finally {
+      setLoadingAiSuggestions(false);
+    }
+  };
 
   const initializeFabricCanvas = useCallback(() => {
     if (!canvasRef.current || !image || fabricCanvasRef.current) return;
@@ -765,6 +799,14 @@ const ImageEditor = () => {
               <h3 className="font-semibold">Image Editor</h3>
               <div className="flex gap-2">
                 <button
+                  onClick={loadAiSuggestions}
+                  disabled={loadingAiSuggestions || !image}
+                  className="flex items-center gap-2 px-3 py-1 rounded-md text-sm bg-green-500 text-white hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Lightbulb className={`h-4 w-4 ${loadingAiSuggestions ? 'animate-pulse' : ''}`} />
+                  {loadingAiSuggestions ? 'Scanning...' : 'AI Scan'}
+                </button>
+                <button
                   onClick={() => {
                     console.log('Toggling tagging mode from:', isTaggingMode, 'to:', !isTaggingMode);
                     setIsTaggingMode(!isTaggingMode);
@@ -1011,6 +1053,50 @@ const ImageEditor = () => {
 
         {/* Sidebar */}
         <div className="space-y-6">
+          {/* AI Suggestions */}
+          {showAiSuggestions && aiSuggestions.length > 0 && (
+            <div className="bg-green-50 border border-green-200 p-4 rounded-lg shadow">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Lightbulb className="h-5 w-5 text-green-600" />
+                  <h3 className="font-semibold text-green-800">AI Tag Suggestions</h3>
+                </div>
+                <button
+                  onClick={() => setShowAiSuggestions(false)}
+                  className="text-green-600 hover:text-green-800"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              
+              <div className="space-y-2">
+                {aiSuggestions.map((suggestion, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 bg-white rounded-md border border-green-200">
+                    <div className="flex-1">
+                      <span className="font-medium text-gray-900">{suggestion.tag}</span>
+                      <span className="ml-2 text-sm text-green-600">({suggestion.confidence}%)</span>
+                      {suggestion.reason && (
+                        <div className="text-xs text-gray-500 mt-1">{suggestion.reason}</div>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (!tags.includes(suggestion.tag)) {
+                          setTags([...tags, suggestion.tag]);
+                          toast.success(`Added tag: ${suggestion.tag}`);
+                        }
+                      }}
+                      disabled={tags.includes(suggestion.tag)}
+                      className="ml-2 px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {tags.includes(suggestion.tag) ? 'Added' : 'Add'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* General Tags */}
           <div className="bg-white p-4 rounded-lg shadow">
             <h3 className="font-semibold mb-4">General Tags</h3>
