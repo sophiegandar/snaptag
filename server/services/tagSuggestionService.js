@@ -13,11 +13,22 @@ class TagSuggestionService {
     const suggestions = [];
     
     try {
+      console.log(`🔍 TagSuggestionService.generateSuggestions called for: ${image.filename}`);
+      console.log(`🔗 Image URL: ${image.url ? 'Present' : 'Missing'}`);
+      console.log(`🔑 OpenAI API Key: ${this.openaiApiKey ? 'Present' : 'Missing'}`);
+      
       // 1. AI VISUAL ANALYSIS (Primary - highest priority)
       if (this.openaiApiKey && image.url && !image.url.includes('placeholder')) {
         console.log('🤖 Using OpenAI Vision API for intelligent analysis...');
         const visualSuggestions = await this.getVisualAnalysisSuggestions(image);
+        console.log(`🎯 Visual AI returned ${visualSuggestions.length} suggestions`);
         suggestions.push(...visualSuggestions);
+      } else {
+        const reasons = [];
+        if (!this.openaiApiKey) reasons.push('No OpenAI API key');
+        if (!image.url) reasons.push('No image URL');
+        if (image.url && image.url.includes('placeholder')) reasons.push('Placeholder URL');
+        console.log(`⚠️ Skipping visual AI analysis: ${reasons.join(', ')}`);
       }
       
       // 2. Source-based suggestions (fallback)

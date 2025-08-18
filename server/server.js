@@ -2338,6 +2338,17 @@ app.get('/api/images/:id/suggestions', async (req, res) => {
       return res.status(404).json({ error: 'Image not found' });
     }
     
+    // Generate URL for AI analysis
+    try {
+      console.log(`🔗 Generating URL for AI analysis: ${image.filename}`);
+      image.url = await dropboxService.getTemporaryLink(image.dropbox_path);
+      console.log(`✅ URL generated for AI analysis`);
+    } catch (error) {
+      console.error(`❌ Failed to generate URL for AI analysis:`, error);
+      // AI will skip visual analysis but still do filename/source analysis
+      image.url = null;
+    }
+    
     // Check if image already has tags
     const tagsResult = await databaseService.query(`
       SELECT t.name 
