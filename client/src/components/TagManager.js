@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Tag, Hash, Trash2, Edit, Plus, BarChart3, Search } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { apiCall } from '../utils/apiConfig';
+import { useMode } from '../context/ModeContext';
 
 const TagManager = () => {
+  const { canEdit, canDelete } = useMode();
   const [tags, setTags] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');

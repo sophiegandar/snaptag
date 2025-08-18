@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Search, Filter, Grid, List, Trash2, Edit, RefreshCw, AlertTriangle, Tag, Plus, CheckCircle, Download, Lightbulb, Check, X, ChevronDown, SortAsc, SortDesc } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { useMode } from '../context/ModeContext';
 import AdvancedSearch from './AdvancedSearch';
 import { apiCall } from '../utils/apiConfig';
 
 const ImageGallery = () => {
   const navigate = useNavigate();
+  const { canDelete, canEdit } = useMode();
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('grid');
@@ -100,12 +102,12 @@ const ImageGallery = () => {
       if (hasFilters) {
         console.log('📡 Using search endpoint (has filters)');
         response = await apiCall('/api/images/search', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(searchFilters)
-        });
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(searchFilters)
+      });
       } else {
         console.log('📡 Using regular endpoint (no filters)');
         response = await apiCall('/api/images');
@@ -693,7 +695,7 @@ const ImageGallery = () => {
     }
   };
 
-  return (
+    return (
     <div className="space-y-6">
       {/* Tag Update State */}
       {updatingTags && (
@@ -990,8 +992,8 @@ const ImageGallery = () => {
                         <div className="flex-1">
                           <div className="font-medium text-gray-900 capitalize">{tag}</div>
                         </div>
-                      </div>
-                    );
+      </div>
+    );
                   })}
                 </div>
               </div>
@@ -1030,7 +1032,7 @@ const ImageGallery = () => {
                     
                     {sortOptions.map((option) => {
                       const isSelected = currentSort.sortBy === option.value;
-                      return (
+  return (
                         <div
                           key={option.value}
                           className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 rounded-lg cursor-pointer mb-1"
@@ -1086,18 +1088,18 @@ const ImageGallery = () => {
             </div>
           </div>
 
-          {/* Results Summary & View Controls */}
-          <div className="flex justify-between items-center">
-            <div className="text-sm text-gray-600">
-              {images.length} image{images.length !== 1 ? 's' : ''} found
-              {Object.keys(currentFilters).length > 0 && (
-                <span className="ml-2 text-blue-600">
-                  (filtered)
-                </span>
-              )}
-            </div>
-            
-            <div className="flex gap-2">
+      {/* Results Summary & View Controls */}
+      <div className="flex justify-between items-center">
+        <div className="text-sm text-gray-600">
+          {images.length} image{images.length !== 1 ? 's' : ''} found
+          {Object.keys(currentFilters).length > 0 && (
+            <span className="ml-2 text-blue-600">
+              (filtered)
+            </span>
+          )}
+        </div>
+        
+        <div className="flex gap-2">
               <button
                 onClick={manualRefresh}
                 className="p-2 rounded-md bg-gray-200 hover:bg-gray-300 transition-colors"
@@ -1105,24 +1107,24 @@ const ImageGallery = () => {
               >
                 <RefreshCw className="h-4 w-4" />
               </button>
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-md transition-colors ${
-                  viewMode === 'grid' ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
-                }`}
-              >
-                <Grid className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-2 rounded-md transition-colors ${
-                  viewMode === 'list' ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
-                }`}
-              >
-                <List className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`p-2 rounded-md transition-colors ${
+              viewMode === 'grid' ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
+            }`}
+          >
+            <Grid className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`p-2 rounded-md transition-colors ${
+              viewMode === 'list' ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
+            }`}
+          >
+            <List className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
 
           {/* AI Suggestions Panel - Appears above selection bar */}
           {Object.keys(imageSuggestions).length > 0 && (
@@ -1223,7 +1225,7 @@ const ImageGallery = () => {
           )}
 
           {/* Gallery Selection Bar - Fixed at bottom */}
-          {selectedGalleryImages.length > 0 && (
+          {selectedGalleryImages.length > 0 && canEdit && (
             <div className="fixed bottom-0 left-0 right-0 bg-blue-50 border-t border-blue-200 p-4 shadow-lg z-50">
               <div className="max-w-7xl mx-auto">
                 <div className="flex items-center justify-between">
@@ -1291,42 +1293,44 @@ const ImageGallery = () => {
           )}
 
           {/* Add bottom padding when sticky bar is visible */}
-          {selectedGalleryImages.length > 0 && (
+          {selectedGalleryImages.length > 0 && canEdit && (
             <div className="h-20"></div>
           )}
 
           {/* Images Grid */}
-          {images.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-gray-400 mb-4">
-                <Search className="h-12 w-12 mx-auto" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No images found</h3>
-              <p className="text-gray-500">
-                {Object.keys(currentFilters).length > 0
-                  ? 'Try adjusting your search terms or filters'
-                  : 'Upload some images to get started'
-                }
-              </p>
-            </div>
-          ) : (
+      {images.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="text-gray-400 mb-4">
+            <Search className="h-12 w-12 mx-auto" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No images found</h3>
+          <p className="text-gray-500">
+            {Object.keys(currentFilters).length > 0
+              ? 'Try adjusting your search terms or filters'
+              : 'Upload some images to get started'
+            }
+          </p>
+        </div>
+      ) : (
             <div className={viewMode === 'grid' 
               ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-center'
               : 'space-y-4'
             }>
-              {images.map(image => (
-                <ImageCard 
-                  key={image.id} 
-                  image={image} 
-                  viewMode={viewMode}
-                  onTagClick={handleTagClick}
-                  onDelete={deleteImage}
-                  onEdit={(id) => navigate(`/image/${id}`)}
+          {images.map(image => (
+            <ImageCard 
+              key={image.id} 
+              image={image} 
+              viewMode={viewMode}
+              onTagClick={handleTagClick}
+              onDelete={deleteImage}
+              onEdit={(id) => navigate(`/image/${id}`)}
                   isSelected={selectedGalleryImages.includes(image.id)}
                   onSelect={() => toggleGalleryImageSelection(image.id)}
-                />
-              ))}
-            </div>
+                  canEdit={canEdit}
+                  canDelete={canDelete}
+            />
+          ))}
+        </div>
           )}
         </>
       )}
@@ -1334,7 +1338,7 @@ const ImageGallery = () => {
   );
 };
 
-const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, onSelect }) => {
+const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, onSelect, canEdit, canDelete }) => {
   const [imageUrl, setImageUrl] = useState('');
   const [imageError, setImageError] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -1423,15 +1427,17 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
     return (
       <div className={`bg-white p-4 rounded-lg shadow flex gap-4 ${isSelected ? 'ring-2 ring-blue-500' : ''}`}>
         {/* Selection Checkbox */}
-        <div className="flex items-start pt-2">
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={onSelect}
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
+        {canEdit && (
+          <div className="flex items-start pt-2">
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={onSelect}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        )}
         {imageError ? (
           <div className="w-24 h-24 bg-gray-200 flex items-center justify-center rounded cursor-pointer" onClick={() => onEdit(image.id)}>
             <div className="text-center text-gray-500">
@@ -1439,13 +1445,13 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
             </div>
           </div>
         ) : (
-          <img
-            src={imageUrl}
-            alt={image.title || image.filename}
-            className="w-24 h-24 object-cover rounded cursor-pointer"
-            onClick={() => onEdit(image.id)}
+        <img
+          src={imageUrl}
+          alt={image.title || image.filename}
+          className="w-24 h-24 object-cover rounded cursor-pointer"
+          onClick={() => onEdit(image.id)}
             onError={handleImageError}
-          />
+        />
         )}
         <div className="flex-1">
           <div className="flex justify-between items-start mb-2">
@@ -1458,13 +1464,15 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
               >
                 <Edit className="h-4 w-4" />
               </button>
-              <button
-                onClick={() => onDelete(image.id, image.title || image.filename)}
-                className="p-1 text-gray-500 hover:text-red-600"
-                title="Delete image"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              {canDelete && (
+                <button
+                  onClick={() => onDelete(image.id, image.title || image.filename)}
+                  className="p-1 text-gray-500 hover:text-red-600"
+                  title="Delete image"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </div>
           <p className="text-gray-600 text-sm mt-1">{image.description}</p>
@@ -1496,15 +1504,17 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
       onClick={() => onEdit(image.id)}
     >
       {/* Selection Checkbox - only visible on hover or when selected */}
-      <div className={`absolute top-3 left-3 z-20 transition-opacity duration-200 ${isHovered || isSelected ? 'opacity-100' : 'opacity-0'}`}>
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={onSelect}
-          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded bg-white shadow-lg"
-          onClick={(e) => e.stopPropagation()}
-        />
-      </div>
+      {canEdit && (
+        <div className={`absolute top-3 left-3 z-20 transition-opacity duration-200 ${isHovered || isSelected ? 'opacity-100' : 'opacity-0'}`}>
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={onSelect}
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded bg-white shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
 
       {/* Image Container - Fixed aspect ratio like architextures.org */}
       <div className="relative aspect-square bg-gray-100 overflow-hidden">
@@ -1516,8 +1526,8 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
             </div>
           </div>
         ) : (
-          <img
-            src={imageUrl}
+        <img
+          src={imageUrl}
             alt={getDisplayName()}
             loading="lazy"
             className="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
