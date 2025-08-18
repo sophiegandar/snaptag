@@ -84,21 +84,26 @@ class TagSuggestionService {
             content: [
               {
                 type: "text",
-                text: `You are an expert architectural photographer and designer analyzing images for a professional architecture firm. 
+                text: `You are an expert architectural photographer analyzing this image for a professional architecture firm's database. 
 
-Analyze this image and suggest 3-8 relevant tags from these architectural categories:
+Analyze what you can ACTUALLY SEE and suggest 4-8 specific, descriptive tags from these categories:
 
-SPACES: exteriors, interiors, bathrooms, kitchens, stairs, spatial
-ELEMENTS: doors, windows, lighting, joinery, furniture, structure
-MATERIALS: wood, metal, concrete, stone, brick, tile, fabric
-DETAILS: details, art
-FUNCTIONS: landscape
+SPACES & ROOMS: interior, exterior, living-room, kitchen, bathroom, bedroom, dining-room, office, stairway, courtyard, deck, balcony
+ARCHITECTURAL ELEMENTS: windows, doors, stairs, ceiling, floor, walls, roof, columns, beams, railing, skylight, glazing
+MATERIALS: timber, wood, concrete, steel, metal, stone, brick, glass, tile, plaster, fabric, leather
+LIGHTING & ATMOSPHERE: natural-light, artificial-light, daylight, evening, moody, bright, shadowy
+DESIGN STYLES: modern, contemporary, minimalist, industrial, rustic, traditional, mid-century
+SPECIFIC FEATURES: built-in-storage, open-plan, double-height, exposed-beams, floor-to-ceiling-windows, polished-concrete
 
-Focus on what you can ACTUALLY SEE in the image. Be specific and accurate.
-Respond ONLY with a JSON array of objects like this:
-[{"tag": "exteriors", "confidence": 95, "reason": "Clear view of building exterior facade"}, {"tag": "concrete", "confidence": 85, "reason": "Prominent concrete walls and structure visible"}]
+IMPORTANT: 
+- Focus on VISIBLE architectural elements, materials, and spatial qualities
+- Use descriptive terms that architects would search for
+- Be specific about materials (e.g., "timber" not just "wood", "polished-concrete" not just "floor")
+- Include lighting conditions and spatial qualities you can observe
+- DO NOT suggest project names, locations, or internal filing categories
 
-Do not include generic tags like "architecture" or "building". Be specific about what architectural elements, materials, and spaces are actually visible.`
+Respond ONLY with a JSON array:
+[{"tag": "interior", "confidence": 95, "reason": "Indoor living space clearly visible"}, {"tag": "timber", "confidence": 90, "reason": "Exposed wooden ceiling beams and wall paneling"}, {"tag": "natural-light", "confidence": 85, "reason": "Bright daylight streaming through large windows"}]`
               },
               {
                 type: "image_url",
