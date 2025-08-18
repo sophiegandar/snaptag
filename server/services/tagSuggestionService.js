@@ -123,22 +123,27 @@ Respond ONLY with a JSON array:
 
       if (!response.ok) {
         const error = await response.text();
-        console.error('❌ OpenAI Vision API error:', error);
+        console.error('❌ OpenAI Vision API error:', response.status, error);
         return [];
       }
 
       const result = await response.json();
+      console.log('🔍 Full OpenAI response:', JSON.stringify(result, null, 2));
+      
       const content = result.choices?.[0]?.message?.content;
+      console.log('🔍 OpenAI content:', content);
       
       if (!content) {
-        console.error('❌ No content in OpenAI response');
+        console.error('❌ No content in OpenAI response:', result);
         return [];
       }
 
       // Parse the JSON response
       try {
+        console.log('🔍 Attempting to parse JSON:', content);
         const visualTags = JSON.parse(content);
         console.log(`✅ Visual analysis complete: ${visualTags.length} tags identified`);
+        console.log('🎯 Parsed tags:', visualTags);
         
         // Add priority and source info
         return visualTags.map(tag => ({
@@ -148,7 +153,8 @@ Respond ONLY with a JSON array:
         }));
         
       } catch (parseError) {
-        console.error('❌ Failed to parse OpenAI response:', content);
+        console.error('❌ Failed to parse OpenAI response as JSON:', parseError);
+        console.error('❌ Raw content that failed to parse:', content);
         return [];
       }
 
