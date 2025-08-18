@@ -31,16 +31,13 @@ class TagSuggestionService {
         console.log(`⚠️ Skipping visual AI analysis: ${reasons.join(', ')}`);
       }
       
-      // Skip filename and source suggestions for now to test pure AI visual analysis
-      // TODO: Re-enable these as supplements to visual analysis
-      
-      // 2. Source-based suggestions (fallback) - DISABLED FOR TESTING
-      // const sourceSuggestions = await this.getSuggestionsFromSource(image.source_url);
-      // suggestions.push(...sourceSuggestions);
-      
-      // 3. Filename-based suggestions - DISABLED FOR TESTING
-      // const filenameSuggestions = await this.getSuggestionsFromFilename(image.filename);
-      // suggestions.push(...filenameSuggestions);
+      // 2. Filename-based suggestions (as supplement to visual analysis)
+      if (suggestions.length < 3) { // Only add if visual AI didn't provide enough suggestions
+        console.log('🔍 Adding filename-based suggestions as supplement...');
+        const filenameSuggestions = await this.getSuggestionsFromFilename(image.filename);
+        console.log(`🎯 Filename analysis returned ${filenameSuggestions.length} suggestions`);
+        suggestions.push(...filenameSuggestions);
+      }
       
       // 4. Description-based suggestions
       if (image.description) {
@@ -88,27 +85,17 @@ class TagSuggestionService {
             content: [
               {
                 type: "text",
-                text: `You are an expert architectural photographer analyzing this image for a professional architecture firm's database. 
+                text: `Analyze this architectural image and suggest 3-6 descriptive tags.
 
-Analyze what you can ACTUALLY SEE and suggest 4-8 specific, descriptive tags from these categories:
+Focus on what you can clearly see:
+- Spaces: interior, exterior, kitchen, living room, bathroom, bedroom
+- Materials: timber, concrete, steel, glass, stone, brick
+- Features: windows, doors, stairs, natural light, modern, contemporary
 
-SPACES & ROOMS: interior, exterior, living room, kitchen, bathroom, bedroom, dining room, office, stairway, courtyard, deck, balcony
-ARCHITECTURAL ELEMENTS: windows, doors, stairs, ceiling, floor, walls, roof, columns, beams, railing, skylight, glazing
-MATERIALS: timber, wood, concrete, steel, metal, stone, brick, glass, tile, plaster, fabric, leather
-LIGHTING & ATMOSPHERE: natural light, artificial light, daylight, evening, moody, bright, shadowy
-DESIGN STYLES: modern, contemporary, minimalist, industrial, rustic, traditional, mid century
-SPECIFIC FEATURES: built in storage, open plan, double height, exposed beams, floor to ceiling windows, polished concrete
+Use simple, searchable terms. Use spaces not hyphens (e.g. "natural light" not "natural-light").
 
-IMPORTANT: 
-- Focus on VISIBLE architectural elements, materials, and spatial qualities
-- Use descriptive terms that architects would search for
-- Be specific about materials (e.g., "timber" not just "wood", "polished concrete" not just "floor")
-- Include lighting conditions and spatial qualities you can observe
-- Use spaces in multi-word tags, NOT hyphens (e.g., "natural light", "living room")
-- DO NOT suggest project names, locations, or internal filing categories
-
-Respond ONLY with a JSON array where confidence is 0-100 (whole numbers):
-[{"tag": "interior", "confidence": 95, "reason": "Indoor living space clearly visible"}, {"tag": "timber", "confidence": 90, "reason": "Exposed wooden ceiling beams and wall paneling"}, {"tag": "natural light", "confidence": 85, "reason": "Bright daylight streaming through large windows"}]`
+Respond with valid JSON only:
+[{"tag": "interior", "confidence": 90}, {"tag": "timber", "confidence": 85}, {"tag": "natural light", "confidence": 80}]`
               },
               {
                 type: "image_url",
@@ -139,23 +126,56 @@ Respond ONLY with a JSON array where confidence is 0-100 (whole numbers):
         return [];
       }
 
-      // Parse the JSON response
+      // Parse the JSON response with enhanced error handling
       try {
         console.log('🔍 Attempting to parse JSON:', content);
-        const visualTags = JSON.parse(content);
+        
+        // Clean the content - sometimes OpenAI wraps in ```json blocks
+        let cleanContent = content.trim();
+        if (cleanContent.startsWith('```json')) {
+          cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+        } else if (cleanContent.startsWith('```')) {
+          cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+        }
+        
+        console.log('🧹 Cleaned content for parsing:', cleanContent);
+        
+        const visualTags = JSON.parse(cleanContent);
         console.log(`✅ Visual analysis complete: ${visualTags.length} tags identified`);
         console.log('🎯 Parsed tags:', visualTags);
         
-        // Add priority and source info
-        return visualTags.map(tag => ({
-          ...tag,
-          priority: 0, // HIGHEST priority for visual AI analysis (0 = top priority)
-          source: 'visual_ai'
-        }));
+        // Validate the response format
+        if (!Array.isArray(visualTags)) {
+          console.error('❌ OpenAI response is not an array:', visualTags);
+          return [];
+        }
+        
+        // Ensure each tag has required properties and fix confidence if needed
+        const validatedTags = visualTags
+          .filter(tag => tag && typeof tag.tag === 'string')
+          .map(tag => ({
+            tag: tag.tag.trim(),
+            confidence: Math.min(100, Math.max(0, Math.round(Number(tag.confidence) || 50))), // Ensure 0-100 range
+            reason: tag.reason || 'Visual analysis',
+            priority: 0, // HIGHEST priority for visual AI analysis
+            source: 'visual_ai'
+          }));
+        
+        console.log(`🎯 Validated tags (${validatedTags.length}):`, validatedTags);
+        return validatedTags;
         
       } catch (parseError) {
         console.error('❌ Failed to parse OpenAI response as JSON:', parseError);
         console.error('❌ Raw content that failed to parse:', content);
+        
+        // Try to extract tags from plain text as fallback
+        console.log('🔄 Attempting text extraction fallback...');
+        const fallbackTags = this.extractTagsFromText(content, image);
+        if (fallbackTags.length > 0) {
+          console.log(`🎯 Fallback extraction found ${fallbackTags.length} tags:`, fallbackTags);
+          return fallbackTags;
+        }
+        
         return [];
       }
 
@@ -185,6 +205,49 @@ Respond ONLY with a JSON array where confidence is 0-100 (whole numbers):
       }
       
       return fallbackSuggestions;
+    }
+  }
+
+  /**
+   * Extract tags from plain text response when JSON parsing fails
+   */
+  extractTagsFromText(content, image) {
+    try {
+      console.log('🔍 Extracting tags from text content...');
+      
+      const fallbackTags = [];
+      const commonArchTags = [
+        'interior', 'exterior', 'timber', 'concrete', 'steel', 'glass',
+        'modern', 'contemporary', 'minimalist', 'natural light', 'open plan',
+        'kitchen', 'living room', 'bedroom', 'bathroom', 'stairs', 'windows'
+      ];
+      
+      const contentLower = content.toLowerCase();
+      
+      // Look for architectural terms mentioned in the response
+      commonArchTags.forEach(tag => {
+        if (contentLower.includes(tag.toLowerCase())) {
+          fallbackTags.push({
+            tag: tag,
+            confidence: 60, // Lower confidence for text extraction
+            reason: 'Extracted from text analysis',
+            priority: 1,
+            source: 'text_extraction'
+          });
+        }
+      });
+      
+      // Remove duplicates
+      const uniqueTags = fallbackTags.filter((tag, index, self) => 
+        index === self.findIndex(t => t.tag.toLowerCase() === tag.tag.toLowerCase())
+      );
+      
+      console.log(`🎯 Text extraction found ${uniqueTags.length} tags:`, uniqueTags.map(t => t.tag));
+      return uniqueTags.slice(0, 5); // Limit to 5 tags
+      
+    } catch (error) {
+      console.error('❌ Error in text extraction:', error);
+      return [];
     }
   }
 
