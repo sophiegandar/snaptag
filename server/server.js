@@ -2456,6 +2456,7 @@ app.get('/api/images/:id/suggestions', async (req, res) => {
     const suggestions = await tagSuggestionService.generateSuggestions(image);
     
     console.log(`✅ Generated ${suggestions.length} tag suggestions for image ${id}`);
+    console.log(`🎯 Raw AI suggestions:`, suggestions.map(s => s.tag));
     
     // Filter out internal filing tags and existing tags
     const internalTags = ['precedent', 'archier', 'texture', 'materials'];
@@ -2463,6 +2464,12 @@ app.get('/api/images/:id/suggestions', async (req, res) => {
       !internalTags.includes(suggestion.tag.toLowerCase()) &&
       !existingTags.some(existing => existing.toLowerCase() === suggestion.tag.toLowerCase())
     );
+    
+    console.log(`🔍 Filtered suggestions:`, filteredSuggestions.map(s => s.tag));
+    console.log(`❌ Filtered out:`, suggestions.filter(s => 
+      internalTags.includes(s.tag.toLowerCase()) ||
+      existingTags.some(existing => existing.toLowerCase() === s.tag.toLowerCase())
+    ).map(s => s.tag));
 
     res.json({
       success: true,
