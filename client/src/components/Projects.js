@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { FolderOpen, Image as ImageIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { apiCall } from '../utils/apiConfig';
 import { useMode } from '../context/ModeContext';
 
 const Projects = () => {
   const { canEdit } = useMode();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('yandoit');
   const [projectImages, setProjectImages] = useState({});
   const [loading, setLoading] = useState(true);
@@ -195,7 +197,11 @@ const Projects = () => {
                 };
 
                 return (
-                  <div key={image.id} className="relative group cursor-pointer">
+                  <div 
+                    key={image.id} 
+                    className="relative group cursor-pointer"
+                    onClick={() => navigate(`/image/${image.id}`, { state: { from: 'projects' } })}
+                  >
                     <div className="bg-white overflow-hidden shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 aspect-square">
                       <div className="relative w-full h-full overflow-hidden">
                         <img

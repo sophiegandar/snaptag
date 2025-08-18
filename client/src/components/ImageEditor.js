@@ -784,11 +784,19 @@ const ImageEditor = () => {
       <div className="bg-white p-4 rounded-lg shadow flex justify-between items-center">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => navigate('/')}
+            onClick={() => {
+              // Check if user came from Projects page
+              const fromProjects = location.state?.from === 'projects' || document.referrer.includes('/projects');
+              if (fromProjects) {
+                navigate('/projects');
+              } else {
+                navigate('/');
+              }
+            }}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-800"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Gallery
+            {location.state?.from === 'projects' || document.referrer.includes('/projects') ? 'Back to Projects' : 'Back to Gallery'}
           </button>
           <div>
             <h1 className="text-xl font-semibold">
