@@ -2326,6 +2326,76 @@ app.post('/api/admin/migrate-folder-structure', async (req, res) => {
   }
 });
 
+// Debug endpoint to test AI scan functionality
+app.get('/api/debug/ai-scan/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(`🐛 DEBUG: Testing AI scan for image ${id}...`);
+    
+    // Get the image
+    const image = await databaseService.getImageById(id);
+    if (!image) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+    
+    console.log(`🐛 DEBUG: Image found - ${image.filename}`);
+    console.log(`🐛 DEBUG: Dropbox path - ${image.dropbox_path}`);
+    
+    // Test URL generation
+    let imageUrl = null;
+    try {
+      console.log(`🐛 DEBUG: Generating URL for AI analysis...`);
+      imageUrl = await dropboxService.getTemporaryLink(image.dropbox_path);
+      console.log(`🐛 DEBUG: URL generated successfully: ${imageUrl ? 'YES' : 'NO'}`);
+      console.log(`🐛 DEBUG: URL starts with: ${imageUrl ? imageUrl.substring(0, 50) + '...' : 'NULL'}`);
+    } catch (error) {
+      console.error(`🐛 DEBUG: URL generation failed:`, error);
+      return res.json({
+        success: false,
+        error: 'URL generation failed',
+        details: error.message,
+        image: { id: image.id, filename: image.filename }
+      });
+    }
+    
+    // Test OpenAI API key
+    const tagSuggestionService = new TagSuggestionService();
+    const hasApiKey = !!tagSuggestionService.openaiApiKey;
+    console.log(`🐛 DEBUG: OpenAI API Key present: ${hasApiKey}`);
+    if (hasApiKey) {
+      console.log(`🐛 DEBUG: API Key starts with: ${tagSuggestionService.openaiApiKey.substring(0, 10)}...`);
+    }
+    
+    // Test AI suggestion generation
+    image.url = imageUrl;
+    console.log(`🐛 DEBUG: Calling generateSuggestions...`);
+    const suggestions = await tagSuggestionService.generateSuggestions(image);
+    console.log(`🐛 DEBUG: Suggestions returned: ${suggestions.length}`);
+    
+    res.json({
+      success: true,
+      debug: {
+        imageId: id,
+        filename: image.filename,
+        hasUrl: !!imageUrl,
+        urlPreview: imageUrl ? imageUrl.substring(0, 50) + '...' : null,
+        hasApiKey: hasApiKey,
+        apiKeyPreview: hasApiKey ? tagSuggestionService.openaiApiKey.substring(0, 10) + '...' : null,
+        suggestionsCount: suggestions.length,
+        suggestions: suggestions
+      }
+    });
+    
+  } catch (error) {
+    console.error('🐛 DEBUG: AI scan debug error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message,
+      stack: error.stack 
+    });
+  }
+});
+
 // Get tag suggestions for an untagged image
 app.get('/api/images/:id/suggestions', async (req, res) => {
   try {
