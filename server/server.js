@@ -142,6 +142,57 @@ app.get('/api/debug/env-check', async (req, res) => {
   }
 });
 
+// Direct OpenAI test with simple hardcoded example
+app.get('/api/debug/openai-test', async (req, res) => {
+  try {
+    console.log('🧪 Testing OpenAI Vision API directly...');
+    
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: "gpt-4-vision-preview",
+        messages: [{
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: "Analyze this architectural image and suggest 3-5 descriptive tags. Respond only with JSON array: [{'tag': 'interior', 'confidence': 90}]"
+            },
+            {
+              type: "image_url", 
+              image_url: {
+                url: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800"
+              }
+            }
+          ]
+        }],
+        max_tokens: 300
+      })
+    });
+
+    const result = await response.json();
+    
+    res.json({
+      success: response.ok,
+      status: response.status,
+      openaiResponse: result,
+      content: result.choices?.[0]?.message?.content,
+      hasApiKey: !!process.env.OPENAI_API_KEY
+    });
+    
+  } catch (error) {
+    res.status(500).json({ 
+      success: false,
+      error: error.message,
+      stack: error.stack 
+    });
+  }
+});
+
 // Debug endpoint to test untagged query
 app.get('/api/debug/untagged-test', async (req, res) => {
   try {
