@@ -70,6 +70,7 @@ class TagSuggestionService {
       }
 
       console.log(`🔍 Analyzing image: ${image.filename}`);
+      console.log(`🎯 Using enhanced architectural prompt v2.0`);
       
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
