@@ -267,28 +267,30 @@ const TagManager = () => {
           </div>
         </div>
 
-        {/* Add New Tag */}
-        <div className="flex gap-3">
-          <div className="flex-1 relative">
-            <Tag className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Add new tag..."
-              value={newTagName}
-              onChange={(e) => setNewTagName(e.target.value)}
-              onKeyPress={(e) => handleKeyPress(e, addTag)}
-              className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-            />
+        {/* Add New Tag - Only show in Edit mode */}
+        {canEdit && (
+          <div className="flex gap-3">
+            <div className="flex-1 relative">
+              <Tag className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Add new tag..."
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                onKeyPress={(e) => handleKeyPress(e, addTag)}
+                className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <button
+              onClick={addTag}
+              disabled={!newTagName.trim()}
+              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Add Tag
+            </button>
           </div>
-          <button
-            onClick={addTag}
-            disabled={!newTagName.trim()}
-            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            Add Tag
-          </button>
-        </div>
+        )}
       </div>
 
       {/* Search and Sort */}
@@ -374,7 +376,7 @@ const TagManager = () => {
                       {tag.usage_count || 0}
                     </span>
                     
-                    {editingTag === tag.id ? (
+                    {canEdit && editingTag === tag.id ? (
                       <div className="flex gap-1">
                         <button
                           onClick={() => updateTag(tag.id, editValue)}
@@ -392,22 +394,26 @@ const TagManager = () => {
                         </button>
                       </div>
                     ) : (
-                      <div className="flex gap-1">
-                        <button
-                          onClick={() => startEditing(tag)}
-                          className="p-1 text-gray-600 hover:text-blue-600"
-                          title="Edit tag"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => deleteTag(tag.id, tag.name)}
-                          className="p-1 text-gray-600 hover:text-red-600"
-                          title="Delete tag"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
+                      canEdit && (
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => startEditing(tag)}
+                            className="p-1 text-gray-600 hover:text-blue-600"
+                            title="Edit tag"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                          {canDelete && (
+                            <button
+                              onClick={() => deleteTag(tag.id, tag.name)}
+                              className="p-1 text-gray-600 hover:text-red-600"
+                              title="Delete tag"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      )
                     )}
                   </div>
                 </div>

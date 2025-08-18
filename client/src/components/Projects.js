@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { FolderOpen, Image as ImageIcon } from 'lucide-react';
 import { apiCall } from '../utils/apiConfig';
+import { useMode } from '../context/ModeContext';
 
 const Projects = () => {
+  const { canEdit } = useMode();
   const [activeTab, setActiveTab] = useState('yandoit');
   const [projectImages, setProjectImages] = useState({});
   const [loading, setLoading] = useState(true);
