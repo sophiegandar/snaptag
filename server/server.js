@@ -154,7 +154,7 @@ app.get('/api/debug/openai-test', async (req, res) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "gpt-4-vision-preview",
+        model: "gpt-4o-mini",
         messages: [{
           role: "user",
           content: [
