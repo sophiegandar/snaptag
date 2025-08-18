@@ -2440,15 +2440,32 @@ app.get('/api/images/:id/suggestions', async (req, res) => {
     }
     
     // Check if image already has tags
-    const tagsResult = await databaseService.query(`
-      SELECT t.name 
-      FROM tags t
-      JOIN image_tags it ON t.id = it.tag_id 
-      WHERE it.image_id = $1
-    `, [id]);
-    
-    const existingTags = tagsResult.rows.map(row => row.name);
-    console.log(`🏷️ Existing tags for image ${id}:`, existingTags);
+    console.log(`🔍 Querying tags for image ${id}...`);
+    let existingTags = [];
+    try {
+      const tagsResult = await databaseService.query(`
+        SELECT t.name 
+        FROM tags t
+        JOIN image_tags it ON t.id = it.tag_id 
+        WHERE it.image_id = $1
+      `, [id]);
+      
+      console.log(`🔍 Tags query result:`, tagsResult);
+      console.log(`🔍 Has rows property:`, !!tagsResult.rows);
+      console.log(`🔍 Rows length:`, tagsResult.rows ? tagsResult.rows.length : 'no rows');
+      
+      if (tagsResult.rows) {
+        existingTags = tagsResult.rows.map(row => row.name);
+      } else if (Array.isArray(tagsResult)) {
+        // Fallback for SQLite-style response
+        existingTags = tagsResult.map(row => row.name);
+      }
+      
+      console.log(`🏷️ Existing tags for image ${id}:`, existingTags);
+    } catch (error) {
+      console.error(`❌ Error querying tags for image ${id}:`, error);
+      existingTags = [];
+    }
     
     // Always generate suggestions - AI should provide additional insights beyond existing tags
     
