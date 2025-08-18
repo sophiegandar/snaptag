@@ -122,6 +122,26 @@ app.get('/api/debug/simple-test', async (req, res) => {
   }
 });
 
+// Check environment variables
+app.get('/api/debug/env-check', async (req, res) => {
+  try {
+    const hasOpenAI = !!process.env.OPENAI_API_KEY;
+    const hasDropbox = !!process.env.DROPBOX_ACCESS_TOKEN;
+    
+    res.json({ 
+      success: true,
+      environment: {
+        hasOpenAIKey: hasOpenAI,
+        openAIKeyPreview: hasOpenAI ? process.env.OPENAI_API_KEY.substring(0, 10) + '...' : 'MISSING',
+        hasDropboxToken: hasDropbox,
+        dropboxTokenPreview: hasDropbox ? process.env.DROPBOX_ACCESS_TOKEN.substring(0, 10) + '...' : 'MISSING'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Debug endpoint to test untagged query
 app.get('/api/debug/untagged-test', async (req, res) => {
   try {
