@@ -628,12 +628,40 @@ const ImageEditor = () => {
     fabricCanvasRef.current.add(group);
   };
 
-  const addGeneralTag = () => {
+  const addGeneralTag = async () => {
+    if (!canEdit) return; // Prevent adding in view mode
     if (!newTag.trim() || tags.includes(newTag.trim())) return;
     
     const tag = newTag.trim();
-    setTags(prev => [...prev, tag]);
+    const newTags = [...tags, tag];
+    setTags(newTags);
     setNewTag('');
+    
+    // Auto-save in edit mode
+    try {
+      const response = await fetch(`/api/images/${id}/tags`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tags: newTags,
+          focusedTags,
+          name: editableName
+        })
+      });
+
+      if (response.ok) {
+        toast.success(`Added tag: ${tag}`);
+      } else {
+        // Revert on failure
+        setTags(prev => prev.filter(t => t !== tag));
+        toast.error('Failed to add tag');
+      }
+    } catch (error) {
+      // Revert on failure
+      setTags(prev => prev.filter(t => t !== tag));
+      toast.error('Failed to add tag');
+      console.error('Error adding tag:', error);
+    }
   };
 
   const removeGeneralTag = async (tagToRemove) => {
@@ -644,7 +672,7 @@ const ImageEditor = () => {
     
     // Auto-save in edit mode
     try {
-      const response = await fetch(`/api/images/${id}`, {
+      const response = await fetch(`/api/images/${id}/tags`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
