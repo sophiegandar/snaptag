@@ -79,11 +79,11 @@ export const ModeProvider = ({ children }) => {
     return () => clearInterval(interval);
   }, [isEditMode, timeRemaining]);
 
-  // Keyboard shortcut listener (Cmd+Shift+A)
+  // Keyboard shortcut listener (Cmd+Shift+E for Edit mode)
   useEffect(() => {
     const handleKeyDown = (event) => {
-      // Check for Cmd+Shift+A (Mac) or Ctrl+Shift+A (Windows/Linux)
-      if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key === 'A') {
+      // Check for Cmd+Shift+E (Mac) or Ctrl+Shift+E (Windows/Linux)
+      if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key === 'E') {
         event.preventDefault();
         toggleEditMode();
       }
