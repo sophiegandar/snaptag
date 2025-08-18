@@ -31,13 +31,16 @@ class TagSuggestionService {
         console.log(`⚠️ Skipping visual AI analysis: ${reasons.join(', ')}`);
       }
       
-      // 2. Source-based suggestions (fallback)
-      const sourceSuggestions = await this.getSuggestionsFromSource(image.source_url);
-      suggestions.push(...sourceSuggestions);
+      // Skip filename and source suggestions for now to test pure AI visual analysis
+      // TODO: Re-enable these as supplements to visual analysis
       
-      // 3. Filename-based suggestions  
-      const filenameSuggestions = await this.getSuggestionsFromFilename(image.filename);
-      suggestions.push(...filenameSuggestions);
+      // 2. Source-based suggestions (fallback) - DISABLED FOR TESTING
+      // const sourceSuggestions = await this.getSuggestionsFromSource(image.source_url);
+      // suggestions.push(...sourceSuggestions);
+      
+      // 3. Filename-based suggestions - DISABLED FOR TESTING
+      // const filenameSuggestions = await this.getSuggestionsFromFilename(image.filename);
+      // suggestions.push(...filenameSuggestions);
       
       // 4. Description-based suggestions
       if (image.description) {
