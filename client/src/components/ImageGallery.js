@@ -921,27 +921,24 @@ const ImageGallery = () => {
           )}
 
           {/* Filter and Sort Controls */}
-          <div className="flex items-start space-x-4 mb-4">
+          <div className="flex items-start justify-end space-x-3 mb-4">
             {/* Tags Filter Dropdown */}
             <div className="relative tags-dropdown">
             <button
               onClick={() => setIsTagsDropdownOpen(!isTagsDropdownOpen)}
-              className="flex items-center space-x-3 px-6 py-4 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm min-w-[200px] justify-between"
+              className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors shadow-sm min-w-[140px] justify-between text-sm"
             >
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center">
-                  <Tag className="h-5 w-5 text-white" />
+              <div className="flex items-center space-x-2">
+                <div className="w-6 h-6 bg-gray-800 rounded flex items-center justify-center">
+                  <Tag className="h-3 w-3 text-white" />
                 </div>
                 <div className="text-left">
-                  <div className="font-medium text-gray-900">
+                  <div className="font-medium text-gray-900 text-xs">
                     {currentFilters.tags?.length > 0 ? `${currentFilters.tags.length} tag${currentFilters.tags.length > 1 ? 's' : ''}` : 'Categories'}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    {currentFilters.tags?.length > 0 ? currentFilters.tags.slice(0, 2).join(', ') + (currentFilters.tags.length > 2 ? '...' : '') : 'Filter by tags'}
                   </div>
                 </div>
               </div>
-              <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform ${isTagsDropdownOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isTagsDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
             
             {isTagsDropdownOpen && (
@@ -1004,23 +1001,20 @@ const ImageGallery = () => {
             <div className="relative sort-dropdown">
               <button
                 onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
-                className="flex items-center space-x-3 px-6 py-4 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm min-w-[200px] justify-between"
+                className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors shadow-sm min-w-[100px] justify-between text-sm"
               >
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center">
+                <div className="flex items-center space-x-2">
+                  <div className="w-6 h-6 bg-gray-800 rounded flex items-center justify-center">
                     {currentSort.sortOrder === 'asc' ? 
-                      <SortAsc className="h-5 w-5 text-white" /> : 
-                      <SortDesc className="h-5 w-5 text-white" />
+                      <SortAsc className="h-3 w-3 text-white" /> : 
+                      <SortDesc className="h-3 w-3 text-white" />
                     }
                   </div>
                   <div className="text-left">
-                    <div className="font-medium text-gray-900">Sort</div>
-                    <div className="text-sm text-gray-500">
-                      {sortOptions.find(opt => opt.value === currentSort.sortBy)?.label} ({currentSort.sortOrder === 'asc' ? 'A-Z' : 'Z-A'})
-                    </div>
+                    <div className="font-medium text-gray-900 text-xs">Sort</div>
                   </div>
                 </div>
-                <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform ${isSortDropdownOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isSortDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
               
               {isSortDropdownOpen && (
@@ -1465,13 +1459,13 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
                 <Edit className="h-4 w-4" />
               </button>
               {canDelete && (
-                <button
-                  onClick={() => onDelete(image.id, image.title || image.filename)}
-                  className="p-1 text-gray-500 hover:text-red-600"
-                  title="Delete image"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+              <button
+                onClick={() => onDelete(image.id, image.title || image.filename)}
+                className="p-1 text-gray-500 hover:text-red-600"
+                title="Delete image"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
               )}
             </div>
           </div>

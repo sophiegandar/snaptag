@@ -16,9 +16,7 @@ const ImageEditor = () => {
   const [loading, setLoading] = useState(true);
   const [tags, setTags] = useState([]);
   const [focusedTags, setFocusedTags] = useState([]);
-  const [editableTitle, setEditableTitle] = useState('');
   const [editableName, setEditableName] = useState('');
-  const [editableDescription, setEditableDescription] = useState('');
   const [isTaggingMode, setIsTaggingMode] = useState(false);
   const [newTag, setNewTag] = useState('');
   // Removed unused selectedRegion state
@@ -177,9 +175,7 @@ const ImageEditor = () => {
       setImage(imageData);
       setTags(imageData.tags || []);
       setFocusedTags(imageData.focused_tags || []);
-      setEditableTitle(imageData.title || '');
       setEditableName(imageData.name || '');
-      setEditableDescription(imageData.description || '');
     } catch (error) {
       console.error('Error loading image:', error);
       toast.error('Failed to load image');
@@ -658,9 +654,7 @@ const ImageEditor = () => {
         body: JSON.stringify({
           tags,
           focusedTags,
-          title: editableTitle,
-          name: editableName,
-          description: editableDescription
+          name: editableName
         })
       });
 
@@ -1053,6 +1047,42 @@ const ImageEditor = () => {
 
         {/* Sidebar */}
         <div className="space-y-6">
+          {/* Name Field */}
+          <div className="bg-white p-4 rounded-lg shadow">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Name
+            </label>
+            <input
+              type="text"
+              placeholder="Enter name..."
+              value={editableName}
+              onChange={(e) => setEditableName(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+            />
+            
+            {/* File Info */}
+            <div className="pt-3 border-t border-gray-200 mt-3 space-y-2 text-sm">
+              <div>
+                <span className="font-medium">Filename:</span>
+                <span className="ml-2 text-gray-600">{image.filename}</span>
+              </div>
+              <div>
+                <span className="font-medium">Uploaded:</span>
+                <span className="ml-2 text-gray-600">
+                  {new Date(image.upload_date).toLocaleDateString()}
+                </span>
+              </div>
+              {image.file_size && (
+                <div>
+                  <span className="font-medium">Size:</span>
+                  <span className="ml-2 text-gray-600">
+                    {(image.file_size / 1024 / 1024).toFixed(2)} MB
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* AI Suggestions */}
           {showAiSuggestions && aiSuggestions.length > 0 && (
             <div className="bg-green-50 border border-green-200 p-4 rounded-lg shadow">
@@ -1164,89 +1194,7 @@ const ImageEditor = () => {
             </div>
           </div>
 
-          {/* Image Details */}
-          <div className="bg-white p-4 rounded-lg shadow">
-            <h3 className="font-semibold mb-4">Image Details</h3>
-            
-            <div className="space-y-3">
-              {/* Editable Title */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Title
-                </label>
-                <input
-                  type="text"
-                  placeholder="Enter title..."
-                  value={editableTitle}
-                  onChange={(e) => setEditableTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
 
-              {/* Editable Name */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="Enter name..."
-                  value={editableName}
-                  onChange={(e) => setEditableName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-
-              {/* Editable Description */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
-                </label>
-                <textarea
-                  placeholder="Enter description..."
-                  value={editableDescription}
-                  onChange={(e) => setEditableDescription(e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-
-              {/* Read-only Info */}
-              <div className="pt-3 border-t border-gray-200 space-y-2 text-sm">
-                <div>
-                  <span className="font-medium">Filename:</span>
-                  <span className="ml-2 text-gray-600">{image.filename}</span>
-                </div>
-                <div>
-                  <span className="font-medium">Uploaded:</span>
-                  <span className="ml-2 text-gray-600">
-                    {new Date(image.upload_date).toLocaleDateString()}
-                  </span>
-                </div>
-                {image.file_size && (
-                  <div>
-                    <span className="font-medium">Size:</span>
-                    <span className="ml-2 text-gray-600">
-                      {(image.file_size / 1024 / 1024).toFixed(2)} MB
-                    </span>
-                  </div>
-                )}
-                {image.source_url && (
-                  <div>
-                    <span className="font-medium">Source:</span>
-                    <a
-                      href={image.source_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="ml-2 text-blue-600 hover:text-blue-800 break-all"
-                    >
-                      {new URL(image.source_url).hostname}
-                    </a>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
