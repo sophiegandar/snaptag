@@ -79,37 +79,61 @@ export const ModeProvider = ({ children }) => {
     return () => clearInterval(interval);
   }, [isEditMode, timeRemaining]);
 
-  // Keyboard shortcut listener (Escape key for mode toggle)
+  // Keyboard shortcut listener (Escape + E sequence for mode toggle)
   useEffect(() => {
+    let escapePressed = false;
+    let escapeTimeout = null;
+
     const handleKeyDown = (event) => {
       // Always log key presses to debug
       console.log('🔍 Key pressed:', {
         key: event.key,
         code: event.code,
-        metaKey: event.metaKey,
-        ctrlKey: event.ctrlKey,
-        shiftKey: event.shiftKey,
+        escapePressed: escapePressed,
         target: event.target.tagName
       });
       
-      // Use Escape key to toggle mode (safe key that won't conflict)
+      // Only trigger if not typing in an input field or modal
+      if (['INPUT', 'TEXTAREA'].includes(event.target.tagName)) {
+        return;
+      }
+
       if (event.key === 'Escape') {
-        // Only trigger if not typing in an input field or modal
-        if (!['INPUT', 'TEXTAREA'].includes(event.target.tagName)) {
-          console.log('🔄 Escape pressed - triggering mode toggle...');
-          event.preventDefault();
-          toggleEditMode();
-        }
+        console.log('🔄 Escape pressed - waiting for E...');
+        escapePressed = true;
+        event.preventDefault();
+        
+        // Clear any existing timeout
+        if (escapeTimeout) clearTimeout(escapeTimeout);
+        
+        // Reset escape state after 2 seconds
+        escapeTimeout = setTimeout(() => {
+          console.log('🔄 Escape sequence timed out');
+          escapePressed = false;
+        }, 2000);
+      } else if (escapePressed && (event.key === 'e' || event.key === 'E')) {
+        console.log('🔄 ESC + E sequence completed - triggering mode toggle...');
+        event.preventDefault();
+        toggleEditMode();
+        escapePressed = false;
+        if (escapeTimeout) clearTimeout(escapeTimeout);
+      } else if (escapePressed) {
+        // Any other key resets the sequence
+        console.log('🔄 Escape sequence reset by other key');
+        escapePressed = false;
+        if (escapeTimeout) clearTimeout(escapeTimeout);
       }
     };
 
-    console.log('🎧 Adding keyboard event listener...');
-    document.addEventListener('keydown', handleKeyDown, true); // Use capture phase
+    console.log('🎧 Adding ESC + E keyboard event listener...');
+    document.addEventListener('keydown', handleKeyDown, true);
+    
     return () => {
       console.log('🎧 Removing keyboard event listener...');
       document.removeEventListener('keydown', handleKeyDown, true);
+      if (escapeTimeout) clearTimeout(escapeTimeout);
     };
-  }, [toggleEditMode]); // Add toggleEditMode to dependencies
+  }, [toggleEditMode]);
 
   // Cleanup timer on unmount
   useEffect(() => {

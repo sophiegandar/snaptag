@@ -209,7 +209,7 @@ const Projects = () => {
                         {/* Hover Overlay - Match Gallery Style Exactly */}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end">
                           <div className="p-4 text-white">
-                            <div className="text-xs font-semibold text-green-400 uppercase tracking-wide mb-1">
+                            <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{color: '#C9D468'}}>
                               {getImageType()}
                             </div>
                             <div className="text-sm font-medium text-white/90">

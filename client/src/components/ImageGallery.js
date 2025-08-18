@@ -1539,7 +1539,7 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
         <div className={`absolute inset-0 bg-black bg-opacity-70 transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'} flex flex-col justify-end p-4`}>
           <div className="text-white">
             {/* Type */}
-            <div className="text-xs font-semibold text-green-400 uppercase tracking-wide mb-1">
+            <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{color: '#C9D468'}}>
               {getImageType()}
             </div>
             

@@ -38,21 +38,20 @@ function Navigation() {
           <div className="flex items-center space-x-4">
             {/* Mode Indicator & Toggle */}
             <div className="flex items-center space-x-2">
-              <button
-                onClick={toggleEditMode}
-                className={`flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+              <div
+                className={`flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-medium cursor-default ${
                   isEditMode 
-                    ? 'bg-green-100 text-green-800 border border-green-200 hover:bg-green-200' 
-                    : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
+                    ? 'bg-green-100 text-green-800 border border-green-200' 
+                    : 'bg-gray-100 text-gray-600 border border-gray-200'
                 }`}
-                title={`Click to toggle mode (Escape key)`}
+                title={`Mode toggle: Press ESC then E`}
               >
                 {isEditMode ? <Edit3 className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
                 <span>{isEditMode ? 'Edit Mode' : 'View Mode'}</span>
                 {isEditMode && formatTimeRemaining() && (
                   <span className="text-green-600 ml-1">({formatTimeRemaining()})</span>
                 )}
-              </button>
+              </div>
             </div>
 
             <Link
