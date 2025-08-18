@@ -79,13 +79,25 @@ export const ModeProvider = ({ children }) => {
     return () => clearInterval(interval);
   }, [isEditMode, timeRemaining]);
 
-  // Keyboard shortcut listener (Cmd+Shift+E for Edit mode)
+  // Keyboard shortcut listener (Cmd+E for Edit mode)
   useEffect(() => {
     const handleKeyDown = (event) => {
-      // Check for Cmd+Shift+E (Mac) or Ctrl+Shift+E (Windows/Linux)
-      if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key === 'E') {
-        event.preventDefault();
-        toggleEditMode();
+      console.log('🔍 Key pressed:', {
+        key: event.key,
+        metaKey: event.metaKey,
+        ctrlKey: event.ctrlKey,
+        shiftKey: event.shiftKey,
+        target: event.target.tagName
+      });
+      
+      // Try simpler shortcut: Cmd+E (Mac) or Ctrl+E (Windows/Linux)
+      if ((event.metaKey || event.ctrlKey) && event.key === 'e' && !event.shiftKey) {
+        // Only trigger if not typing in an input field
+        if (!['INPUT', 'TEXTAREA'].includes(event.target.tagName)) {
+          console.log('🔄 Triggering mode toggle...');
+          event.preventDefault();
+          toggleEditMode();
+        }
       }
     };
 
