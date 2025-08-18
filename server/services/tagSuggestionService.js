@@ -107,7 +107,7 @@ IMPORTANT:
 - Use spaces in multi-word tags, NOT hyphens (e.g., "natural light", "living room")
 - DO NOT suggest project names, locations, or internal filing categories
 
-Respond ONLY with a JSON array:
+Respond ONLY with a JSON array where confidence is 0-100 (whole numbers):
 [{"tag": "interior", "confidence": 95, "reason": "Indoor living space clearly visible"}, {"tag": "timber", "confidence": 90, "reason": "Exposed wooden ceiling beams and wall paneling"}, {"tag": "natural light", "confidence": 85, "reason": "Bright daylight streaming through large windows"}]`
               },
               {
@@ -171,16 +171,16 @@ Respond ONLY with a JSON array:
       // Determine image type from context
       if (filename.includes('interior') || filename.includes('archier')) {
         fallbackSuggestions.push(
-          { tag: 'interior', confidence: 85, reason: 'Fallback: Based on context and filename', source: 'fallback_ai' },
-          { tag: 'timber', confidence: 80, reason: 'Fallback: Common in Archier projects', source: 'fallback_ai' },
-          { tag: 'natural light', confidence: 75, reason: 'Fallback: Architectural emphasis', source: 'fallback_ai' },
-          { tag: 'contemporary', confidence: 70, reason: 'Fallback: Archier design style', source: 'fallback_ai' }
+          { tag: 'interior', confidence: 85, reason: 'Based on context and filename', source: 'fallback_ai' },
+          { tag: 'timber', confidence: 80, reason: 'Common in Archier projects', source: 'fallback_ai' },
+          { tag: 'natural light', confidence: 75, reason: 'Architectural emphasis', source: 'fallback_ai' },
+          { tag: 'contemporary', confidence: 70, reason: 'Archier design style', source: 'fallback_ai' }
         );
       } else if (filename.includes('exterior') || filename.includes('precedent')) {
         fallbackSuggestions.push(
-          { tag: 'exterior', confidence: 85, reason: 'Fallback: Based on context', source: 'fallback_ai' },
-          { tag: 'facade', confidence: 80, reason: 'Fallback: Common exterior element', source: 'fallback_ai' },
-          { tag: 'contemporary', confidence: 75, reason: 'Fallback: Modern architecture', source: 'fallback_ai' }
+          { tag: 'exterior', confidence: 85, reason: 'Based on context', source: 'fallback_ai' },
+          { tag: 'facade', confidence: 80, reason: 'Common exterior element', source: 'fallback_ai' },
+          { tag: 'contemporary', confidence: 75, reason: 'Modern architecture', source: 'fallback_ai' }
         );
       }
       
