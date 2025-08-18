@@ -578,16 +578,19 @@ Respond with valid JSON only:
     
     suggestions.forEach(suggestion => {
       const existing = tagMap.get(suggestion.tag);
+      // Normalize confidence to 0-100 range
+      const normalizedConfidence = Math.min(100, Math.max(0, Math.round(Number(suggestion.confidence) || 50)));
+      
       if (existing) {
-        // Combine confidence scores (taking max and adding bonus for multiple sources)
-        existing.confidence = Math.min(0.95, Math.max(existing.confidence, suggestion.confidence) + 0.1);
+        // Combine confidence scores (taking max and adding small bonus for multiple sources)
+        existing.confidence = Math.min(100, Math.max(existing.confidence, normalizedConfidence) + 5);
         existing.reasons.push(suggestion.reason);
-        // Keep the highest priority (1 is higher than 2)
+        // Keep the highest priority (0 is higher than 3)
         existing.priority = Math.min(existing.priority || 3, suggestion.priority || 3);
       } else {
         tagMap.set(suggestion.tag, {
           tag: suggestion.tag,
-          confidence: suggestion.confidence,
+          confidence: normalizedConfidence,
           reasons: [suggestion.reason],
           priority: suggestion.priority || 3
         });
