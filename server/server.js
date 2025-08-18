@@ -2480,6 +2480,13 @@ app.get('/api/images/:id/suggestions', async (req, res) => {
       },
       existingTags: existingTags,
       suggestions: filteredSuggestions,
+      debug: {
+        rawSuggestionsCount: suggestions.length,
+        rawSuggestions: suggestions.map(s => s.tag),
+        filteredOutInternal: suggestions.filter(s => internalTags.includes(s.tag.toLowerCase())).map(s => s.tag),
+        filteredOutExisting: suggestions.filter(s => existingTags.some(existing => existing.toLowerCase() === s.tag.toLowerCase())).map(s => s.tag),
+        finalCount: filteredSuggestions.length
+      },
       message: existingTags.length > 0 
         ? `Found ${filteredSuggestions.length} additional suggestions beyond existing tags`
         : `Generated ${filteredSuggestions.length} tag suggestions`
