@@ -87,15 +87,20 @@ class TagSuggestionService {
                 type: "text",
                 text: `Analyze this architectural image and suggest 3-6 descriptive tags.
 
-Focus on what you can clearly see:
-- Spaces: interior, exterior, kitchen, living room, bathroom, bedroom
+CRITICAL: First determine if this is an interior or exterior view:
+- INTERIOR: Indoor spaces, rooms, inside buildings
+- EXTERIOR: Outdoor views, building facades, landscapes, courtyards
+
+Then identify:
 - Materials: timber, concrete, steel, glass, stone, brick
 - Features: windows, doors, stairs, natural light, modern, contemporary
+- Rooms (if interior): kitchen, living room, bathroom, bedroom
+- Elements (if exterior): facade, landscaping, entrance, deck, balcony
 
 Use simple, searchable terms. Use spaces not hyphens (e.g. "natural light" not "natural-light").
 
 Respond with valid JSON only:
-[{"tag": "interior", "confidence": 90}, {"tag": "timber", "confidence": 85}, {"tag": "natural light", "confidence": 80}]`
+[{"tag": "exterior", "confidence": 90}, {"tag": "timber", "confidence": 85}, {"tag": "natural light", "confidence": 80}]`
               },
               {
                 type: "image_url",
@@ -162,6 +167,24 @@ Respond with valid JSON only:
           }));
         
         console.log(`🎯 Validated tags (${validatedTags.length}):`, validatedTags);
+        
+        // Monitor interior/exterior classification accuracy
+        const interiorSuggested = validatedTags.some(tag => tag.tag.toLowerCase() === 'interior');
+        const exteriorSuggested = validatedTags.some(tag => tag.tag.toLowerCase() === 'exterior');
+        const filename = image.filename.toLowerCase();
+        
+        if (interiorSuggested && exteriorSuggested) {
+          console.log('⚠️ CLASSIFICATION ISSUE: Both interior and exterior suggested for', filename);
+        } else if (interiorSuggested && filename.includes('exterior')) {
+          console.log('❌ FALSE POSITIVE: Interior suggested for exterior image', filename);
+        } else if (exteriorSuggested && filename.includes('interior')) {
+          console.log('❌ FALSE POSITIVE: Exterior suggested for interior image', filename);
+        } else if (interiorSuggested) {
+          console.log('✅ INTERIOR classification for', filename);
+        } else if (exteriorSuggested) {
+          console.log('✅ EXTERIOR classification for', filename);
+        }
+        
         return validatedTags;
         
       } catch (parseError) {
