@@ -3,11 +3,13 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { fabric } from 'fabric';
 import { Save, Tag, X, ArrowLeft, Trash2, Edit3, ChevronLeft, ChevronRight, Lightbulb } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { useMode } from '../context/ModeContext';
 
 const ImageEditor = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const { canEdit } = useMode();
   const canvasRef = useRef(null);
   const fabricCanvasRef = useRef(null);
   const fallbackTimeoutRef = useRef(null);
@@ -634,8 +636,37 @@ const ImageEditor = () => {
     setNewTag('');
   };
 
-  const removeGeneralTag = (tagToRemove) => {
-    setTags(prev => prev.filter(tag => tag !== tagToRemove));
+  const removeGeneralTag = async (tagToRemove) => {
+    if (!canEdit) return; // Prevent removal in view mode
+    
+    const newTags = tags.filter(tag => tag !== tagToRemove);
+    setTags(newTags);
+    
+    // Auto-save in edit mode
+    try {
+      const response = await fetch(`/api/images/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tags: newTags,
+          focusedTags,
+          name: editableName
+        })
+      });
+
+      if (response.ok) {
+        toast.success(`Removed tag: ${tagToRemove}`);
+      } else {
+        // Revert on failure
+        setTags(prev => [...prev, tagToRemove]);
+        toast.error('Failed to remove tag');
+      }
+    } catch (error) {
+      // Revert on failure
+      setTags(prev => [...prev, tagToRemove]);
+      toast.error('Failed to remove tag');
+      console.error('Error removing tag:', error);
+    }
   };
 
   // removeFocusedTag function moved up to avoid duplication
@@ -769,19 +800,21 @@ const ImageEditor = () => {
             </button>
           </div>
           
-          {/* Save button - greyed out when no changes */}
-          <button
-            onClick={saveChanges}
-            disabled={!hasUnsavedChanges}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
-              hasUnsavedChanges 
-                ? 'bg-blue-500 text-white hover:bg-blue-600' 
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
-          >
-            <Save className="h-4 w-4" />
-            Save Changes
-          </button>
+          {/* Save button - only show in edit mode */}
+          {canEdit && (
+            <button
+              onClick={saveChanges}
+              disabled={!hasUnsavedChanges}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
+                hasUnsavedChanges 
+                  ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              <Save className="h-4 w-4" />
+              Save Changes
+            </button>
+          )}
         </div>
       </div>
 
@@ -791,36 +824,38 @@ const ImageEditor = () => {
           <div className="bg-white p-4 rounded-lg shadow">
             <div className="mb-4 flex justify-between items-center">
               <h3 className="font-semibold">Image Editor</h3>
-              <div className="flex gap-2">
-                <button
-                  onClick={loadAiSuggestions}
-                  disabled={loadingAiSuggestions || !image}
-                  className="flex items-center gap-2 px-3 py-1 rounded-md text-sm bg-green-500 text-white hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Lightbulb className={`h-4 w-4 ${loadingAiSuggestions ? 'animate-pulse' : ''}`} />
-                  {loadingAiSuggestions ? 'Scanning...' : 'AI Scan'}
-                </button>
-                <button
-                  onClick={() => {
-                    console.log('Toggling tagging mode from:', isTaggingMode, 'to:', !isTaggingMode);
-                    setIsTaggingMode(!isTaggingMode);
-                    if (isTaggingMode) {
-                      // If exiting tagging mode, clean up
-                      setPendingTagLocation(null);
-                      setNewTag('');
-                    }
-                  }}
-                  disabled={!canvasReady}
-                  className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
-                    isTaggingMode 
-                      ? 'bg-blue-500 text-white' 
-                      : 'bg-gray-200 text-gray-700'
-                  }`}
-                >
-                  <Edit3 className="h-4 w-4" />
-                  {isTaggingMode ? 'Exit Tagging' : 'Add Region Tag'}
-                </button>
-              </div>
+              {canEdit && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={loadAiSuggestions}
+                    disabled={loadingAiSuggestions || !image}
+                    className="flex items-center gap-2 px-3 py-1 rounded-md text-sm bg-green-500 text-white hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Lightbulb className={`h-4 w-4 ${loadingAiSuggestions ? 'animate-pulse' : ''}`} />
+                    {loadingAiSuggestions ? 'Scanning...' : 'AI Scan'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      console.log('Toggling tagging mode from:', isTaggingMode, 'to:', !isTaggingMode);
+                      setIsTaggingMode(!isTaggingMode);
+                      if (isTaggingMode) {
+                        // If exiting tagging mode, clean up
+                        setPendingTagLocation(null);
+                        setNewTag('');
+                      }
+                    }}
+                    disabled={!canvasReady}
+                    className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+                      isTaggingMode 
+                        ? 'bg-blue-500 text-white' 
+                        : 'bg-gray-200 text-gray-700'
+                    }`}
+                  >
+                    <Edit3 className="h-4 w-4" />
+                    {isTaggingMode ? 'Exit Tagging' : 'Add Region Tag'}
+                  </button>
+                </div>
+              )}
             </div>
             
             {isTaggingMode && !pendingTagLocation && (
@@ -1057,7 +1092,12 @@ const ImageEditor = () => {
               placeholder="Enter name..."
               value={editableName}
               onChange={(e) => setEditableName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+              disabled={!canEdit}
+              className={`w-full px-3 py-2 border border-gray-300 rounded-md text-sm ${
+                canEdit 
+                  ? 'focus:ring-blue-500 focus:border-blue-500' 
+                  : 'bg-gray-100 cursor-not-allowed'
+              }`}
             />
             
             {/* File Info */}
@@ -1131,22 +1171,24 @@ const ImageEditor = () => {
           <div className="bg-white p-4 rounded-lg shadow">
             <h3 className="font-semibold mb-4">General Tags</h3>
             
-            <div className="flex gap-2 mb-4">
-              <input
-                type="text"
-                placeholder="Add tag..."
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && addGeneralTag()}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
-              />
-              <button
-                onClick={addGeneralTag}
-                className="px-3 py-2 bg-gray-500 text-white rounded-md text-sm hover:bg-gray-600"
-              >
-                <Tag className="h-4 w-4" />
-              </button>
-            </div>
+            {canEdit && (
+              <div className="flex gap-2 mb-4">
+                <input
+                  type="text"
+                  placeholder="Add tag..."
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && addGeneralTag()}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
+                <button
+                  onClick={addGeneralTag}
+                  className="px-3 py-2 bg-gray-500 text-white rounded-md text-sm hover:bg-gray-600"
+                >
+                  <Tag className="h-4 w-4" />
+                </button>
+              </div>
+            )}
 
             <div className="flex flex-wrap gap-2">
               {tags.map(tag => (
@@ -1155,12 +1197,14 @@ const ImageEditor = () => {
                   className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm flex items-center gap-1"
                 >
                   {tag}
-                  <button
-                    onClick={() => removeGeneralTag(tag)}
-                    className="hover:bg-blue-200 rounded-full p-1"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
+                  {canEdit && (
+                    <button
+                      onClick={() => removeGeneralTag(tag)}
+                      className="hover:bg-blue-200 rounded-full p-1"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
                 </span>
               ))}
             </div>
