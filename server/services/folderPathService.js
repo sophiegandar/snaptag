@@ -169,73 +169,79 @@ class FolderPathService {
         .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
     };
     
-    // Determine filename structure based on folder logic
+    // Determine filename structure: AXXXX-Type-Category
+    // Types: Archier, Precedent, Texture (only these 3)
     let filenameStructure = '';
     
     if (normalizedTags.includes('archier')) {
-      // XXXX-archier-projectname format
+      // TYPE: Archier
       filenameStructure = 'archier';
       
-      // Find project name
+      // CATEGORY: Find project name
       const projectNames = [
         'yandoit', 'ballarat', 'melbourne', 'brunswick', 'geelong', 
         'sydney', 'adelaide', 'perth', 'canberra', 'hobart',
         'bendigo', 'shepparton', 'warrnambool', 'mildura'
       ];
       
+      let categoryFound = false;
       for (const project of projectNames) {
         if (normalizedTags.includes(project)) {
           filenameStructure += '-' + cleanTag(project);
+          categoryFound = true;
           break;
         }
       }
       
-      // Add final/wip if present
-      if (normalizedTags.includes('final')) {
-        filenameStructure += '-final';
-      } else if (normalizedTags.includes('wip')) {
-        filenameStructure += '-wip';
+      // Fallback category if no project found
+      if (!categoryFound) {
+        filenameStructure += '-general';
+      }
+      
+    } else if (normalizedTags.includes('texture') || normalizedTags.some(tag => this.materialCategories.includes(tag))) {
+      // TYPE: Texture (if has 'texture' tag OR any material category tag)
+      filenameStructure = 'texture';
+      
+      // CATEGORY: Find material category
+      let categoryFound = false;
+      for (const material of this.materialCategories) {
+        if (normalizedTags.includes(material)) {
+          filenameStructure += '-' + cleanTag(material);
+          categoryFound = true;
+          break;
+        }
+      }
+      
+      // Fallback category if no material found
+      if (!categoryFound) {
+        filenameStructure += '-general';
       }
       
     } else {
-      // Check if it's materials
-      let isMaterial = false;
-      for (const material of this.materialCategories) {
-        if (normalizedTags.includes(material)) {
-          filenameStructure = 'materials-' + cleanTag(material);
-          isMaterial = true;
+      // TYPE: Precedent (default for everything else)
+      filenameStructure = 'precedent';
+      
+      // CATEGORY: Find precedent category
+      let categoryFound = false;
+      for (const category of this.precedentCategories) {
+        if (normalizedTags.includes(category)) {
+          filenameStructure += '-' + cleanTag(category);
+          categoryFound = true;
           break;
         }
       }
       
-      if (!isMaterial) {
-        // Default to precedents with category
-        filenameStructure = 'precedents';
-        
-        // Find the most specific category tag
-        for (const category of this.precedentCategories) {
-          if (normalizedTags.includes(category)) {
-            filenameStructure += '-' + cleanTag(category);
-            break;
-          }
-        }
-        
-        // If no category found, add first non-structural tag
-        if (filenameStructure === 'precedents') {
-          const structuralTags = ['archier', 'final', 'complete', 'wip', ...this.precedentCategories, ...this.materialCategories];
-          const specificTag = normalizedTags.find(tag => !structuralTags.includes(tag));
-          if (specificTag) {
-            filenameStructure += '-' + cleanTag(specificTag);
-          }
-        }
+      // Fallback category if no precedent category found
+      if (!categoryFound) {
+        filenameStructure += '-general';
       }
     }
     
-    // Add sequential number
+    // Add sequential number with A prefix
     let filename;
     if (sequenceNumber !== null) {
       const paddedNumber = sequenceNumber.toString().padStart(4, '0');
-      filename = `${paddedNumber}-${filenameStructure}`;
+      filename = `A${paddedNumber}-${filenameStructure}`;
     } else {
       // Fallback to date-based if no sequence provided
       const date = new Date();
@@ -267,18 +273,24 @@ class FolderPathService {
   async getNextSequenceNumber(databaseService) {
     try {
       // Get the highest current sequence number from existing filenames (PostgreSQL compatible)
-      // Look for both 4-digit and 5-digit patterns for backward compatibility
+      // Look for AXXXX format (preferred) and fallback to legacy XXXX format
       const result = await databaseService.query(`
         SELECT filename 
         FROM images 
-        WHERE filename ~ '^[0-9]{4,5}-'
+        WHERE filename ~ '^A?[0-9]{4,5}-'
         ORDER BY filename DESC 
         LIMIT 1
       `);
       
       if (result.rows && result.rows.length > 0) {
         const latestFilename = result.rows[0].filename;
-        const match = latestFilename.match(/^(\d{4,5})-/);
+        // Try AXXXX format first
+        let match = latestFilename.match(/^A(\d{4})-/);
+        if (match) {
+          return parseInt(match[1]) + 1;
+        }
+        // Fallback to legacy XXXX format
+        match = latestFilename.match(/^(\d{4,5})-/);
         if (match) {
           return parseInt(match[1]) + 1;
         }
