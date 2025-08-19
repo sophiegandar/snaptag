@@ -229,45 +229,47 @@ class DatabaseService {
         const searchWords = searchTerm.trim().split(/\s+/);
         const contentConditions = [];
         
-        // Search for exact phrase in content (case-insensitive)
+        // Common words to skip in individual word search (but not in exact phrase)
+        const skipWords = new Set(['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'de', 'la', 'le', 'el', 'un', 'una']);
+        
+        // PRIORITY 1: Search for exact phrase in content and tags (case-insensitive)
         contentConditions.push('LOWER(i.title) LIKE LOWER(?)');
         contentConditions.push('LOWER(i.description) LIKE LOWER(?)');
         contentConditions.push('LOWER(i.filename) LIKE LOWER(?)');
         contentConditions.push('LOWER(i.original_name) LIKE LOWER(?)');
+        contentConditions.push('LOWER(i.name) LIKE LOWER(?)');
+        contentConditions.push('LOWER(t.name) LIKE LOWER(?)');
+        contentConditions.push('LOWER(ft.tag_name) LIKE LOWER(?)');
         const exactPattern = `%${searchTerm.trim()}%`;
-        params.push(exactPattern, exactPattern, exactPattern, exactPattern);
+        params.push(exactPattern, exactPattern, exactPattern, exactPattern, exactPattern, exactPattern, exactPattern);
         
-        // Search for individual words in content
-        searchWords.forEach(word => {
-          if (word.length > 2) {
+        // PRIORITY 2: Individual word search - only for meaningful words
+        // Only break into words if we have multiple words AND they're meaningful
+        if (searchWords.length > 1) {
+          const meaningfulWords = searchWords.filter(word => 
+            word.length > 2 && !skipWords.has(word.toLowerCase())
+          );
+          
+          meaningfulWords.forEach(word => {
+            // Search in content fields
             contentConditions.push('LOWER(i.title) LIKE LOWER(?)');
             contentConditions.push('LOWER(i.description) LIKE LOWER(?)');
             contentConditions.push('LOWER(i.filename) LIKE LOWER(?)');
             contentConditions.push('LOWER(i.original_name) LIKE LOWER(?)');
-            const wordPattern = `%${word}%`;
-            params.push(wordPattern, wordPattern, wordPattern, wordPattern);
-          }
-        });
-        
-        // Search in tags (both regular and focused, case-insensitive)
-        // Exact phrase in tags - ALWAYS include this
-        contentConditions.push('LOWER(t.name) LIKE LOWER(?)');
-        contentConditions.push('LOWER(ft.tag_name) LIKE LOWER(?)');
-        params.push(exactPattern, exactPattern);
-        
-        // Individual words in tags - include ALL words, not just length > 2
-        searchWords.forEach(word => {
-          if (word.length > 1) { // Changed from > 2 to > 1
+            contentConditions.push('LOWER(i.name) LIKE LOWER(?)');
+            // Search in tags
             contentConditions.push('LOWER(t.name) LIKE LOWER(?)');
             contentConditions.push('LOWER(ft.tag_name) LIKE LOWER(?)');
             const wordPattern = `%${word}%`;
-            params.push(wordPattern, wordPattern);
-          }
-        });
+            params.push(wordPattern, wordPattern, wordPattern, wordPattern, wordPattern, wordPattern, wordPattern);
+          });
+        }
         
         if (contentConditions.length > 0) {
           console.log('📊 Content conditions count:', contentConditions.length);
-          console.log('📊 Sample content conditions:', contentConditions.slice(0, 6));
+          console.log('📊 Search term:', searchTerm);
+          console.log('📊 Exact pattern matches:', 7);
+          console.log('📊 Individual word matches:', contentConditions.length - 7);
           conditions.push(`(${contentConditions.join(' OR ')})`);
         }
       }
