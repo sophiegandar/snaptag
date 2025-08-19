@@ -96,9 +96,9 @@ class FolderPathService {
       return folderPath;
     }
     
-    // Step 2: Check for Texture category (ONLY if "texture" tag exists)
-    if (normalizedTags.includes('texture')) {
-      console.log('🏷️ Texture tag found, looking for material categories');
+    // Step 2: Check for Texture category (if "texture" tag OR any material category tag exists)
+    if (normalizedTags.includes('texture') || normalizedTags.some(tag => this.materialCategories.includes(tag))) {
+      console.log('🏷️ Texture classification: explicit texture tag OR material category tag found');
       
       // Look for specific material category
       for (const tag of normalizedTags) {
@@ -109,9 +109,9 @@ class FolderPathService {
         }
       }
       
-      // Texture tag but no specific material category, use Texture/General
+      // Texture classification but no specific material category, use Texture/General
       const generalTexturePath = path.posix.join(baseFolder, 'Texture', 'General');
-      console.log('📁 Texture tag found but no specific material category, using Texture/General:', generalTexturePath);
+      console.log('📁 Texture classification but no specific material category, using Texture/General:', generalTexturePath);
       return generalTexturePath;
     }
     

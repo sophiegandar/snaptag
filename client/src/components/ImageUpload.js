@@ -24,8 +24,6 @@ const ImageUpload = () => {
     const newFiles = acceptedFiles.map(file => ({
       file,
       preview: URL.createObjectURL(file),
-      title: '',
-      description: '',
       name: '', // Add name field
       tags: [...tags],
       id: Math.random().toString(36).substr(2, 9)
@@ -114,9 +112,7 @@ const ImageUpload = () => {
       try {
         const formData = new FormData();
         formData.append('image', fileData.file);
-        formData.append('title', fileData.title);
         formData.append('name', fileData.name || '');
-        formData.append('description', fileData.description);
         formData.append('tags', JSON.stringify(fileData.tags));
 
         const response = await fetch('/api/images/upload', {
@@ -336,26 +332,12 @@ const FilePreview = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <input
-              type="text"
-              placeholder="Title (optional)"
-              value={fileData.title}
-              onChange={(e) => onUpdateMetadata('title', e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
-            />
+          <div className="grid grid-cols-1 gap-3">
             <input
               type="text"
               placeholder="Name (optional)"
               value={fileData.name || ''}
               onChange={(e) => onUpdateMetadata('name', e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
-            />
-            <input
-              type="text"
-              placeholder="Description (optional)"
-              value={fileData.description}
-              onChange={(e) => onUpdateMetadata('description', e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
             />
           </div>

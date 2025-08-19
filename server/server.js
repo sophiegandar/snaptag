@@ -1289,7 +1289,7 @@ app.post('/api/images/upload', upload.single('image'), async (req, res) => {
       return res.status(400).json({ error: 'No image file provided' });
     }
 
-    const { tags, title, name, description, focusedTags } = req.body;
+    const { tags, name, focusedTags } = req.body;
     const tempFilePath = req.file.path;
     
     // Parse tags
@@ -1301,9 +1301,7 @@ app.post('/api/images/upload', upload.single('image'), async (req, res) => {
       filePath: tempFilePath,
       originalName: req.file.originalname,
       tags: parsedTags,
-      title,
       name,
-      description,
       focusedTags: parsedFocusedTags
     });
 
@@ -1505,6 +1503,9 @@ app.delete('/api/tags/:id', async (req, res) => {
   }
 });
 
+// File locking mechanism to prevent concurrent moves
+const fileMoveLocks = new Set();
+
 // Batch apply tags to multiple images
 app.post('/api/batch/apply-tags', async (req, res) => {
   try {
@@ -1529,13 +1530,25 @@ app.post('/api/batch/apply-tags', async (req, res) => {
     
     for (const imageId of imageIds) {
       try {
-        // Get current image data
-        const image = await databaseService.getImageById(imageId);
-        if (!image) {
-          errors.push(`Image ${imageId} not found`);
+        // Check if this file is already being processed
+        if (fileMoveLocks.has(imageId)) {
+          console.log(`⏳ Image ${imageId} is already being processed, skipping to prevent conflicts`);
+          errors.push(`Image ${imageId}: Already being processed`);
           errorCount++;
           continue;
         }
+
+        // Lock this file for processing
+        fileMoveLocks.add(imageId);
+        
+        try {
+          // Get current image data
+          const image = await databaseService.getImageById(imageId);
+          if (!image) {
+            errors.push(`Image ${imageId} not found`);
+            errorCount++;
+            continue;
+          }
         
         // Get current tags
         let currentTags = [];
@@ -1615,12 +1628,21 @@ app.post('/api/batch/apply-tags', async (req, res) => {
         
         // Move file in Dropbox if path or filename has changed
         if (image.dropbox_path !== newDropboxPath) {
-          console.log(`📁 Moving file from: ${image.dropbox_path}`);
-          console.log(`📁 Moving file to: ${newDropboxPath}`);
+          console.log(`📁 FILE MOVE REQUIRED for image ${imageId}:`);
+          console.log(`   From: ${image.dropbox_path}`);
+          console.log(`   To: ${newDropboxPath}`);
+          console.log(`   Reason: Tags ${uniqueNewTags.join(', ')} added, triggering folder reorganization`);
           
           try {
+            // ENHANCED LOGGING: Record move operation start
+            const moveStartTime = Date.now();
+            console.log(`🔄 MOVE START: ${new Date().toISOString()} - Image ${imageId}`);
+            
             // Use fast Dropbox move API instead of download-upload-delete
             await dropboxService.moveFile(image.dropbox_path, newDropboxPath);
+            
+            const moveEndTime = Date.now();
+            console.log(`🔄 MOVE SUCCESS: ${new Date().toISOString()} - Image ${imageId} (${moveEndTime - moveStartTime}ms)`);
             
             // Update database with new path and filename
             await databaseService.query(
@@ -1628,13 +1650,19 @@ app.post('/api/batch/apply-tags', async (req, res) => {
               [newDropboxPath, newFilename, imageId]
             );
             
-            console.log(`✅ Successfully moved file to new folder structure`);
+            console.log(`✅ DATABASE UPDATED: Image ${imageId} path updated to ${newDropboxPath}`);
+            console.log(`📊 MOVE COMPLETE: Image ${imageId} successfully organized`);
           } catch (moveError) {
-            console.error(`❌ Failed to move file in Dropbox:`, moveError.message);
+            console.error(`❌ MOVE FAILED: ${new Date().toISOString()} - Image ${imageId}`);
+            console.error(`   Error: ${moveError.message}`);
+            console.error(`   Source: ${image.dropbox_path}`);
+            console.error(`   Target: ${newDropboxPath}`);
             errors.push(`Image ${imageId}: Failed to reorganize in Dropbox - ${moveError.message}`);
             errorCount++;
             continue;
           }
+        } else {
+          console.log(`✅ NO MOVE NEEDED: Image ${imageId} already in correct location: ${newDropboxPath}`);
         }
         
         // Update metadata in the actual image file
@@ -1651,19 +1679,26 @@ app.post('/api/batch/apply-tags', async (req, res) => {
           console.error(`⚠️ Failed to embed metadata for image ${imageId} (non-critical):`, metadataError.message);
         }
 
-        console.log(`✅ Updated tags for image ${imageId}`);
-        successCount++;
-        processedImages.push({
-          imageId: imageId,
-          filename: image.filename,
-          addedTags: uniqueNewTags,
-          moved: image.dropbox_path !== newDropboxPath
-        });
+          console.log(`✅ Updated tags for image ${imageId}`);
+          successCount++;
+          processedImages.push({
+            imageId: imageId,
+            filename: image.filename,
+            addedTags: uniqueNewTags,
+            moved: image.dropbox_path !== newDropboxPath
+          });
+          
+        } finally {
+          // Always unlock the file when done processing
+          fileMoveLocks.delete(imageId);
+        }
         
       } catch (error) {
         console.error(`❌ Error updating tags for image ${imageId}:`, error.message);
         errors.push(`Image ${imageId}: ${error.message}`);
         errorCount++;
+        // Unlock the file on error too
+        fileMoveLocks.delete(imageId);
       }
     }
     
@@ -2687,7 +2722,7 @@ app.post('/api/images/:id/apply-suggestions', async (req, res) => {
 });
 
 // Helper functions
-async function processAndUploadImage({ filePath, originalName, tags, title, name, description, focusedTags }) {
+async function processAndUploadImage({ filePath, originalName, tags, name, focusedTags }) {
   console.log('🏷️ Adding metadata to image...');
   
   // Check file size before processing
@@ -2697,9 +2732,7 @@ async function processAndUploadImage({ filePath, originalName, tags, title, name
   // Add metadata to image
   const processedImagePath = await metadataService.addMetadataToImage(filePath, {
     tags,
-    title,
     name,
-    description,
     focusedTags
   });
   console.log('✅ Metadata added, processed image:', processedImagePath);
@@ -2723,8 +2756,7 @@ async function processAndUploadImage({ filePath, originalName, tags, title, name
     const normalizedBaseFolder = baseDropboxFolder.startsWith('/') ? baseDropboxFolder : `/${baseDropboxFolder}`;
   const folderPath = folderPathService.generateFolderPath(tags, normalizedBaseFolder);
   
-  // Generate filename from tags
-  const timestamp = Date.now();
+  // Generate filename from tags with proper sequence number
   let ext = path.extname(originalName);
   
   // Fallback to .jpg if no extension found
@@ -2733,7 +2765,11 @@ async function processAndUploadImage({ filePath, originalName, tags, title, name
     console.log(`⚠️ Using fallback extension .jpg for uploaded file: "${originalName}"`);
   }
   
-  const filename = folderPathService.generateTagBasedFilename(tags, ext, timestamp);
+  // Get next sequence number for proper AXXXX format
+  const sequenceNumber = await folderPathService.getNextSequenceNumber(databaseService);
+  console.log(`🔢 Generated sequence number: ${sequenceNumber}`);
+  
+  const filename = folderPathService.generateTagBasedFilename(tags, ext, sequenceNumber);
   
   // Combine folder path and filename
   const dropboxPath = path.posix.join(folderPath, filename);
@@ -2751,9 +2787,7 @@ async function processAndUploadImage({ filePath, originalName, tags, title, name
     original_name: originalName,
     dropbox_path: dropboxPath,
     tags,
-    title,
     name,
-    description,
     focused_tags: focusedTags,
     upload_date: new Date().toISOString(),
     file_size: uploadResult.size,

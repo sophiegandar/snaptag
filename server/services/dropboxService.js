@@ -79,6 +79,38 @@ class DropboxService {
     }
   }
 
+  // Get file metadata to check if file exists
+  async getFileMetadata(filePath) {
+    try {
+      const pathRootHeader = JSON.stringify({
+        '.tag': 'root',
+        'root': this.rootNamespaceId
+      });
+      
+      const response = await fetch('https://api.dropboxapi.com/2/files/get_metadata', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.currentAccessToken}`,
+          'Content-Type': 'application/json',
+          'Dropbox-API-Path-Root': pathRootHeader
+        },
+        body: JSON.stringify({
+          path: filePath
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`not_found: ${error}`);
+      }
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      throw new Error(`File metadata check failed: ${error.message}`);
+    }
+  }
+
   // Move/rename file in Dropbox (much faster than download-upload-delete)
   async moveFile(fromPath, toPath) {
     return this.executeWithRetry(async (fromPath, toPath) => {
@@ -86,6 +118,28 @@ class DropboxService {
         console.log('🚚 Moving file in Dropbox...');
         console.log(`   From: ${fromPath}`);
         console.log(`   To: ${toPath}`);
+        
+        // SAFETY CHECK 1: Verify source file exists
+        console.log('🔍 Verifying source file exists...');
+        try {
+          await this.getFileMetadata(fromPath);
+        } catch (sourceError) {
+          console.log(`⚠️ Source file does not exist: ${fromPath}`);
+          throw new Error(`Source file not found: ${fromPath}`);
+        }
+        
+        // SAFETY CHECK 2: Check if target file already exists
+        console.log('🔍 Checking if target file already exists...');
+        try {
+          await this.getFileMetadata(toPath);
+          console.log(`⚠️ Target file already exists: ${toPath}`);
+          throw new Error(`Target file already exists: ${toPath}. This would create a duplicate.`);
+        } catch (targetError) {
+          // Target not existing is what we want - proceed with move
+          if (!targetError.message.includes('not_found') && !targetError.message.includes('Target file already exists')) {
+            throw targetError; // Re-throw if it's not a "not found" error
+          }
+        }
         
         // Use raw HTTP request with Path-Root header for team folder access
         const pathRootHeader = JSON.stringify({
@@ -115,6 +169,25 @@ class DropboxService {
         }
 
         const result = await response.json();
+        
+        // SAFETY CHECK 3: Verify move was successful
+        console.log('🔍 Verifying file move was successful...');
+        try {
+          await this.getFileMetadata(toPath);
+          console.log('✅ Target file verified to exist');
+        } catch (verifyError) {
+          throw new Error(`Move failed - target file not found after move: ${toPath}`);
+        }
+        
+        // SAFETY CHECK 4: Verify source file was removed
+        try {
+          await this.getFileMetadata(fromPath);
+          console.log(`⚠️ WARNING: Source file still exists after move: ${fromPath}`);
+          // Don't throw here - this is a warning, not a failure
+        } catch (sourceGoneError) {
+          console.log('✅ Source file successfully removed');
+        }
+        
         console.log(`✅ File moved successfully: ${fromPath} → ${toPath}`);
         return result;
       } catch (error) {
