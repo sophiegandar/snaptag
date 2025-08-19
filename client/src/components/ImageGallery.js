@@ -91,15 +91,17 @@ const ImageGallery = () => {
       
       console.log('🔍 Loading images with filters:', searchFilters);
       
-      // Use regular endpoint for better performance when no filters
+      // Use search endpoint when there are filters OR sorting parameters
       const hasFilters = searchFilters.searchTerm || 
                         (searchFilters.tags && searchFilters.tags.length > 0) ||
                         (searchFilters.sources && searchFilters.sources.length > 0) ||
                         searchFilters.dateRange;
       
+      const hasSorting = searchFilters.sortBy || searchFilters.sortOrder;
+      
       let response;
-      if (hasFilters) {
-        console.log('📡 Using search endpoint (has filters)');
+      if (hasFilters || hasSorting) {
+        console.log('📡 Using search endpoint (has filters or sorting)');
         response = await apiCall('/api/images/search', {
         method: 'POST',
         headers: {
@@ -108,7 +110,7 @@ const ImageGallery = () => {
         body: JSON.stringify(searchFilters)
       });
       } else {
-        console.log('📡 Using regular endpoint (no filters)');
+        console.log('📡 Using regular endpoint (no filters or sorting)');
         response = await apiCall('/api/images');
       }
       
