@@ -1027,7 +1027,7 @@ const ImageGallery = () => {
                     
                     {sortOptions.map((option) => {
                       const isSelected = currentSort.sortBy === option.value;
- return (
+  return (
                         <div
                           key={option.value}
                           className="flex items-center space-x-2 px-3 py-2 hover:bg-gray-50 rounded-lg cursor-pointer mb-1"
@@ -1418,6 +1418,27 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
     return image.name || image.title || image.filename?.replace(/\.(jpg|jpeg|png|gif|webp)$/i, '') || 'Untitled';
   };
 
+  // Check if this is a texture with unusual dimensions that should be constrained
+  const isUnusualTexture = () => {
+    const tags = image.tags || [];
+    const isTexture = tags.some(tag => ['texture', 'materials'].includes(tag.toLowerCase())) ||
+                     tags.some(tag => ['brick', 'carpet', 'concrete', 'fabric', 'metal', 'stone', 'tile', 'wood'].includes(tag.toLowerCase()));
+    
+    if (!isTexture) return false;
+    
+    const width = image.width || 0;
+    const height = image.height || 0;
+    
+    // Check for unusual aspect ratios (very tall or very wide)
+    if (width > 0 && height > 0) {
+      const aspectRatio = width / height;
+      // Unusual if taller than 3:1 or wider than 1:3 (very vertical or horizontal)
+      return aspectRatio > 3 || aspectRatio < 0.33;
+    }
+    
+    return false;
+  };
+
   if (viewMode === 'list') {
     return (
       <div className={`bg-white p-4 rounded-lg shadow flex gap-4 ${isSelected ? 'ring-2 ring-blue-500' : ''}`}>
@@ -1443,7 +1464,9 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
         <img
           src={imageUrl}
           alt={image.title || image.filename}
-          className="w-24 h-24 object-cover rounded cursor-pointer"
+          className={`w-24 h-24 object-cover rounded cursor-pointer ${
+            isUnusualTexture() ? 'scale-150' : ''
+          }`}
           onClick={() => onEdit(image.id)}
             onError={handleImageError}
         />
@@ -1511,8 +1534,8 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
         </div>
       )}
 
-      {/* Image Container - Fixed aspect ratio like architextures.org */}
-      <div className="relative aspect-square bg-gray-100 overflow-hidden">
+      {/* Image Container - Special handling for unusual texture dimensions */}
+      <div className={`relative bg-gray-100 overflow-hidden ${isUnusualTexture() ? 'aspect-square' : 'aspect-square'}`}>
         {imageError ? (
           <div className="w-full h-full bg-gray-200 flex items-center justify-center">
             <div className="text-center text-gray-400">
@@ -1525,7 +1548,11 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
           src={imageUrl}
             alt={getDisplayName()}
             loading="lazy"
-            className="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
+            className={`w-full h-full transition-transform duration-300 group-hover:scale-105 ${
+              isUnusualTexture() 
+                ? 'object-cover object-center scale-150' // For unusual textures, zoom in to show pattern detail
+                : 'object-cover object-center'   // For normal images, standard cover
+            }`}
             onError={handleImageError}
           />
         )}
@@ -1548,6 +1575,9 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
             {/* Category */}
             <div className="text-xs text-gray-300 mb-2">
               <span className="font-medium">Category:</span> {getCategory()}
+              {isUnusualTexture() && (
+                <span className="ml-2 text-yellow-400 text-xs">• Pattern View</span>
+              )}
             </div>
             
             {/* Name (only if manually entered) */}
