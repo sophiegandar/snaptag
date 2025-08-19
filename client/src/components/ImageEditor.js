@@ -697,6 +697,134 @@ const ImageEditor = () => {
     }
   };
 
+  // Properties helper functions
+  const getImageType = () => {
+    if (tags.some(tag => tag.toLowerCase() === 'precedent')) return 'precedent';
+    if (tags.some(tag => tag.toLowerCase() === 'texture')) return 'texture';
+    if (tags.some(tag => tag.toLowerCase() === 'photos')) return 'photos';
+    return 'precedent'; // Default
+  };
+
+  const getImageCategory = () => {
+    const categoryOptions = getCategoryOptions();
+    const currentCategory = tags.find(tag => 
+      categoryOptions.some(option => option.value === tag.toLowerCase())
+    );
+    return currentCategory ? currentCategory.toLowerCase() : categoryOptions[0]?.value || '';
+  };
+
+  const getCategoryOptions = () => {
+    const type = getImageType();
+    
+    if (type === 'texture') {
+      return [
+        { value: 'brick', label: 'Brick' },
+        { value: 'carpet', label: 'Carpet' },
+        { value: 'concrete', label: 'Concrete' },
+        { value: 'fabric', label: 'Fabric' },
+        { value: 'metal', label: 'Metal' },
+        { value: 'stone', label: 'Stone' },
+        { value: 'tile', label: 'Tile' },
+        { value: 'wood', label: 'Wood' },
+        { value: 'general', label: 'General' }
+      ];
+    } else if (type === 'precedent') {
+      return [
+        { value: 'art', label: 'Art' },
+        { value: 'bathrooms', label: 'Bathrooms' },
+        { value: 'details', label: 'Details' },
+        { value: 'doors', label: 'Doors' },
+        { value: 'exteriors', label: 'Exteriors' },
+        { value: 'furniture', label: 'Furniture' },
+        { value: 'interiors', label: 'Interiors' },
+        { value: 'joinery', label: 'Joinery' },
+        { value: 'kitchens', label: 'Kitchens' },
+        { value: 'landscape', label: 'Landscape' },
+        { value: 'lighting', label: 'Lighting' },
+        { value: 'spatial', label: 'Spatial' },
+        { value: 'stairs', label: 'Stairs' },
+        { value: 'structure', label: 'Structure' },
+        { value: 'general', label: 'General' }
+      ];
+    } else {
+      return [{ value: 'general', label: 'General' }];
+    }
+  };
+
+  const getProjectTag = () => {
+    const projectTags = ['yandoit', 'couvreur'];
+    return tags.find(tag => projectTags.includes(tag.toLowerCase())) || '';
+  };
+
+  const getStageTag = () => {
+    const stageTags = ['feasibility', 'layout', 'finishes'];
+    return tags.find(tag => stageTags.includes(tag.toLowerCase())) || '';
+  };
+
+  const getRoomTag = () => {
+    const roomTags = ['living', 'dining', 'kitchen', 'bathroom', 'bedroom'];
+    return tags.find(tag => roomTags.includes(tag.toLowerCase())) || '';
+  };
+
+  const updateImageType = async (newType) => {
+    if (!canEdit) return;
+    const oldTypeTags = ['precedent', 'texture', 'photos'];
+    let updatedTags = tags.filter(tag => !oldTypeTags.includes(tag.toLowerCase()));
+    updatedTags = [...updatedTags, newType];
+    await updateTagsAndSave(updatedTags);
+  };
+
+  const updateImageCategory = async (newCategory) => {
+    if (!canEdit) return;
+    const allCategories = [
+      'brick', 'carpet', 'concrete', 'fabric', 'metal', 'stone', 'tile', 'wood',
+      'art', 'bathrooms', 'details', 'doors', 'exteriors', 'furniture', 'interiors', 
+      'joinery', 'kitchens', 'landscape', 'lighting', 'spatial', 'stairs', 'structure', 'general'
+    ];
+    let updatedTags = tags.filter(tag => !allCategories.includes(tag.toLowerCase()));
+    updatedTags = [...updatedTags, newCategory];
+    await updateTagsAndSave(updatedTags);
+  };
+
+  const updateProjectTag = async (newProject) => {
+    if (!canEdit) return;
+    const projectTags = ['yandoit', 'couvreur'];
+    let updatedTags = tags.filter(tag => !projectTags.includes(tag.toLowerCase()));
+    if (newProject) updatedTags = [...updatedTags, newProject];
+    await updateTagsAndSave(updatedTags);
+  };
+
+  const updateStageTag = async (newStage) => {
+    if (!canEdit) return;
+    const stageTags = ['feasibility', 'layout', 'finishes'];
+    let updatedTags = tags.filter(tag => !stageTags.includes(tag.toLowerCase()));
+    if (newStage) updatedTags = [...updatedTags, newStage];
+    await updateTagsAndSave(updatedTags);
+  };
+
+  const updateRoomTag = async (newRoom) => {
+    if (!canEdit) return;
+    const roomTags = ['living', 'dining', 'kitchen', 'bathroom', 'bedroom'];
+    let updatedTags = tags.filter(tag => !roomTags.includes(tag.toLowerCase()));
+    if (newRoom) updatedTags = [...updatedTags, newRoom];
+    await updateTagsAndSave(updatedTags);
+  };
+
+  const updateTagsAndSave = async (newTags) => {
+    setTags(newTags);
+    try {
+      const response = await fetch(`/api/images/${id}/tags`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tags: newTags, focusedTags, name: editableName })
+      });
+      if (!response.ok) toast.error('Failed to update properties');
+    } catch (error) {
+      console.error('Error updating tags:', error);
+      toast.error('Failed to update properties');
+    }
+  };
+
   // removeFocusedTag function moved up to avoid duplication
 
   const saveChanges = async () => {
@@ -1203,46 +1331,140 @@ const ImageEditor = () => {
             </div>
           )}
 
-          {/* General Tags */}
+          {/* Properties */}
           <div className="bg-white p-4 rounded-lg shadow">
-            <h3 className="font-semibold mb-4">General Tags</h3>
+            <h3 className="font-semibold mb-4">Properties</h3>
             
-            {canEdit && (
-              <div className="flex gap-2 mb-4">
-                <input
-                  type="text"
-                  placeholder="Add tag..."
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && addGeneralTag()}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
-                />
-                <button
-                  onClick={addGeneralTag}
-                  className="px-3 py-2 bg-gray-500 text-white rounded-md text-sm hover:bg-gray-600"
+            <div className="space-y-4">
+              {/* Type Dropdown */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                <select
+                  value={getImageType()}
+                  onChange={(e) => updateImageType(e.target.value)}
+                  disabled={!canEdit}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50"
                 >
-                  <Tag className="h-4 w-4" />
-                </button>
+                  <option value="precedent">Precedent</option>
+                  <option value="texture">Texture</option>
+                  <option value="photos">Photos</option>
+                </select>
               </div>
-            )}
 
-            <div className="flex flex-wrap gap-2">
-              {tags.map(tag => (
-                <span
-                  key={tag}
-                  className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm flex items-center gap-1"
+              {/* Category Dropdown */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                <select
+                  value={getImageCategory()}
+                  onChange={(e) => updateImageCategory(e.target.value)}
+                  disabled={!canEdit}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50"
                 >
-                  {tag}
-                  {canEdit && (
+                  {getCategoryOptions().map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Project Dropdown (if archier tagged) */}
+              {tags.some(tag => tag.toLowerCase() === 'archier') && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Project</label>
+                  <select
+                    value={getProjectTag()}
+                    onChange={(e) => updateProjectTag(e.target.value)}
+                    disabled={!canEdit}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50"
+                  >
+                    <option value="">Select Project...</option>
+                    <option value="yandoit">Yandoit</option>
+                    <option value="couvreur">Couvreur</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Stage Dropdown (for precedent and texture) */}
+              {(getImageType() === 'precedent' || getImageType() === 'texture') && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Stage</label>
+                  <select
+                    value={getStageTag()}
+                    onChange={(e) => updateStageTag(e.target.value)}
+                    disabled={!canEdit}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50"
+                  >
+                    <option value="">Select Stage...</option>
+                    <option value="feasibility">Feasibility</option>
+                    <option value="layout">Layout</option>
+                    <option value="finishes">Finishes</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Room Dropdown (for precedent and texture) */}
+              {(getImageType() === 'precedent' || getImageType() === 'texture') && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Room</label>
+                  <select
+                    value={getRoomTag()}
+                    onChange={(e) => updateRoomTag(e.target.value)}
+                    disabled={!canEdit}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50"
+                  >
+                    <option value="">Select Room...</option>
+                    <option value="living">Living</option>
+                    <option value="dining">Dining</option>
+                    <option value="kitchen">Kitchen</option>
+                    <option value="bathroom">Bathroom</option>
+                    <option value="bedroom">Bedroom</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Additional Tags Input */}
+              {canEdit && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Additional Tags</label>
+                  <div className="flex gap-2 mb-2">
+                    <input
+                      type="text"
+                      placeholder="Add custom tag..."
+                      value={newTag}
+                      onChange={(e) => setNewTag(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && addGeneralTag()}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    />
                     <button
-                      onClick={() => removeGeneralTag(tag)}
-                      className="hover:bg-blue-200 rounded-full p-1"
+                      onClick={addGeneralTag}
+                      className="px-3 py-2 bg-gray-500 text-white rounded-md text-sm hover:bg-gray-600"
                     >
-                      <X className="h-3 w-3" />
+                      <Tag className="h-4 w-4" />
                     </button>
-                  )}
-                </span>
-              ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Display All Tags */}
+              <div className="flex flex-wrap gap-2">
+                {tags.map(tag => (
+                  <span
+                    key={tag}
+                    className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm flex items-center gap-1"
+                  >
+                    {tag}
+                    {canEdit && (
+                      <button
+                        onClick={() => removeGeneralTag(tag)}
+                        className="hover:bg-blue-200 rounded-full p-1"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
 
