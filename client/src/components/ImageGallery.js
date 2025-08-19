@@ -37,8 +37,7 @@ const ImageGallery = () => {
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
   const [sortOptions] = useState([
     { value: 'upload_date', label: 'Upload Date' },
-    { value: 'title', label: 'Title' },
-    { value: 'filename', label: 'Filename' },
+    { value: 'name', label: 'Name' },
     { value: 'file_size', label: 'File Size' },
     { value: 'width', label: 'Width' },
     { value: 'height', label: 'Height' }
@@ -942,25 +941,25 @@ const ImageGallery = () => {
             </button>
             
             {isTagsDropdownOpen && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-80 overflow-y-auto min-w-[400px]">
-                <div className="p-4">
-                  <div className="mb-3">
-                    <h3 className="font-medium text-gray-900 mb-2">Categories</h3>
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-80 overflow-y-auto min-w-[320px]">
+                <div className="p-3">
+                  <div className="mb-2">
+                    <h3 className="font-medium text-gray-900 mb-1 text-xs">Categories</h3>
                   </div>
                   
                   <div 
-                    className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 rounded-lg cursor-pointer mb-1"
+                    className="flex items-center space-x-2 px-3 py-2 hover:bg-gray-50 rounded-lg cursor-pointer mb-1"
                     onClick={() => {
                       handleAdvancedSearch({...currentFilters, tags: []});
                       setIsTagsDropdownOpen(false);
                     }}
                   >
-                    <div className="w-6 h-6 border-2 border-dashed border-gray-400 rounded-md flex items-center justify-center">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                    <div className="w-4 h-4 border-2 border-dashed border-gray-400 rounded-md flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
                     </div>
                     <div>
-                      <div className="font-medium text-gray-900">Categories</div>
-                      <div className="text-sm text-gray-500">Show all images</div>
+                      <div className="font-medium text-gray-900 text-xs">Categories</div>
+                      <div className="text-xs text-gray-500">Show all images</div>
                     </div>
                   </div>
                   
@@ -969,7 +968,7 @@ const ImageGallery = () => {
                     return (
                       <div
                         key={tag}
-                        className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 rounded-lg cursor-pointer mb-1"
+                        className="flex items-center space-x-2 px-3 py-2 hover:bg-gray-50 rounded-lg cursor-pointer mb-1"
                         onClick={() => {
                           const newTags = isSelected
                             ? currentFilters.tags?.filter(t => t !== tag) || []
@@ -977,17 +976,17 @@ const ImageGallery = () => {
                           handleAdvancedSearch({...currentFilters, tags: newTags});
                         }}
                       >
-                        <div className={`w-6 h-6 border-2 rounded-md flex items-center justify-center ${
+                        <div className={`w-4 h-4 border-2 rounded-md flex items-center justify-center ${
                           isSelected 
                             ? 'bg-blue-500 border-blue-500' 
                             : 'border-gray-300'
                         }`}>
                           {isSelected && (
-                            <Check className="h-4 w-4 text-white" />
+                            <Check className="h-3 w-3 text-white" />
                           )}
                         </div>
                         <div className="flex-1">
-                          <div className="font-medium text-gray-900 capitalize">{tag}</div>
+                          <div className="font-medium text-gray-900 capitalize text-xs">{tag}</div>
                         </div>
       </div>
     );
@@ -1017,19 +1016,19 @@ const ImageGallery = () => {
                 <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isSortDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
               
-              {isSortDropdownOpen && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-50 min-w-[300px]">
-                  <div className="p-4">
-                    <div className="mb-3">
-                      <h3 className="font-medium text-gray-900 mb-2">Sort Options</h3>
+                            {isSortDropdownOpen && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-50 min-w-[240px]">
+                  <div className="p-3">
+                    <div className="mb-2">
+                      <h3 className="font-medium text-gray-900 mb-1 text-xs">Sort Options</h3>
                     </div>
                     
                     {sortOptions.map((option) => {
                       const isSelected = currentSort.sortBy === option.value;
-  return (
+ return (
                         <div
                           key={option.value}
-                          className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 rounded-lg cursor-pointer mb-1"
+                          className="flex items-center space-x-2 px-3 py-2 hover:bg-gray-50 rounded-lg cursor-pointer mb-1"
                           onClick={() => {
                             handleSortChange({
                               sortBy: option.value,
@@ -1038,39 +1037,39 @@ const ImageGallery = () => {
                             setIsSortDropdownOpen(false);
                           }}
                         >
-                          <div className={`w-6 h-6 border-2 rounded-md flex items-center justify-center ${
+                          <div className={`w-4 h-4 border-2 rounded-md flex items-center justify-center ${
                             isSelected 
                               ? 'bg-blue-500 border-blue-500' 
                               : 'border-gray-300'
                           }`}>
                             {isSelected && (
-                              <Check className="h-4 w-4 text-white" />
+                              <Check className="h-3 w-3 text-white" />
                             )}
                           </div>
                           <div className="flex-1">
-                            <div className="font-medium text-gray-900">{option.label}</div>
+                            <div className="font-medium text-gray-900 text-xs">{option.label}</div>
                           </div>
                         </div>
                       );
                     })}
                     
                     {/* Sort Order Toggle */}
-                    <div className="border-t border-gray-200 mt-3 pt-3">
+                    <div className="border-t border-gray-200 mt-2 pt-2">
                       <button
                         onClick={() => {
                           toggleSortOrder();
                           setIsSortDropdownOpen(false);
                         }}
-                        className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 rounded-lg cursor-pointer w-full"
+                        className="flex items-center space-x-2 px-3 py-2 hover:bg-gray-50 rounded-lg cursor-pointer w-full"
                       >
-                        <div className="w-6 h-6 border-2 border-gray-300 rounded-md flex items-center justify-center">
+                        <div className="w-4 h-4 border-2 border-gray-300 rounded-md flex items-center justify-center">
                           {currentSort.sortOrder === 'asc' ? 
-                            <SortAsc className="h-4 w-4 text-gray-600" /> : 
-                            <SortDesc className="h-4 w-4 text-gray-600" />
+                            <SortAsc className="h-3 w-3 text-gray-600" /> : 
+                            <SortDesc className="h-3 w-3 text-gray-600" />
                           }
                         </div>
                         <div className="flex-1 text-left">
-                          <div className="font-medium text-gray-900">
+                          <div className="font-medium text-gray-900 text-xs">
                             {currentSort.sortOrder === 'asc' ? 'Switch to Descending' : 'Switch to Ascending'}
                           </div>
                         </div>

@@ -199,7 +199,7 @@ class DatabaseService {
     return result.lastID;
   }
 
-  async searchImages(searchTerm, tagFilter) {
+  async searchImages(searchTerm, tagFilter, sortBy = 'upload_date', sortOrder = 'desc') {
     try {
       console.log('🔍 DatabaseService.searchImages called with:', { searchTerm, tagFilter });
       
@@ -299,10 +299,25 @@ class DatabaseService {
         query += ' WHERE ' + conditions.join(' AND ');
       }
 
+      // Build ORDER BY clause with proper column mapping
+      const columnMapping = {
+        'upload_date': 'i.upload_date',
+        'name': 'i.name',
+        'file_size': 'i.file_size', 
+        'width': 'i.width',
+        'height': 'i.height',
+        'filename': 'i.filename'
+      };
+      
+      const orderColumn = columnMapping[sortBy] || 'i.upload_date';
+      const orderDirection = sortOrder.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+      
       query += `
         GROUP BY i.id
-        ORDER BY i.upload_date DESC
+        ORDER BY ${orderColumn} ${orderDirection}
       `;
+      
+      console.log('📊 Sorting by:', sortBy, sortOrder, '→', orderColumn, orderDirection);
 
       console.log('📊 Final query:', query);
       console.log('📊 Query params:', params);

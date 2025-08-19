@@ -1091,8 +1091,8 @@ app.get('/api/debug/tags-test', async (req, res) => {
 // Get all images with tags
 app.get('/api/images', async (req, res) => {
   try {
-    const { search, tags, limit } = req.query;
-    let images = await databaseService.searchImages(search, tags);
+    const { search, tags, limit, sortBy, sortOrder } = req.query;
+    let images = await databaseService.searchImages(search, tags, sortBy, sortOrder);
     
     // Apply limit if specified (for extension popup)
     if (limit && !isNaN(parseInt(limit))) {
@@ -1733,14 +1733,14 @@ app.post('/api/batch/apply-tags', async (req, res) => {
 app.post('/api/images/search', async (req, res) => {
   try {
     const searchFilters = req.body;
-    const { searchTerm, tags, sources, dateRange } = searchFilters;
+    const { searchTerm, tags, sources, dateRange, sortBy, sortOrder } = searchFilters;
     
     console.log('🔍 Searching images with filters:', searchFilters);
-    console.log('🔍 Search parameters:', { searchTerm, tags, sources, dateRange });
+    console.log('🔍 Search parameters:', { searchTerm, tags, sources, dateRange, sortBy, sortOrder });
     
-    // Use existing search functionality but with POST body filters
-    console.log('📊 Calling searchImages with:', { searchTerm, tags });
-    const images = await databaseService.searchImages(searchTerm, tags);
+    // Use existing search functionality but with POST body filters including sorting
+    console.log('📊 Calling searchImages with:', { searchTerm, tags, sortBy, sortOrder });
+    const images = await databaseService.searchImages(searchTerm, tags, sortBy, sortOrder);
     console.log('📊 Raw search results:', images.length, 'images found');
     
     // Debug: Log first image details
