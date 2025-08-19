@@ -1516,7 +1516,7 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
   // Architextures.org-style grid card
   return (
     <div 
-      className={`relative group cursor-pointer transition-all duration-200 ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
+      className={`relative group cursor-pointer transition-all duration-200 w-full max-w-full ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={() => onEdit(image.id)}
@@ -1534,8 +1534,8 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
         </div>
       )}
 
-      {/* Image Container - Special handling for unusual texture dimensions */}
-      <div className={`relative bg-gray-100 overflow-hidden ${isUnusualTexture() ? 'aspect-square' : 'aspect-square'}`}>
+      {/* Image Container - Enforce consistent square aspect ratio */}
+      <div className="relative aspect-square bg-gray-100 overflow-hidden w-full max-w-full">
         {imageError ? (
           <div className="w-full h-full bg-gray-200 flex items-center justify-center">
             <div className="text-center text-gray-400">
