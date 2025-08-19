@@ -16,6 +16,8 @@ const Projects = () => {
   const [currentProjects, setCurrentProjects] = useState([]);
   const [newProjectName, setNewProjectName] = useState('');
   const [showNewProjectForm, setShowNewProjectForm] = useState(false);
+  const [stageFilter, setStageFilter] = useState('');
+  const [roomFilter, setRoomFilter] = useState('');
 
   // Default projects that auto-generate from tags
   const defaultCompleteProjects = [
@@ -51,9 +53,9 @@ const Projects = () => {
     }
   };
 
-  const loadProjectImages = async (project, tab = 'photos') => {
+  const loadProjectImages = async (project, tab = 'photos', stage = '', room = '') => {
     try {
-      console.log(`🔍 Loading ${tab} images for project: ${project.name}`);
+      console.log(`🔍 Loading ${tab} images for project: ${project.name}`, { stage, room });
       
       let searchTags = [];
       
@@ -65,15 +67,23 @@ const Projects = () => {
         searchTags = [project.name.toLowerCase()];
       }
       
-      // Add tab-specific filtering
+      // Add tab-specific filtering - MUST have BOTH project tag AND type tag
       if (tab === 'precedent') {
         searchTags.push('precedent');
       } else if (tab === 'texture') {
-        searchTags.push('texture');
-      } else if (tab === 'photos' && project.type === 'complete') {
-        // Photos tab for complete projects shows images with project tags + complete
-        // Already included in project.tags
+        searchTags.push('texture');  
+      } else if (tab === 'photos') {
+        if (project.type === 'complete') {
+          // Photos tab for complete projects - already includes complete tag
+        } else {
+          // For current projects, photos might not have specific tags yet
+          // Just use project name for now
+        }
       }
+
+      // Add stage and room filters if specified
+      if (stage) searchTags.push(stage);
+      if (room) searchTags.push(room);
       
       const response = await apiCall('/api/images/search', {
         method: 'POST',
@@ -87,8 +97,8 @@ const Projects = () => {
         const images = await response.json();
         console.log(`✅ Found ${images?.length || 0} ${tab} images for ${project.name}`);
         
-        // Store images with project and tab key
-        const key = `${project.id}-${tab}`;
+        // Store images with project, tab, stage, and room key
+        const key = `${project.id}-${tab}-${stage}-${room}`;
         setProjectImages(prev => ({
           ...prev,
           [key]: images || []
@@ -128,8 +138,98 @@ const Projects = () => {
     console.log(`✅ Created new project: ${newProject.name}`);
   };
 
+  // ProjectThumbnail component for gallery-style project cards
+  const ProjectThumbnail = ({ project }) => {
+    const [thumbnailImage, setThumbnailImage] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+      loadThumbnail();
+    }, [project]);
+
+    const loadThumbnail = async () => {
+      try {
+        setLoading(true);
+        let searchTags = [];
+        
+        if (project.type === 'complete') {
+          searchTags = project.tags;
+        } else {
+          searchTags = [project.name.toLowerCase()];
+        }
+        
+        const response = await apiCall('/api/images/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tags: searchTags })
+        });
+        
+        if (response.ok) {
+          const images = await response.json();
+          if (images.length > 0) {
+            setThumbnailImage(images[0]);
+          }
+        }
+      } catch (error) {
+        console.error(`Error loading thumbnail for ${project.name}:`, error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    return (
+      <div
+        onClick={() => {
+          setActiveProject(project);
+          setViewMode('project');
+          loadProjectImages(project, project.type === 'complete' ? 'photos' : 'precedent');
+        }}
+        className="relative group cursor-pointer"
+      >
+        <div className="bg-white overflow-hidden shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 aspect-square">
+          <div className="relative w-full h-full overflow-hidden">
+            {loading ? (
+              <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              </div>
+            ) : thumbnailImage ? (
+              <img
+                src={thumbnailImage.url || '/api/placeholder-image.jpg'}
+                alt={project.name}
+                loading="lazy"
+                className="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
+                onError={(e) => {
+                  e.target.src = '/api/placeholder-image.jpg';
+                }}
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                <div className="text-center">
+                  <FolderOpen className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                  <p className="text-gray-600 font-medium">{project.name}</p>
+                </div>
+              </div>
+            )}
+            
+            {/* Hover Overlay - Match Gallery Style */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end">
+              <div className="p-4 text-white">
+                <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{color: '#C9D468'}}>
+                  {project.type === 'complete' ? 'Complete' : 'Current'}
+                </div>
+                <div className="text-sm font-medium text-white/90">
+                  {project.name}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderOverview = () => (
-    <div className="space-y-8">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       {/* Complete Projects Section */}
       <div>
         <div className="flex items-center justify-between mb-6">
@@ -137,32 +237,10 @@ const Projects = () => {
             <CheckCircle className="h-6 w-6 text-green-600" />
             <h2 className="text-xl font-semibold text-gray-900">Complete Projects</h2>
           </div>
-          <button
-            onClick={() => setViewMode('complete')}
-            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-          >
-            View All →
-          </button>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="space-y-4">
           {completeProjects.map(project => (
-            <div
-              key={project.id}
-              onClick={() => {
-                setActiveProject(project);
-                setViewMode('project');
-                loadProjectImages(project, 'photos');
-              }}
-              className="bg-white p-6 rounded-lg border border-gray-200 hover:shadow-md transition-all cursor-pointer"
-            >
-              <div className="text-center">
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <CheckCircle className="h-6 w-6 text-green-600" />
-                </div>
-                <h3 className="font-medium text-gray-900">{project.name}</h3>
-                <p className="text-sm text-gray-500 mt-1">Complete</p>
-              </div>
-            </div>
+            <ProjectThumbnail key={project.id} project={project} />
           ))}
         </div>
       </div>
@@ -174,23 +252,15 @@ const Projects = () => {
             <Clock className="h-6 w-6 text-blue-600" />
             <h2 className="text-xl font-semibold text-gray-900">Current Projects</h2>
           </div>
-          <div className="flex items-center space-x-3">
-            {canEdit && (
-              <button
-                onClick={() => setShowNewProjectForm(true)}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-              >
-                <Plus className="h-4 w-4" />
-                <span>New Project</span>
-              </button>
-            )}
+          {canEdit && (
             <button
-              onClick={() => setViewMode('current')}
-              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+              onClick={() => setShowNewProjectForm(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
             >
-              View All →
+              <Plus className="h-4 w-4" />
+              <span>New Project</span>
             </button>
-          </div>
+          )}
         </div>
         
         {/* New Project Form */}
@@ -228,29 +298,13 @@ const Projects = () => {
           </div>
         )}
         
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="space-y-4">
           {currentProjects.map(project => (
-            <div
-              key={project.id}
-              onClick={() => {
-                setActiveProject(project);
-                setViewMode('project');
-                loadProjectImages(project, 'precedent');
-              }}
-              className="bg-white p-6 rounded-lg border border-gray-200 hover:shadow-md transition-all cursor-pointer"
-            >
-              <div className="text-center">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Clock className="h-6 w-6 text-blue-600" />
-                </div>
-                <h3 className="font-medium text-gray-900">{project.name}</h3>
-                <p className="text-sm text-gray-500 mt-1">In Progress</p>
-              </div>
-            </div>
+            <ProjectThumbnail key={project.id} project={project} />
           ))}
           
           {currentProjects.length === 0 && (
-            <div className="col-span-full text-center py-8">
+            <div className="text-center py-8">
               <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500">No current projects yet</p>
               {canEdit && (
@@ -266,7 +320,7 @@ const Projects = () => {
   const renderProjectView = () => {
     if (!activeProject) return null;
     
-    const currentImages = projectImages[`${activeProject.id}-${activeProjectTab}`] || [];
+    const currentImages = projectImages[`${activeProject.id}-${activeProjectTab}-${stageFilter}-${roomFilter}`] || [];
     
     return (
       <div>
@@ -293,9 +347,6 @@ const Projects = () => {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{activeProject.name}</h1>
-              <p className="text-gray-600">
-                {activeProject.type === 'complete' ? 'Complete Project' : 'Current Project'}
-              </p>
             </div>
           </div>
         </div>
@@ -308,7 +359,9 @@ const Projects = () => {
                 key={tab}
                 onClick={() => {
                   setActiveProjectTab(tab);
-                  loadProjectImages(activeProject, tab);
+                  setStageFilter('');
+                  setRoomFilter('');
+                  loadProjectImages(activeProject, tab, '', '');
                 }}
                 className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap capitalize ${
                   activeProjectTab === tab
@@ -317,15 +370,64 @@ const Projects = () => {
                 }`}
               >
                 {tab}
-                {projectImages[`${activeProject.id}-${tab}`] && (
-                  <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                    {projectImages[`${activeProject.id}-${tab}`].length}
-                  </span>
-                )}
               </button>
             ))}
           </nav>
         </div>
+
+        {/* Stage and Room Filters (for precedent and texture tabs) */}
+        {(activeProjectTab === 'precedent' || activeProjectTab === 'texture') && (
+          <div className="mb-6 flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-gray-700">Stage:</label>
+              <select
+                value={stageFilter}
+                onChange={(e) => {
+                  setStageFilter(e.target.value);
+                  loadProjectImages(activeProject, activeProjectTab, e.target.value, roomFilter);
+                }}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">All Stages</option>
+                <option value="feasibility">Feasibility</option>
+                <option value="layout">Layout</option>
+                <option value="finishes">Finishes</option>
+              </select>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-gray-700">Room:</label>
+              <select
+                value={roomFilter}
+                onChange={(e) => {
+                  setRoomFilter(e.target.value);
+                  loadProjectImages(activeProject, activeProjectTab, stageFilter, e.target.value);
+                }}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">All Rooms</option>
+                <option value="living">Living</option>
+                <option value="dining">Dining</option>
+                <option value="kitchen">Kitchen</option>
+                <option value="bathroom">Bathroom</option>
+                <option value="bedroom">Bedroom</option>
+              </select>
+            </div>
+
+            {(stageFilter || roomFilter) && (
+              <button
+                onClick={() => {
+                  setStageFilter('');
+                  setRoomFilter('');
+                  loadProjectImages(activeProject, activeProjectTab, '', '');
+                }}
+                className="text-sm text-blue-600 hover:text-blue-800"
+              >
+                Clear Filters
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Project Images */}
         {currentImages.length > 0 ? (
@@ -373,7 +475,6 @@ const Projects = () => {
           <FolderOpen className="h-6 w-6 text-blue-600" />
           <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
         </div>
-        <p className="text-gray-600">Manage and browse images from architectural projects</p>
       </div>
 
       {loading ? (
