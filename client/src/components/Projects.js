@@ -20,6 +20,7 @@ const Projects = () => {
   const [showNewProjectForm, setShowNewProjectForm] = useState(false);
   const [stageFilter, setStageFilter] = useState('');
   const [roomFilter, setRoomFilter] = useState('');
+  const [forceRefresh, setForceRefresh] = useState(0);
 
   // Default projects that auto-generate from tags
   const defaultCompleteProjects = [
@@ -470,6 +471,9 @@ const Projects = () => {
                     return updated;
                   });
                   
+                  // Force a complete re-render
+                  setForceRefresh(prev => prev + 1);
+                  
                   loadProjectImages(activeProject, tab, '', '');
                 }}
                 className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap capitalize ${
@@ -539,7 +543,7 @@ const Projects = () => {
         )}
 
         {/* Project Images - Force re-render with key */}
-        <div key={`${activeProject.id}-${activeProjectTab}-${stageFilter}-${roomFilter}`}>
+        <div key={`${activeProject.id}-${activeProjectTab}-${stageFilter}-${roomFilter}-${forceRefresh}`}>
           {console.log(`🔍 RENDER CHECK: currentImages.length = ${currentImages.length}, showing images:`, currentImages.slice(0, 2))}
           {currentImages.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
@@ -580,7 +584,7 @@ const Projects = () => {
 
               return (
                 <div 
-                  key={`${image.id}-${activeProjectTab}-${index}`} 
+                  key={`${image.id}-${activeProjectTab}-${index}-${forceRefresh}`} 
                   className="relative group cursor-pointer"
                   onClick={() => navigate(`/image/${image.id}`, { state: { from: 'projects' } })}
                 >
@@ -607,7 +611,7 @@ const Projects = () => {
                           </div>
                           {getOtherTags().length > 0 && (
                             <div className="text-xs text-white/80">
-                              Tags: {getOtherTags().join(', ')}
+                              Properties: {getOtherTags().join(', ')}
                             </div>
                           )}
                         </div>
