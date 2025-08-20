@@ -240,16 +240,13 @@ const Projects = () => {
       tab = validTab;
     }
 
-    const cacheKey = `${project.id}-${tab}-${stage}-${room}`;
-    
-    // TEMPORARY: Skip cache to test backend fix
-    console.log(`🔄 SKIPPING CACHE: Forcing fresh API call for ${cacheKey}`);
+    const cacheKey = `${project.id}-${tab}-${stage}-${room}-${photosFilter}`;
     
     // Check if we already have cached results
-    // if (projectImages[cacheKey] && Array.isArray(projectImages[cacheKey])) {
-    //   console.log(`💨 CACHE HIT: Using cached images for ${cacheKey}`);
-    //   return projectImages[cacheKey];
-    // }
+    if (projectImages[cacheKey] && Array.isArray(projectImages[cacheKey])) {
+      console.log(`💨 CACHE HIT: Using cached images for ${cacheKey}`);
+      return;
+    }
     
     // Set loading state immediately
     setProjectImages(prev => ({ ...prev, [cacheKey]: null }));
