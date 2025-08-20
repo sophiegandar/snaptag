@@ -144,7 +144,7 @@ const Projects = () => {
           
           const newProject = {
             id: 'de-witt',
-            name: 'De Witt St',
+            name: 'De Witt St',  // ✅ Fixed name to match tags
             tags: ['de witt st'],
             type: 'current',
             created: new Date().toISOString()
@@ -224,11 +224,14 @@ const Projects = () => {
 
     const cacheKey = `${project.id}-${tab}-${stage}-${room}`;
     
+    // TEMPORARY: Skip cache to test backend fix
+    console.log(`🔄 SKIPPING CACHE: Forcing fresh API call for ${cacheKey}`);
+    
     // Check if we already have cached results
-    if (projectImages[cacheKey] && Array.isArray(projectImages[cacheKey])) {
-      console.log(`💨 CACHE HIT: Using cached images for ${cacheKey}`);
-      return projectImages[cacheKey];
-    }
+    // if (projectImages[cacheKey] && Array.isArray(projectImages[cacheKey])) {
+    //   console.log(`💨 CACHE HIT: Using cached images for ${cacheKey}`);
+    //   return projectImages[cacheKey];
+    // }
     
     // Set loading state immediately
     setProjectImages(prev => ({ ...prev, [cacheKey]: null }));
@@ -305,11 +308,13 @@ const Projects = () => {
           // Create comprehensive search tags that must ALL be present
           const requiredTags = [];
           
-          // Add project name variations - images should have one of these
+          // Add project name - use the project's actual tag
           if (project.id === 'de-witt') {
             requiredTags.push('de witt st'); // Exact match for "de witt st"
+            console.log(`🏷️ Using "de witt st" tag for De Witt St project`);
           } else {
             requiredTags.push(project.name.toLowerCase());
+            console.log(`🏷️ Using "${project.name.toLowerCase()}" tag for ${project.name} project`);
           }
           
           // Add type tag (precedent/texture)
