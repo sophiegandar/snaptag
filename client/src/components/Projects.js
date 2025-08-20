@@ -501,10 +501,6 @@ const Projects = () => {
     const [thumbnailImage, setThumbnailImage] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-      loadThumbnail();
-    }, [loadThumbnail]); // Depend on memoized function
-
     const loadThumbnail = useCallback(async () => {
       try {
         setLoading(true);
@@ -534,6 +530,10 @@ const Projects = () => {
         setLoading(false);
       }
     }, [project.id, project.type, project.name, project.tags]);
+
+    useEffect(() => {
+      loadThumbnail();
+    }, [loadThumbnail]); // Depend on memoized function
 
     return (
       <div
