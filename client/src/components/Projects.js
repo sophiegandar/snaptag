@@ -373,61 +373,10 @@ const Projects = () => {
     );
   };
 
-  // CurrentProjectThumbnail component for colored squares
-  const CurrentProjectThumbnail = ({ project }) => {
-    // Generate a consistent color based on project name
-    const getProjectColor = (name) => {
-      const colors = [
-        'bg-blue-500',
-        'bg-green-500', 
-        'bg-purple-500',
-        'bg-red-500',
-        'bg-yellow-500',
-        'bg-indigo-500',
-        'bg-pink-500',
-        'bg-teal-500'
-      ];
-      
-      // Use project name to generate consistent color
-      let hash = 0;
-      for (let i = 0; i < name.length; i++) {
-        hash = name.charCodeAt(i) + ((hash << 5) - hash);
-      }
-      return colors[Math.abs(hash) % colors.length];
-    };
-
-    return (
-      <div className="group cursor-pointer" onClick={() => navigate(`/projects/current/${project.id}`)}>
-        <div className="bg-white overflow-hidden shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 aspect-square w-48 h-48">
-          <div className="relative w-full h-full overflow-hidden">
-            {/* Colored square with project name */}
-            <div className={`w-full h-full ${getProjectColor(project.name)} flex items-center justify-center`}>
-              <span className="text-white font-bold text-base text-center px-2 leading-tight">
-                {project.name}
-              </span>
-            </div>
-            
-            {/* Hover Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end">
-              <div className="p-2 text-white">
-                <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{color: '#C9D468'}}>
-                  Current
-                </div>
-                <div className="text-xs font-medium text-white/90">
-                  {project.name}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   const renderOverview = () => (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       {/* Complete Projects Section */}
-      <div className="bg-gray-200 p-6 rounded-lg border border-gray-300">
+      <div>
         <div className="flex items-center justify-center mb-6">
           <div 
             className="flex items-center space-x-3 cursor-pointer hover:text-green-700 transition-colors"
@@ -444,7 +393,7 @@ const Projects = () => {
       </div>
 
       {/* Current Projects Section */}
-      <div className="bg-gray-200 p-6 rounded-lg border border-gray-300">
+      <div>
         <div className="flex items-center justify-center mb-6">
           <div 
             className="flex items-center space-x-3 cursor-pointer hover:text-blue-700 transition-colors"
@@ -456,7 +405,7 @@ const Projects = () => {
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {currentProjects.map(project => (
-            <CurrentProjectThumbnail key={project.id} project={project} />
+            <ProjectThumbnail key={project.id} project={project} />
           ))}
           
           {currentProjects.length === 0 && (
