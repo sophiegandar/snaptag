@@ -333,19 +333,40 @@ class PostgresService {
         }
       }
 
-      // Tag filter (case-insensitive)
+      // Tag filter - CRITICAL FIX: Enforce ALL required tags (AND logic)
       if (tagFilter) {
         const tagArray = Array.isArray(tagFilter) ? tagFilter : tagFilter.split(',');
         const validTags = tagArray.filter(tag => tag && tag.toString().trim());
         
+        console.log('🔍 REWRITTEN POSTGRES QUERY: Required tags:', validTags);
+        
         if (validTags.length > 0) {
-          const regularTagConditions = validTags.map(() => `LOWER(t.name) LIKE LOWER($${++paramCount})`).join(' OR ');
-          const focusedTagConditions = validTags.map(() => `LOWER(ft.tag_name) LIKE LOWER($${++paramCount})`).join(' OR ');
+          // NEW APPROACH: Use subquery to count matching tags and ensure ALL are present
+          // This enforces strict AND logic - image must have ALL specified tags
           
-          conditions.push(`(${regularTagConditions} OR ${focusedTagConditions})`);
+          const tagCountSubquery = `
+            (
+              SELECT COUNT(DISTINCT CASE 
+                WHEN LOWER(t2.name) = LOWER($${++paramCount}) OR LOWER(ft2.tag_name) = LOWER($${paramCount}) THEN 1 
+                ${validTags.slice(1).map(() => `WHEN LOWER(t2.name) = LOWER($${++paramCount}) OR LOWER(ft2.tag_name) = LOWER($${paramCount}) THEN 1`).join(' ')}
+                ELSE NULL 
+              END)
+              FROM image_tags it2 
+              LEFT JOIN tags t2 ON it2.tag_id = t2.id
+              LEFT JOIN focused_tags ft2 ON i.id = ft2.image_id
+              WHERE it2.image_id = i.id OR ft2.image_id = i.id
+            ) = ${validTags.length}
+          `;
           
-          validTags.forEach(tag => params.push(`%${tag.toString().trim()}%`));
-          validTags.forEach(tag => params.push(`%${tag.toString().trim()}%`));
+          conditions.push(tagCountSubquery);
+          
+          // Add each tag twice (for regular and focused tag matching in the CASE statements)
+          validTags.forEach(tag => {
+            const trimmedTag = tag.toString().trim();
+            params.push(trimmedTag, trimmedTag);
+          });
+          
+          console.log('🔍 POSTGRES AND Logic: Expecting exactly', validTags.length, 'matching tags');
         }
       }
 
