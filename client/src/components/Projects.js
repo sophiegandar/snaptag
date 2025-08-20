@@ -415,11 +415,13 @@ const Projects = () => {
     if (!activeProject) return null;
     
     // Force reload of images when switching tabs to prevent cache issues
-    const currentImages = projectImages[`${activeProject.id}-${activeProjectTab}-${stageFilter}-${roomFilter}`] || [];
+    const cacheKey = `${activeProject.id}-${activeProjectTab}-${stageFilter}-${roomFilter}`;
+    const currentImages = projectImages[cacheKey] || [];
     
-    console.log(`🖼️ DISPLAY: Showing images for ${activeProject.id}-${activeProjectTab}-${stageFilter}-${roomFilter}`);
+    console.log(`🖼️ DISPLAY: Showing images for ${cacheKey}`);
     console.log(`🖼️ DISPLAY: Found ${currentImages.length} images in cache`);
     console.log(`🖼️ DISPLAY: Available cache keys:`, Object.keys(projectImages));
+    console.log(`🖼️ DISPLAY: Current tab state - activeProjectTab: ${activeProjectTab}, stageFilter: ${stageFilter}, roomFilter: ${roomFilter}`);
     
     return (
       <div>
@@ -536,11 +538,12 @@ const Projects = () => {
           </div>
         )}
 
-        {/* Project Images */}
-        {console.log(`🔍 RENDER CHECK: currentImages.length = ${currentImages.length}, showing images:`, currentImages.slice(0, 2))}
-        {currentImages.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {currentImages.map((image) => {
+        {/* Project Images - Force re-render with key */}
+        <div key={`${activeProject.id}-${activeProjectTab}-${stageFilter}-${roomFilter}`}>
+          {console.log(`🔍 RENDER CHECK: currentImages.length = ${currentImages.length}, showing images:`, currentImages.slice(0, 2))}
+          {currentImages.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {currentImages.map((image, index) => {
               // Helper functions for image metadata display
               const getImageType = () => {
                 const tags = image.tags || [];
@@ -577,7 +580,7 @@ const Projects = () => {
 
               return (
                 <div 
-                  key={image.id} 
+                  key={`${image.id}-${activeProjectTab}-${index}`} 
                   className="relative group cursor-pointer"
                   onClick={() => navigate(`/image/${image.id}`, { state: { from: 'projects' } })}
                 >
@@ -614,16 +617,17 @@ const Projects = () => {
                 </div>
               );
             })}
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No {activeProjectTab} images</h3>
-            <p className="text-gray-500">
-              No images found for {activeProject.name} {activeProjectTab}
-            </p>
-          </div>
-        )}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No {activeProjectTab} images</h3>
+              <p className="text-gray-500">
+                No images found for {activeProject.name} {activeProjectTab}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     );
   };
