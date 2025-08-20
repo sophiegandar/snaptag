@@ -451,14 +451,20 @@ const Projects = () => {
                   setStageFilter('');
                   setRoomFilter('');
                   
-                  // Clear cached images for this tab to force fresh load
+                  // Clear ALL cached images for this project to force fresh load
                   const oldKey = `${activeProject.id}-${activeProjectTab}-${stageFilter}-${roomFilter}`;
                   const newKey = `${activeProject.id}-${tab}--`;
                   console.log(`🗑️ CACHE: Clearing old key ${oldKey}, will load ${newKey}`);
                   
                   setProjectImages(prev => {
                     const updated = { ...prev };
-                    delete updated[oldKey];
+                    // Clear all keys for this project to prevent any cache contamination
+                    Object.keys(updated).forEach(key => {
+                      if (key.startsWith(`${activeProject.id}-`)) {
+                        delete updated[key];
+                        console.log(`🗑️ CACHE: Deleted cache key ${key}`);
+                      }
+                    });
                     return updated;
                   });
                   
@@ -531,29 +537,83 @@ const Projects = () => {
         )}
 
         {/* Project Images */}
+        {console.log(`🔍 RENDER CHECK: currentImages.length = ${currentImages.length}, showing images:`, currentImages.slice(0, 2))}
         {currentImages.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {currentImages.map((image) => (
-              <div 
-                key={image.id} 
-                className="relative group cursor-pointer"
-                onClick={() => navigate(`/image/${image.id}`, { state: { from: 'projects' } })}
-              >
-                <div className="bg-white overflow-hidden shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 aspect-square">
-                  <div className="relative w-full h-full overflow-hidden">
-                    <img
-                      src={image.url || '/api/placeholder-image.jpg'}
-                      alt={image.filename}
-                      loading="lazy"
-                      className="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
-                      onError={(e) => {
-                        e.target.src = '/api/placeholder-image.jpg';
-                      }}
-                    />
+            {currentImages.map((image) => {
+              // Helper functions for image metadata display
+              const getImageType = () => {
+                const tags = image.tags || [];
+                if (tags.some(tag => tag.toLowerCase() === 'precedent')) return 'Precedent';
+                if (tags.some(tag => tag.toLowerCase() === 'texture')) return 'Texture';
+                if (tags.some(tag => tag.toLowerCase() === 'photos')) return 'Photos';
+                return 'General';
+              };
+
+              const getImageCategory = () => {
+                const tags = image.tags || [];
+                const type = getImageType();
+                
+                if (type === 'Texture') {
+                  const materialCategories = ['brick', 'carpet', 'concrete', 'fabric', 'metal', 'stone', 'tile', 'wood', 'general'];
+                  const categoryTag = tags.find(tag => materialCategories.includes(tag.toLowerCase()));
+                  return categoryTag ? categoryTag.charAt(0).toUpperCase() + categoryTag.slice(1) : 'General';
+                }
+                
+                if (type === 'Precedent') {
+                  const precedentCategories = ['art', 'bathrooms', 'details', 'doors', 'exteriors', 'furniture', 'interiors', 'joinery', 'kitchens', 'landscape', 'lighting', 'spatial', 'stairs', 'structure', 'general'];
+                  const categoryTag = tags.find(tag => precedentCategories.includes(tag.toLowerCase()));
+                  return categoryTag ? categoryTag.charAt(0).toUpperCase() + categoryTag.slice(1) : 'General';
+                }
+                
+                return 'General';
+              };
+
+              const getOtherTags = () => {
+                const tags = image.tags || [];
+                const excludeTags = ['precedent', 'texture', 'photos', 'brick', 'carpet', 'concrete', 'fabric', 'metal', 'stone', 'tile', 'wood', 'general', 'art', 'bathrooms', 'details', 'doors', 'exteriors', 'furniture', 'interiors', 'joinery', 'kitchens', 'landscape', 'lighting', 'spatial', 'stairs', 'structure'];
+                return tags.filter(tag => !excludeTags.includes(tag.toLowerCase()));
+              };
+
+              return (
+                <div 
+                  key={image.id} 
+                  className="relative group cursor-pointer"
+                  onClick={() => navigate(`/image/${image.id}`, { state: { from: 'projects' } })}
+                >
+                  <div className="bg-white overflow-hidden shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 aspect-square">
+                    <div className="relative w-full h-full overflow-hidden">
+                      <img
+                        src={image.url || '/api/placeholder-image.jpg'}
+                        alt={image.filename}
+                        loading="lazy"
+                        className="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
+                        onError={(e) => {
+                          e.target.src = '/api/placeholder-image.jpg';
+                        }}
+                      />
+                      
+                      {/* Hover Overlay with Properties */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end">
+                        <div className="p-4 text-white">
+                          <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{color: '#C9D468'}}>
+                            {getImageType()}
+                          </div>
+                          <div className="text-sm font-medium text-white/90 mb-2">
+                            Category: {getImageCategory()}
+                          </div>
+                          {getOtherTags().length > 0 && (
+                            <div className="text-xs text-white/80">
+                              Tags: {getOtherTags().join(', ')}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-12">
