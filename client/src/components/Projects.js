@@ -597,8 +597,8 @@ const Projects = () => {
 
   const renderOverview = () => (
     <div>
-      {/* Filter Dropdown */}
-      <div className="flex justify-center mb-6">
+      {/* Filter Dropdown - Left aligned */}
+      <div className="flex justify-start mb-6">
         <div className="relative">
           <select
             value={projectFilter}
@@ -612,8 +612,8 @@ const Projects = () => {
         </div>
       </div>
 
-      {/* Single Project Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {/* Single Project Grid - 6 projects per row on full browser */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
         {getFilteredProjects().map(project => (
           <ProjectThumbnail key={project.id} project={project} />
         ))}
@@ -627,7 +627,7 @@ const Projects = () => {
                'No projects yet'}
             </p>
             {canEdit && projectFilter !== 'complete' && (
-              <p className="text-sm text-gray-400 mt-2">Click "New Project" above to get started</p>
+              <p className="text-sm text-gray-400 mt-2">Projects will appear here when created</p>
             )}
           </div>
         )}
@@ -897,59 +897,7 @@ const Projects = () => {
 
   return (
     <div className="max-w-7xl mx-auto">
-      {/* New Project Button - Centered at top */}
-      {canEdit && viewMode === 'overview' && (
-        <div className="flex justify-center mb-6">
-          <button
-            onClick={() => setShowNewProjectForm(true)}
-            className="flex items-center space-x-2 px-6 py-3 text-white rounded-lg transition-colors"
-            style={{backgroundColor: '#6b7249', borderColor: '#84823a'}}
-            onMouseEnter={(e) => e.target.style.backgroundColor = '#84823a'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = '#6b7249'}
-          >
-            <Plus className="h-5 w-5" />
-            <span>New Project</span>
-          </button>
-        </div>
-      )}
 
-      {/* New Project Form */}
-      {showNewProjectForm && (
-        <div className="bg-gray-50 p-4 rounded-lg mb-6 max-w-md mx-auto">
-          <div className="flex items-center space-x-3">
-            <input
-              type="text"
-              placeholder="Project name (e.g., Couvreur)"
-              value={newProjectName}
-              onChange={(e) => setNewProjectName(e.target.value)}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') createNewProject();
-                if (e.key === 'Escape') {
-                  setShowNewProjectForm(false);
-                  setNewProjectName('');
-                }
-              }}
-              autoFocus
-            />
-            <button
-              onClick={createNewProject}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-            >
-              Create
-            </button>
-            <button
-              onClick={() => {
-                setShowNewProjectForm(false);
-                setNewProjectName('');
-              }}
-              className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
 
       {loading ? (
         <div className="flex justify-center items-center py-12">
