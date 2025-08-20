@@ -22,6 +22,7 @@ const Projects = () => {
   const [newProjectName, setNewProjectName] = useState('');
   const [showNewProjectForm, setShowNewProjectForm] = useState(false);
   const [projectFilter, setProjectFilter] = useState('all'); // 'all', 'current', 'complete'
+  const [photosFilter, setPhotosFilter] = useState('all'); // 'all', 'final', 'wip' for Photos tab
   const [stageFilter, setStageFilter] = useState('');
   const [roomFilter, setRoomFilter] = useState('');
   const [forceRefresh, setForceRefresh] = useState(0);
@@ -290,13 +291,13 @@ const Projects = () => {
         searchTags.push('texture');
         console.log(`🏷️ Added 'texture' tag - now searching for ALL of: [${searchTags.join(', ')}]`);  
       } else if (tab === 'photos') {
-        if (project.type === 'complete') {
-          // Photos tab for complete projects - already includes complete tag
-          console.log(`📸 Photos tab for complete project - using tags: [${searchTags.join(', ')}]`);
-        } else {
-          // For current projects, photos might not have specific tags yet
-          console.log(`📸 Photos tab for current project - using tags: [${searchTags.join(', ')}]`);
+        // Photos tab - add Final/WIP filter if selected
+        if (photosFilter === 'final') {
+          searchTags.push('final');
+        } else if (photosFilter === 'wip') {
+          searchTags.push('wip');
         }
+        console.log(`📸 Photos tab with filter '${photosFilter}' - using tags: [${searchTags.join(', ')}]`);
       }
 
       // Add stage and room filters if specified
@@ -344,7 +345,7 @@ const Projects = () => {
           searchBody = { tags: requiredTags };
           console.log(`🔍 EXACT TAG SEARCH: ALL required tags: [${requiredTags.join(', ')}]`);
         } else {
-          // Photos tab for current projects - require BOTH project tag AND "complete" tag
+          // Photos tab - require project tag + "complete" tag + optional final/wip
           const requiredTags = [];
           
           if (project.id === 'de-witt') {
@@ -353,8 +354,15 @@ const Projects = () => {
             requiredTags.push(project.name.toLowerCase());
           }
           
-          // Current projects photos must also be tagged "complete"
+          // Photos tab must be tagged "complete"
           requiredTags.push('complete');
+          
+          // Add Final/WIP filter if selected
+          if (photosFilter === 'final') {
+            requiredTags.push('final');
+          } else if (photosFilter === 'wip') {
+            requiredTags.push('wip');
+          }
           
           searchBody = { tags: requiredTags };
           console.log(`🔍 PHOTOS SEARCH (current project): ALL required tags: [${requiredTags.join(', ')}]`);
@@ -591,50 +599,41 @@ const Projects = () => {
   };
 
   const renderOverview = () => (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      {/* Complete Projects Section */}
-      <div>
-        <div className="flex items-center justify-center mb-6">
-          <div 
-            className="flex items-center space-x-3 cursor-pointer hover:text-green-700 transition-colors"
-            onClick={() => navigate('/projects/complete')}
+    <div>
+      {/* Filter Dropdown */}
+      <div className="flex justify-center mb-6">
+        <div className="relative">
+          <select
+            value={projectFilter}
+            onChange={(e) => setProjectFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
-            <h2 className="text-xl font-semibold text-gray-900">Complete</h2>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {completeProjects.map(project => (
-            <ProjectThumbnail key={project.id} project={project} />
-          ))}
+            <option value="all">All Projects</option>
+            <option value="current">Current Projects</option>
+            <option value="complete">Complete Projects</option>
+          </select>
         </div>
       </div>
 
-      {/* Current Projects Section */}
-      <div>
-        <div className="flex items-center justify-center mb-6">
-          <div 
-            className="flex items-center space-x-3 cursor-pointer hover:text-blue-700 transition-colors"
-            onClick={() => navigate('/projects/current')}
-          >
-            <h2 className="text-xl font-semibold text-gray-900">Current</h2>
-          </div>
-        </div>
+      {/* Single Project Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {getFilteredProjects().map(project => (
+          <ProjectThumbnail key={project.id} project={project} />
+        ))}
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {currentProjects.map(project => (
-            <ProjectThumbnail key={project.id} project={project} />
-          ))}
-          
-          {currentProjects.length === 0 && (
-            <div className="text-center py-8">
-              <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">No current projects yet</p>
-              {canEdit && (
-                <p className="text-gray-400 text-sm mt-2">Create your first project above</p>
-              )}
-            </div>
-          )}
-        </div>
+        {getFilteredProjects().length === 0 && (
+          <div className="col-span-full text-center py-8">
+            <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-500">
+              {projectFilter === 'current' ? 'No current projects yet' : 
+               projectFilter === 'complete' ? 'No complete projects yet' : 
+               'No projects yet'}
+            </p>
+            {canEdit && projectFilter !== 'complete' && (
+              <p className="text-sm text-gray-400 mt-2">Click "New Project" above to get started</p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -643,7 +642,7 @@ const Projects = () => {
     if (!activeProject) return null;
     
     // Force reload of images when switching tabs to prevent cache issues
-    const cacheKey = `${activeProject.id}-${activeProjectTab}-${stageFilter}-${roomFilter}`;
+    const cacheKey = `${activeProject.id}-${activeProjectTab}-${stageFilter}-${roomFilter}-${photosFilter}`;
     const currentImages = projectImages[cacheKey] || [];
     
     console.log(`🖼️ DISPLAY: Showing images for ${cacheKey}`);
@@ -772,8 +771,41 @@ const Projects = () => {
           </div>
         )}
 
+        {/* Final/WIP Filter - Only for Photos tab */}
+        {activeProjectTab === 'photos' && (
+          <div className="mb-6 flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-gray-700">Status:</label>
+              <select
+                value={photosFilter}
+                onChange={(e) => {
+                  setPhotosFilter(e.target.value);
+                  loadProjectImages(activeProject, activeProjectTab, stageFilter, roomFilter);
+                }}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 w-32"
+              >
+                <option value="all">All</option>
+                <option value="final">Final</option>
+                <option value="wip">WIP</option>
+              </select>
+            </div>
+
+            {photosFilter !== 'all' && (
+              <button
+                onClick={() => {
+                  setPhotosFilter('all');
+                  loadProjectImages(activeProject, activeProjectTab, stageFilter, roomFilter);
+                }}
+                className="text-sm text-blue-600 hover:text-blue-800"
+              >
+                Clear Filter
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Project Images - Force re-render with key */}
-        <div key={`${activeProject.id}-${activeProjectTab}-${stageFilter}-${roomFilter}-${forceRefresh}`}>
+        <div key={`${activeProject.id}-${activeProjectTab}-${stageFilter}-${roomFilter}-${photosFilter}-${forceRefresh}`}>
           {console.log(`🔍 RENDER CHECK: currentImages.length = ${currentImages.length}, showing images:`, currentImages.slice(0, 2))}
           {/* Loading State - Show while waiting for API response */}
           {projectImages[cacheKey] === null ? (
