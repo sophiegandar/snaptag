@@ -12,7 +12,7 @@ const Projects = () => {
   const location = useLocation();
   const [viewMode, setViewMode] = useState('overview'); // 'overview', 'complete', 'current', 'project'
   const [activeProject, setActiveProject] = useState(null);
-  const [activeProjectTab, setActiveProjectTab] = useState('photos'); // 'precedent', 'texture', 'photos', 'final', 'wip'
+  const [activeProjectTab, setActiveProjectTab] = useState('precedent'); // 'precedent', 'texture', 'final', 'wip'
   const [error, setError] = useState(null);
   const [apiLoading, setApiLoading] = useState(false);
   const [projectImages, setProjectImages] = useState({});
@@ -29,18 +29,20 @@ const Projects = () => {
   // Helper function to get valid tabs for a project type
   const getValidTabs = (project) => {
     if (!project) return [];
-    return project.type === 'complete' ? ['final', 'wip'] : ['precedent', 'texture', 'photos'];
+    // Complete projects: Final and WIP tabs, Current projects: Precedent, Texture only
+    // Photos tab removed - current projects move to Complete (Final/WIP) when tagged "complete"
+    return project.type === 'complete' ? ['final', 'wip'] : ['precedent', 'texture'];
   };
 
   // Helper function to get default tab for a project type
   const getDefaultTab = (project) => {
-    if (!project) return 'photos';
+    if (!project) return 'precedent';
     return project.type === 'complete' ? 'final' : 'precedent';
   };
 
   // Helper function to validate and fix tab state
   const validateAndFixTab = (project, currentTab) => {
-    if (!project) return 'photos';
+    if (!project) return 'precedent';
     const validTabs = getValidTabs(project);
     return validTabs.includes(currentTab) ? currentTab : getDefaultTab(project);
   };

@@ -390,10 +390,21 @@ class PostgresService {
         console.log(`📊 Image ${image.id}: regular tags = "${image.tag_names}", focused_tag_count = ${image.focused_tag_count}`);
       }
 
-      // Get focused tags for each image
+      // Get focused tags and ALL regular tags for each image (not just filtered ones)
       for (const image of images) {
         image.focused_tags = await this.getFocusedTags(image.id);
-        image.tags = image.tag_names ? image.tag_names.split(',') : [];
+        
+        // CRITICAL FIX: Get ALL tags for this image, not just the filtered ones
+        // The main query only returns tags that match the search, but we need ALL tags for rollover display
+        const allImageTags = await this.all(`
+          SELECT t.name 
+          FROM image_tags it 
+          JOIN tags t ON it.tag_id = t.id 
+          WHERE it.image_id = $1
+        `, [image.id]);
+        
+        image.tags = allImageTags.map(tag => tag.name);
+        console.log(`🏷️ COMPLETE TAGS for ${image.filename}: [${image.tags.join(', ')}]`);
       }
 
       console.log('📊 Processed results:', images.length, 'images with tags');
