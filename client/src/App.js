@@ -12,6 +12,7 @@ import TagManager from './components/TagManager';
 import Settings from './components/Settings';
 import ProfessionalWorkflow from './components/ProfessionalWorkflow';
 import Projects from './components/Projects';
+import Dashboard from './components/Dashboard';
 
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
@@ -136,6 +137,7 @@ function AppContent() {
           <Route path="/projects/complete/:projectId/:tabId" element={<Projects />} />
           <Route path="/projects/current/:projectId" element={<Projects />} />
           <Route path="/projects/current/:projectId/:tabId" element={<Projects />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           {canAccessSettings && <Route path="/settings" element={<Settings />} />}
         </Routes>
       </main>
