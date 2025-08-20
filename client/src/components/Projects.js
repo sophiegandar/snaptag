@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FolderOpen, Image as ImageIcon, Plus, CheckCircle, Clock, ArrowLeft } from 'lucide-react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { apiCall } from '../utils/apiConfig';
 import { useMode } from '../context/ModeContext';
 
@@ -204,10 +205,28 @@ const Projects = () => {
   const createNewProject = async () => {
     if (!newProjectName.trim()) return;
     
+    const projectName = newProjectName.trim();
+    const projectId = projectName.toLowerCase().replace(/\s+/g, '-');
+    
+    // Check for duplicates in current projects
+    const existsInCurrent = currentProjects.some(
+      project => project.id === projectId || project.name.toLowerCase() === projectName.toLowerCase()
+    );
+    
+    // Check for duplicates in complete projects
+    const existsInComplete = completeProjects.some(
+      project => project.id === projectId || project.name.toLowerCase() === projectName.toLowerCase()
+    );
+    
+    if (existsInCurrent || existsInComplete) {
+      toast.error(`Project "${projectName}" already exists`);
+      return;
+    }
+    
     const newProject = {
-      id: newProjectName.toLowerCase().replace(/\s+/g, '-'),
-      name: newProjectName.trim(),
-      tags: [newProjectName.toLowerCase()],
+      id: projectId,
+      name: projectName,
+      tags: [projectName.toLowerCase()],
       type: 'current',
       created: new Date().toISOString()
     };
@@ -221,7 +240,7 @@ const Projects = () => {
     setNewProjectName('');
     setShowNewProjectForm(false);
     
-    console.log(`✅ Created new project: ${newProject.name}`);
+    toast.success(`Project "${newProject.name}" created successfully`);
   };
 
   // ProjectThumbnail component for gallery-style project cards
@@ -337,61 +356,14 @@ const Projects = () => {
 
       {/* Current Projects Section */}
       <div>
-        <div className="flex items-center justify-center mb-6 relative">
+        <div className="flex items-center justify-center mb-6">
           <div 
             className="flex items-center space-x-3 cursor-pointer hover:text-blue-700 transition-colors"
             onClick={() => navigate('/projects/current')}
           >
             <h2 className="text-xl font-semibold text-gray-900">Current</h2>
           </div>
-          {canEdit && (
-            <button
-              onClick={() => setShowNewProjectForm(true)}
-              className="absolute right-0 flex items-center space-x-2 px-4 py-2 text-white rounded-lg transition-colors text-sm"
-              style={{backgroundColor: '#6b7249', borderColor: '#84823a'}}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#84823a'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#6b7249'}
-            >
-              <Plus className="h-4 w-4" />
-              <span>New Project</span>
-            </button>
-          )}
         </div>
-        
-        {/* New Project Form */}
-        {showNewProjectForm && (
-          <div className="bg-gray-50 p-4 rounded-lg mb-6">
-            <div className="flex items-center space-x-3">
-              <input
-                type="text"
-                placeholder="Project name (e.g., Couvreur)"
-                value={newProjectName}
-                onChange={(e) => setNewProjectName(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') createNewProject();
-                  if (e.key === 'Escape') setShowNewProjectForm(false);
-                }}
-                autoFocus
-              />
-              <button
-                onClick={createNewProject}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-              >
-                Create
-              </button>
-              <button
-                onClick={() => {
-                  setShowNewProjectForm(false);
-                  setNewProjectName('');
-                }}
-                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {currentProjects.map(project => (
@@ -625,12 +597,59 @@ const Projects = () => {
 
   return (
     <div className="max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center space-x-2 mb-2">
-          <h1 className="text-xl font-bold text-gray-900">Projects</h1>
+      {/* New Project Button - Centered at top */}
+      {canEdit && viewMode === 'overview' && (
+        <div className="flex justify-center mb-6">
+          <button
+            onClick={() => setShowNewProjectForm(true)}
+            className="flex items-center space-x-2 px-6 py-3 text-white rounded-lg transition-colors"
+            style={{backgroundColor: '#6b7249', borderColor: '#84823a'}}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#84823a'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#6b7249'}
+          >
+            <Plus className="h-5 w-5" />
+            <span>New Project</span>
+          </button>
         </div>
-      </div>
+      )}
+
+      {/* New Project Form */}
+      {showNewProjectForm && (
+        <div className="bg-gray-50 p-4 rounded-lg mb-6 max-w-md mx-auto">
+          <div className="flex items-center space-x-3">
+            <input
+              type="text"
+              placeholder="Project name (e.g., Couvreur)"
+              value={newProjectName}
+              onChange={(e) => setNewProjectName(e.target.value)}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') createNewProject();
+                if (e.key === 'Escape') {
+                  setShowNewProjectForm(false);
+                  setNewProjectName('');
+                }
+              }}
+              autoFocus
+            />
+            <button
+              onClick={createNewProject}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Create
+            </button>
+            <button
+              onClick={() => {
+                setShowNewProjectForm(false);
+                setNewProjectName('');
+              }}
+              className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex justify-center items-center py-12">
