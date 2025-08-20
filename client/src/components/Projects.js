@@ -59,12 +59,18 @@ const Projects = () => {
     }
   ];
 
-  const handleUrlRouting = useCallback(() => {
+  const handleUrlRouting = () => {
     const path = location.pathname;
     const projectId = params.projectId;
     const tabId = params.tabId;
     
     console.log(`🌐 URL ROUTING: path=${path}, projectId=${projectId}, tabId=${tabId}`);
+    
+    // Guard clause: Only proceed if projects are loaded
+    if (!completeProjects.length && !currentProjects.length && !loading) {
+      console.log(`🌐 Projects not loaded yet, skipping routing`);
+      return;
+    }
     
     if (path === '/projects/complete') {
       console.log(`🌐 Setting view to complete`);
@@ -179,7 +185,7 @@ const Projects = () => {
       console.log(`🌐 Setting view to overview`);
       setViewMode('overview');
     }
-  }, [location.pathname, params.projectId, params.tabId, completeProjects, currentProjects, navigate]);
+  };
 
   useEffect(() => {
     loadProjects();
@@ -190,7 +196,7 @@ const Projects = () => {
     if (!loading && !isInitializing) {
       handleUrlRouting();
     }
-  }, [handleUrlRouting, loading, isInitializing]);
+  }, [location.pathname, params.projectId, params.tabId, loading, isInitializing, completeProjects, currentProjects]);
 
   const loadProjects = async () => {
     try {
