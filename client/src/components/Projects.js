@@ -22,6 +22,7 @@ const Projects = () => {
   const [stageFilter, setStageFilter] = useState('');
   const [roomFilter, setRoomFilter] = useState('');
   const [forceRefresh, setForceRefresh] = useState(0);
+  const [isInitializing, setIsInitializing] = useState(false);
 
   // Default projects that auto-generate from tags
   const defaultCompleteProjects = [
@@ -38,11 +39,11 @@ const Projects = () => {
   }, []);
 
   useEffect(() => {
-    // Only handle URL routing after projects are loaded
-    if (!loading) {
+    // Only handle URL routing after projects are loaded and not during initialization
+    if (!loading && !isInitializing) {
       handleUrlRouting();
     }
-  }, [location.pathname, params, loading, currentProjects, completeProjects]);
+  }, [location.pathname, params.projectId, loading, isInitializing]);
 
   const handleUrlRouting = () => {
     const path = location.pathname;
@@ -80,6 +81,8 @@ const Projects = () => {
         // Try to create the project if it doesn't exist (for URL sharing)
         if (projectId === 'couvreur') {
           console.log(`🌐 Creating missing Couvreur project`);
+          setIsInitializing(true); // Prevent re-render loop
+          
           const newProject = {
             id: 'couvreur',
             name: 'Couvreur',
@@ -96,6 +99,9 @@ const Projects = () => {
           setViewMode('project');
           setActiveProjectTab('precedent');
           loadProjectImages(newProject, 'precedent');
+          
+          // Allow routing again after a brief delay
+          setTimeout(() => setIsInitializing(false), 100);
         } else {
           // If project not found, redirect to overview
           navigate('/projects');
