@@ -1,10 +1,138 @@
 import React, { useState, useEffect } from 'react';
-import { Database, Tags, Folder, Settings, Eye, Edit3, FileText, Layers } from 'lucide-react';
+import { Database, Tags, Folder, Settings, Eye, Edit3, FileText, Layers, Save, TestTube, Check, AlertCircle, RefreshCw, Droplets, Copy, Search } from 'lucide-react';
 import { useMode } from '../context/ModeContext';
+import { toast } from 'react-toastify';
 
 const Dashboard = () => {
   const { canEdit } = useMode();
   const [activeSection, setActiveSection] = useState('tags');
+
+  // Settings state (moved from Settings.js)
+  const [settings, setSettings] = useState({
+    dropboxToken: '',
+    serverUrl: window.location.origin,
+    dropboxFolder: '/ARCHIER Team Folder/Support/Production/SnapTag',
+    autoBackup: true,
+    imageQuality: 85,
+    maxFileSize: 10,
+    defaultTags: '',
+    autoTagging: false,
+    metadataFormat: 'both'
+  });
+
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState(null);
+  const [stats, setStats] = useState({});
+
+  // Settings functions (moved from Settings.js)
+  const loadSettings = async () => {
+    try {
+      setSettingsLoading(true);
+      
+      // Load settings from localStorage
+      const saved = localStorage.getItem('snaptag-settings');
+      if (saved) {
+        const parsedSettings = JSON.parse(saved);
+        setSettings(prev => ({ ...prev, ...parsedSettings }));
+      }
+      
+      // Also load current server settings
+      try {
+        const serverUrl = settings.serverUrl || window.location.origin;
+        const response = await fetch(`${serverUrl}/api/settings`);
+        if (response.ok) {
+          const serverSettings = await response.json();
+          setSettings(prev => ({ ...prev, ...serverSettings }));
+        }
+      } catch (error) {
+        console.log('Could not load server settings:', error);
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error);
+      toast.error('Failed to load settings');
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  const saveSettings = async () => {
+    try {
+      setSaving(true);
+      
+      // Save to localStorage
+      localStorage.setItem('snaptag-settings', JSON.stringify(settings));
+      
+      // Save to server
+      const response = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      });
+      
+      if (response.ok) {
+        toast.success('Settings saved successfully');
+      } else {
+        toast.error('Failed to save settings to server');
+      }
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      toast.error('Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const testConnection = async () => {
+    try {
+      setTesting(true);
+      setConnectionStatus(null);
+      
+      const response = await fetch('/api/test-dropbox', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accessToken: settings.dropboxToken,
+          folder: settings.dropboxFolder
+        })
+      });
+      
+      const result = await response.json();
+      setConnectionStatus(result);
+      
+      if (result.success) {
+        toast.success('Dropbox connection successful!');
+      } else {
+        toast.error(`Connection failed: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error testing connection:', error);
+      setConnectionStatus({ success: false, error: 'Network error' });
+      toast.error('Failed to test connection');
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const loadStats = async () => {
+    try {
+      const response = await fetch('/api/stats');
+      if (response.ok) {
+        const data = await response.json();
+        setStats(data);
+      }
+    } catch (error) {
+      console.error('Error loading stats:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (activeSection === 'settings' && canEdit) {
+      loadSettings();
+      loadStats();
+    }
+  }, [activeSection, canEdit]);
 
   const sections = [
     { id: 'tags', label: 'Tags Database', icon: Tags, description: 'Manage all tags and categories' },
@@ -13,13 +141,13 @@ const Dashboard = () => {
     { id: 'policies', label: 'Image Policies', icon: FileText, description: 'View tagging and categorization rules' },
   ];
 
-  // Only show server settings in edit mode
+  // Only show settings in edit mode
   if (canEdit) {
     sections.push({
-      id: 'server', 
-      label: 'Server Settings', 
+      id: 'settings', 
+      label: 'Settings', 
       icon: Settings, 
-      description: 'Folder structure and filing logic'
+      description: 'Dropbox connection, folder structure and server configuration'
     });
   }
 
@@ -138,20 +266,177 @@ const Dashboard = () => {
           </div>
         )}
 
-        {activeSection === 'server' && canEdit && (
-          <div>
-            <div className="text-center py-12 bg-white">
-              <Settings className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Server Settings</h3>
-              <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 mb-2">
-                Edit Mode Only
+        {activeSection === 'settings' && canEdit && (
+          <div className="space-y-6">
+            {/* Settings Header */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Settings</h3>
+                  <p className="text-gray-600">Configure Dropbox connection and server settings</p>
+                </div>
+                
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setSettings({
+                        dropboxToken: '',
+                        serverUrl: window.location.origin,
+                        dropboxFolder: '/ARCHIER Team Folder/Support/Production/SnapTag',
+                        autoBackup: true,
+                        imageQuality: 85,
+                        maxFileSize: 10,
+                        defaultTags: '',
+                        autoTagging: false,
+                        metadataFormat: 'both'
+                      });
+                      toast.info('Settings reset to defaults');
+                    }}
+                    className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+                  >
+                    Reset to Defaults
+                  </button>
+                  <button
+                    onClick={saveSettings}
+                    disabled={saving}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50"
+                  >
+                    {saving ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4" />
+                    )}
+                    Save Settings
+                  </button>
+                </div>
               </div>
-              <p className="text-gray-600 mb-2">Server settings and folder structure management.</p>
-              <p className="text-sm text-gray-500">
-                Configure Dropbox folder structure, filing logic, and server-side rules.
-                Will incorporate current Settings page functionality.
-              </p>
             </div>
+
+            {/* Connection Settings */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="flex items-center gap-2 mb-4">
+                <Droplets className="h-5 w-5 text-blue-600" />
+                <h3 className="text-lg font-semibold">Connection Settings</h3>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Dropbox Access Token
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="password"
+                      value={settings.dropboxToken}
+                      onChange={(e) => setSettings(prev => ({ ...prev, dropboxToken: e.target.value }))}
+                      placeholder="Enter your Dropbox access token"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <button
+                      onClick={testConnection}
+                      disabled={testing || !settings.dropboxToken}
+                      className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:opacity-50"
+                    >
+                      {testing ? (
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <TestTube className="h-4 w-4" />
+                      )}
+                      Test
+                    </button>
+                  </div>
+                  {connectionStatus && (
+                    <div className={`mt-2 p-3 rounded-md flex items-center gap-2 ${
+                      connectionStatus.success 
+                        ? 'bg-green-50 text-green-700 border border-green-200' 
+                        : 'bg-red-50 text-red-700 border border-red-200'
+                    }`}>
+                      {connectionStatus.success ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <AlertCircle className="h-4 w-4" />
+                      )}
+                      <span>
+                        {connectionStatus.success 
+                          ? 'Connection successful!' 
+                          : `Error: ${connectionStatus.error}`
+                        }
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Dropbox Folder Path
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.dropboxFolder}
+                    onChange={(e) => setSettings(prev => ({ ...prev, dropboxFolder: e.target.value }))}
+                    placeholder="/ARCHIER Team Folder/Support/Production/SnapTag"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <p className="mt-1 text-sm text-gray-500">
+                    Root folder where images will be stored in Dropbox
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Folder Structure Information */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="flex items-center gap-2 mb-4">
+                <Folder className="h-5 w-5 text-purple-600" />
+                <h3 className="text-lg font-semibold">Folder Structure</h3>
+              </div>
+              
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-medium text-gray-900 mb-2">Current Organization:</h4>
+                <div className="text-sm text-gray-700 space-y-1 font-mono">
+                  <div>📁 /SnapTag/</div>
+                  <div className="ml-4">📁 Archier/</div>
+                  <div className="ml-8">📁 [Project Name]/</div>
+                  <div className="ml-12">📁 Final/ → Images tagged "final"</div>
+                  <div className="ml-12">📁 WIP/ → Images tagged "wip"</div>
+                  <div className="ml-4">📁 Precedents/</div>
+                  <div className="ml-8">📁 [Category]/ → exteriors, interiors, etc.</div>
+                  <div className="ml-4">📁 Materials/</div>
+                  <div className="ml-8">📁 [Material Type]/ → tile, wood, stone, etc.</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Stats */}
+            {stats.totalImages && (
+              <div className="bg-white p-6 rounded-lg shadow">
+                <div className="flex items-center gap-2 mb-4">
+                  <Database className="h-5 w-5 text-indigo-600" />
+                  <h3 className="text-lg font-semibold">Database Statistics</h3>
+                </div>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">{stats.totalImages}</div>
+                    <div className="text-sm text-gray-600">Total Images</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">{stats.totalTags}</div>
+                    <div className="text-sm text-gray-600">Total Tags</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-600">{stats.uniqueSources}</div>
+                    <div className="text-sm text-gray-600">Unique Sources</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-orange-600">
+                      {Math.round(stats.totalFileSize / (1024 * 1024))} MB
+                    </div>
+                    <div className="text-sm text-gray-600">Total Size</div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
