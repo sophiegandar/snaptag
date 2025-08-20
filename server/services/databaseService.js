@@ -282,18 +282,28 @@ class DatabaseService {
         if (validTags.length > 0) {
           console.log('🔍 Tag filter - looking for ALL of these tags:', validTags);
           
-          // For multiple tags, we need ALL tags to match (AND logic)
-          // Each tag can be either a regular tag OR a focused tag
+          // FIXED: Use subqueries to ensure ALL tags are present on each image
+          // For each required tag, ensure the image has that specific tag
           validTags.forEach(tag => {
-            const tagCondition = `(LOWER(t.name) = LOWER(?) OR LOWER(ft.tag_name) = LOWER(?))`;
-            conditions.push(tagCondition);
-            
-            // Use exact match (=) instead of LIKE for more precise matching
             const normalizedTag = tag.toString().trim().toLowerCase();
+            
+            // This subquery ensures the image has this specific tag (either regular or focused)
+            const tagExistsCondition = `(
+              EXISTS (
+                SELECT 1 FROM image_tags it2 
+                JOIN tags t2 ON it2.tag_id = t2.id 
+                WHERE it2.image_id = i.id AND LOWER(t2.name) = ?
+              ) OR EXISTS (
+                SELECT 1 FROM focused_tags ft2 
+                WHERE ft2.image_id = i.id AND LOWER(ft2.tag_name) = ?
+              )
+            )`;
+            
+            conditions.push(tagExistsCondition);
             params.push(normalizedTag, normalizedTag);
           });
           
-          console.log('🔍 Added', validTags.length, 'tag conditions (AND logic)');
+          console.log('🔍 Added', validTags.length, 'tag existence conditions (ALL must be present)');
         }
       }
 

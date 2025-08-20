@@ -60,7 +60,8 @@ const Projects = () => {
       if (project) {
         setActiveProject(project);
         setViewMode('project');
-        loadProjectImages(project, 'photos');
+        setActiveProjectTab('final'); // Default to final for complete projects
+        loadProjectImages(project, 'final');
       }
     } else if (path === '/projects/current') {
       console.log(`🌐 Setting view to current`);
@@ -153,14 +154,29 @@ const Projects = () => {
       return projectImages[cacheKey];
     }
     
+    // Set loading state immediately
+    setProjectImages(prev => ({ ...prev, [cacheKey]: null }));
+    
     try {
       console.log(`🔍 Loading ${tab} images for project: ${project.name}`, { stage, room });
       
       let searchTags = [];
       
       if (project.type === 'complete') {
-        // Complete projects use their predefined tags
+        // Complete projects use their predefined tags + Final/WIP
         searchTags = [...project.tags]; // Use spread to avoid mutations
+        
+        if (tab === 'final') {
+          searchTags.push('final', 'complete'); // Images in Final folder
+          console.log(`📊 Complete project FINAL tags: [${searchTags.join(', ')}]`);
+        } else if (tab === 'wip') {
+          searchTags.push('wip'); // Images in WIP folder (remove complete tag)
+          searchTags = searchTags.filter(tag => tag !== 'complete'); 
+          console.log(`📊 Complete project WIP tags: [${searchTags.join(', ')}]`);
+        } else {
+          // Legacy support for photos tab
+          console.log(`📊 Complete project ALL tags: [${searchTags.join(', ')}]`);
+        }
       } else {
         // Current projects - we'll use text search instead of tag search
         searchTags = [project.name.toLowerCase()];
@@ -228,9 +244,20 @@ const Projects = () => {
           searchBody = { tags: requiredTags };
           console.log(`🔍 EXACT TAG SEARCH: ALL required tags: [${requiredTags.join(', ')}]`);
         } else {
-          // Photos tab - just search by project name
-          searchBody = { searchTerm: project.name };
-          console.log(`🔍 TEXT SEARCH: searchTerm="${project.name}"`);
+          // Photos tab for current projects - require BOTH project tag AND "complete" tag
+          const requiredTags = [];
+          
+          if (project.id === 'de-witt') {
+            requiredTags.push('de witt st');
+          } else {
+            requiredTags.push(project.name.toLowerCase());
+          }
+          
+          // Current projects photos must also be tagged "complete"
+          requiredTags.push('complete');
+          
+          searchBody = { tags: requiredTags };
+          console.log(`🔍 PHOTOS SEARCH (current project): ALL required tags: [${requiredTags.join(', ')}]`);
         }
       } else {
         // Complete projects use exact tag matching (this works fine)
@@ -517,7 +544,7 @@ const Projects = () => {
         {/* Project Tabs */}
         <div className="border-b border-gray-200 mb-6">
           <nav className="-mb-px flex space-x-8">
-            {['precedent', 'texture', 'photos'].map((tab) => (
+            {(activeProject.type === 'complete' ? ['final', 'wip'] : ['precedent', 'texture', 'photos']).map((tab) => (
               <button
                 key={tab}
                 onClick={() => {
@@ -561,8 +588,8 @@ const Projects = () => {
           </nav>
         </div>
 
-        {/* Stage and Room Filters (for precedent and texture tabs) */}
-        {(activeProjectTab === 'precedent' || activeProjectTab === 'texture') && (
+        {/* Stage and Room Filters (for precedent and texture tabs only) */}
+        {activeProject.type === 'current' && (activeProjectTab === 'precedent' || activeProjectTab === 'texture') && (
           <div className="mb-6 flex items-center space-x-4">
             <div className="flex items-center space-x-2">
               <label className="text-sm font-medium text-gray-700">Stage:</label>
@@ -697,7 +724,7 @@ const Projects = () => {
         )}
         
         {/* Loading State - Show while waiting for API response */}
-        {!projectImages[cacheKey] && (
+        {projectImages[cacheKey] === null && (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">Loading {activeProjectTab} images...</h3>
