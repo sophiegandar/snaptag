@@ -134,6 +134,14 @@ const Projects = () => {
   };
 
   const loadProjectImages = async (project, tab = 'photos', stage = '', room = '') => {
+    const cacheKey = `${project.id}-${tab}-${stage}-${room}`;
+    
+    // Check if we already have cached results
+    if (projectImages[cacheKey]) {
+      console.log(`💨 CACHE HIT: Using cached images for ${cacheKey}`);
+      return projectImages[cacheKey];
+    }
+    
     try {
       console.log(`🔍 Loading ${tab} images for project: ${project.name}`, { stage, room });
       
@@ -178,10 +186,32 @@ const Projects = () => {
       
       console.log(`🔎 FINAL SEARCH: Looking for images with ALL tags: [${searchTags.join(', ')}]`);
       
-      // TEMPORARY DEBUG: Let's see what images actually have these tags
+      // CRITICAL FIX: Use a more precise search approach
       console.log(`🔍 DEBUG: Searching for images with tags: [${searchTags.join(', ')}]`);
       
-      const searchBody = { tags: searchTags };
+      // For current projects, we need to search differently to handle name variants
+      let searchBody;
+      if (project.type === 'current') {
+        // Use a combination of exact tag search for type and fuzzy search for project name
+        const typeTag = tab === 'precedent' ? 'precedent' : tab === 'texture' ? 'texture' : null;
+        
+        if (typeTag) {
+          // Search for images that have the type tag AND contain the project name in any form
+          searchBody = {
+            searchTerm: project.name, // This will use fuzzy matching for project name
+            tags: [typeTag, ...(stage ? [stage] : []), ...(room ? [room] : [])] // Exact match for type/stage/room
+          };
+          console.log(`🔍 HYBRID SEARCH: searchTerm="${project.name}" + exact tags: [${[typeTag, ...(stage ? [stage] : []), ...(room ? [room] : [])].join(', ')}]`);
+        } else {
+          // Photos tab - just search by project name
+          searchBody = { searchTerm: project.name };
+          console.log(`🔍 TEXT SEARCH: searchTerm="${project.name}"`);
+        }
+      } else {
+        // Complete projects use exact tag matching (this works fine)
+        searchBody = { tags: searchTags };
+        console.log(`🔍 TAG SEARCH: exact tags: [${searchTags.join(', ')}]`);
+      }
       
       const response = await apiCall('/api/images/search', {
         method: 'POST',
@@ -631,14 +661,25 @@ const Projects = () => {
             })}
             </div>
           ) : (
-            <div className="text-center py-12">
-              <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No {activeProjectTab} images</h3>
-              <p className="text-gray-500">
-                No images found for {activeProject.name} {activeProjectTab}
-              </p>
-            </div>
-          )}
+          <div className="text-center py-12">
+            <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No {activeProjectTab} images</h3>
+            <p className="text-gray-500">
+              No images found for {activeProject.name} {activeProjectTab}
+            </p>
+          </div>
+        )}
+        
+        {/* Loading State - Show while waiting for API response */}
+        {!projectImages[cacheKey] && (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Loading {activeProjectTab} images...</h3>
+            <p className="text-gray-500">
+              Searching for {activeProject.name} {activeProjectTab}
+            </p>
+          </div>
+        )}
         </div>
       </div>
     );
