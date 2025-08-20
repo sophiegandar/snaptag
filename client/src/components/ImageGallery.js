@@ -1391,27 +1391,18 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
       return categoryTag ? categoryTag.charAt(0).toUpperCase() + categoryTag.slice(1) : 'Complete';
     }
     
-    if (type === 'Texture') {
-      const materialCategories = ['brick', 'carpet', 'concrete', 'fabric', 'general', 'landscape', 'metal', 'stone', 'tile', 'wood'];
-      const categoryTag = tags.find(tag => materialCategories.includes(tag.toLowerCase()));
-      return categoryTag ? categoryTag.charAt(0).toUpperCase() + categoryTag.slice(1) : 'General';
-    }
-    
-    if (type === 'Precedent') {
-      // Precedent categories
-      const precedentCategories = ['art', 'bathrooms', 'details', 'doors', 'exteriors', 'furniture', 'general', 'interiors', 'joinery', 'kitchens', 'landscape', 'lighting', 'spatial', 'stairs', 'structure'];
-      const categoryTag = tags.find(tag => precedentCategories.includes(tag.toLowerCase()));
-      return categoryTag ? categoryTag.charAt(0).toUpperCase() + categoryTag.slice(1) : 'General';
-    }
-    
-    // For 'General' type, try to find the most relevant category from any tag
-    const allCategories = ['art', 'bathrooms', 'details', 'doors', 'exteriors', 'furniture', 'general', 'interiors', 'joinery', 'kitchens', 'landscape', 'lighting', 'spatial', 'stairs', 'structure', 'brick', 'carpet', 'concrete', 'fabric', 'metal', 'stone', 'tile', 'wood'];
-    const categoryTag = tags.find(tag => allCategories.includes(tag.toLowerCase()));
-    return categoryTag ? categoryTag.charAt(0).toUpperCase() + categoryTag.slice(1) : 'Uncategorised';
+    // For all other types, use unified category detection
+    const categoryTags = ['brick', 'carpet', 'concrete', 'fabric', 'metal', 'stone', 'tile', 'wood', 'general', 'art', 'bathrooms', 'details', 'doors', 'exteriors', 'furniture', 'interiors', 'joinery', 'kitchens', 'landscape', 'lighting', 'spatial', 'stairs', 'structure'];
+    const foundCategory = tags.find(tag => categoryTags.includes(tag.toLowerCase()));
+    return foundCategory ? foundCategory.charAt(0).toUpperCase() + foundCategory.slice(1).toLowerCase() : 'General';
   };
 
   const getName = () => {
     return image.name || null; // Only return actual name, not fallbacks
+  };
+
+  const getAllTags = () => {
+    return image.tags || [];
   };
 
   const getDisplayName = () => {
@@ -1579,6 +1570,13 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
                 <span className="ml-2 text-yellow-400 text-xs">• Pattern View</span>
               )}
             </div>
+            
+            {/* All Tags */}
+            {getAllTags().length > 0 && (
+              <div className="text-xs text-gray-300 mb-2">
+                <span className="font-medium">Tags:</span> {getAllTags().join(', ')}
+              </div>
+            )}
             
             {/* Name (only if manually entered) */}
             {getName() && (

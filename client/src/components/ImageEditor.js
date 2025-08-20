@@ -699,22 +699,20 @@ const ImageEditor = () => {
 
   // Properties helper functions
   const getImageType = () => {
-    if (tags.some(tag => tag.toLowerCase() === 'precedent')) return 'precedent';
-    if (tags.some(tag => tag.toLowerCase() === 'texture')) return 'texture';
-    if (tags.some(tag => tag.toLowerCase() === 'photos')) return 'photos';
-    return 'precedent'; // Default
+    if (tags.some(tag => tag.toLowerCase() === 'precedent')) return 'Precedent';
+    if (tags.some(tag => tag.toLowerCase() === 'texture')) return 'Texture';
+    if (tags.some(tag => tag.toLowerCase() === 'photos')) return 'Photos';
+    return 'General'; // Default
   };
 
   const getImageCategory = () => {
-    const categoryOptions = getCategoryOptions();
-    const currentCategory = tags.find(tag => 
-      categoryOptions.some(option => option.value === tag.toLowerCase())
-    );
-    return currentCategory ? currentCategory.toLowerCase() : categoryOptions[0]?.value || '';
+    const categoryTags = ['brick', 'carpet', 'concrete', 'fabric', 'metal', 'stone', 'tile', 'wood', 'general', 'art', 'bathrooms', 'details', 'doors', 'exteriors', 'furniture', 'interiors', 'joinery', 'kitchens', 'landscape', 'lighting', 'spatial', 'stairs', 'structure'];
+    const foundCategory = tags.find(tag => categoryTags.includes(tag.toLowerCase()));
+    return foundCategory ? foundCategory.charAt(0).toUpperCase() + foundCategory.slice(1).toLowerCase() : 'General';
   };
 
   const getCategoryOptions = () => {
-    const type = getImageType();
+    const type = getImageType().toLowerCase();
     
     if (type === 'texture') {
       return [
@@ -764,6 +762,20 @@ const ImageEditor = () => {
   const getRoomTag = () => {
     const roomTags = ['living', 'dining', 'kitchen', 'bathroom', 'bedroom'];
     return tags.find(tag => roomTags.includes(tag.toLowerCase())) || '';
+  };
+
+  const getProject = () => {
+    // Complete projects (archier tagged)
+    const completeProjects = ['yandoit', 'archier'];
+    const foundCompleteProject = tags.find(tag => completeProjects.includes(tag.toLowerCase()));
+    return foundCompleteProject ? foundCompleteProject.charAt(0).toUpperCase() + foundCompleteProject.slice(1).toLowerCase() : '';
+  };
+
+  const getDesign = () => {
+    // All project names (current projects)
+    const projectTags = ['couvreur', 'yandoit', 'de witt', 'dewitt'];
+    const foundProjects = tags.filter(tag => projectTags.includes(tag.toLowerCase()));
+    return foundProjects.map(project => project.charAt(0).toUpperCase() + project.slice(1).toLowerCase()).join(', ');
   };
 
   const updateImageType = async (newType) => {
@@ -966,18 +978,18 @@ const ImageEditor = () => {
           
           {/* Save button - only show in edit mode */}
           {canEdit && (
-            <button
-              onClick={saveChanges}
+        <button
+          onClick={saveChanges}
               disabled={!hasUnsavedChanges}
               className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
                 hasUnsavedChanges 
                   ? 'bg-blue-500 text-white hover:bg-blue-600' 
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
-            >
-              <Save className="h-4 w-4" />
-              Save Changes
-            </button>
+        >
+          <Save className="h-4 w-4" />
+          Save Changes
+        </button>
           )}
         </div>
       </div>
@@ -989,7 +1001,7 @@ const ImageEditor = () => {
             <div className="mb-4 flex justify-between items-center">
               <h3 className="font-semibold">Image Editor</h3>
               {canEdit && (
-                <div className="flex gap-2">
+              <div className="flex gap-2">
                   <button
                     onClick={loadAiSuggestions}
                     disabled={loadingAiSuggestions || !image}
@@ -998,27 +1010,27 @@ const ImageEditor = () => {
                     <Lightbulb className={`h-4 w-4 ${loadingAiSuggestions ? 'animate-pulse' : ''}`} />
                     {loadingAiSuggestions ? 'Scanning...' : 'AI Scan'}
                   </button>
-                  <button
-                    onClick={() => {
-                      console.log('Toggling tagging mode from:', isTaggingMode, 'to:', !isTaggingMode);
-                      setIsTaggingMode(!isTaggingMode);
-                      if (isTaggingMode) {
-                        // If exiting tagging mode, clean up
-                        setPendingTagLocation(null);
-                        setNewTag('');
-                      }
-                    }}
-                    disabled={!canvasReady}
-                    className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
-                      isTaggingMode 
-                        ? 'bg-blue-500 text-white' 
-                        : 'bg-gray-200 text-gray-700'
-                    }`}
-                  >
-                    <Edit3 className="h-4 w-4" />
-                    {isTaggingMode ? 'Exit Tagging' : 'Add Region Tag'}
-                  </button>
-                </div>
+                <button
+                  onClick={() => {
+                    console.log('Toggling tagging mode from:', isTaggingMode, 'to:', !isTaggingMode);
+                    setIsTaggingMode(!isTaggingMode);
+                    if (isTaggingMode) {
+                      // If exiting tagging mode, clean up
+                      setPendingTagLocation(null);
+                      setNewTag('');
+                    }
+                  }}
+                  disabled={!canvasReady}
+                  className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+                    isTaggingMode 
+                      ? 'bg-blue-500 text-white' 
+                      : 'bg-gray-200 text-gray-700'
+                  }`}
+                >
+                  <Edit3 className="h-4 w-4" />
+                  {isTaggingMode ? 'Exit Tagging' : 'Add Region Tag'}
+                </button>
+              </div>
               )}
             </div>
             
@@ -1336,90 +1348,59 @@ const ImageEditor = () => {
             <h3 className="font-semibold mb-4">Properties</h3>
             
             <div className="space-y-4">
-              {/* Type Dropdown */}
+              {/* Type */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
-                <select
-                  value={getImageType()}
-                  onChange={(e) => updateImageType(e.target.value)}
-                  disabled={!canEdit}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50"
-                >
-                  <option value="precedent">Precedent</option>
-                  <option value="texture">Texture</option>
-                  <option value="photos">Photos</option>
-                </select>
+                <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-900">
+                  {getImageType()}
+                </div>
               </div>
 
-              {/* Category Dropdown */}
+              {/* Category */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                <select
-                  value={getImageCategory()}
-                  onChange={(e) => updateImageCategory(e.target.value)}
-                  disabled={!canEdit}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50"
-                >
-                  {getCategoryOptions().map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-900">
+                  {getImageCategory()}
+                </div>
               </div>
 
-              {/* Project Dropdown (if archier tagged) */}
-              {tags.some(tag => tag.toLowerCase() === 'archier') && (
+              {/* Project (complete projects - archier tagged) */}
+              {getProject() && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Project</label>
-                  <select
-                    value={getProjectTag()}
-                    onChange={(e) => updateProjectTag(e.target.value)}
-                    disabled={!canEdit}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50"
-                  >
-                    <option value="">Select Project...</option>
-                    <option value="yandoit">Yandoit</option>
-                    <option value="couvreur">Couvreur</option>
-                  </select>
+                  <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-900">
+                    {getProject()}
+                  </div>
                 </div>
               )}
 
-              {/* Stage Dropdown (for precedent and texture) */}
-              {(getImageType() === 'precedent' || getImageType() === 'texture') && (
+              {/* Design (current/in-progress projects) */}
+              {getDesign() && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Design</label>
+                  <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-900">
+                    {getDesign()}
+                  </div>
+                </div>
+              )}
+
+              {/* Stage */}
+              {getStageTag() && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Stage</label>
-                  <select
-                    value={getStageTag()}
-                    onChange={(e) => updateStageTag(e.target.value)}
-                    disabled={!canEdit}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50"
-                  >
-                    <option value="">Select Stage...</option>
-                    <option value="feasibility">Feasibility</option>
-                    <option value="layout">Layout</option>
-                    <option value="finishes">Finishes</option>
-                  </select>
+                  <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-900">
+                    {getStageTag().charAt(0).toUpperCase() + getStageTag().slice(1)}
+                  </div>
                 </div>
               )}
 
-              {/* Room Dropdown (for precedent and texture) */}
-              {(getImageType() === 'precedent' || getImageType() === 'texture') && (
+              {/* Room */}
+              {getRoomTag() && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Room</label>
-                  <select
-                    value={getRoomTag()}
-                    onChange={(e) => updateRoomTag(e.target.value)}
-                    disabled={!canEdit}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50"
-                  >
-                    <option value="">Select Room...</option>
-                    <option value="living">Living</option>
-                    <option value="dining">Dining</option>
-                    <option value="kitchen">Kitchen</option>
-                    <option value="bathroom">Bathroom</option>
-                    <option value="bedroom">Bedroom</option>
-                  </select>
+                  <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-900">
+                    {getRoomTag().charAt(0).toUpperCase() + getRoomTag().slice(1)}
+                  </div>
                 </div>
               )}
 
@@ -1428,42 +1409,42 @@ const ImageEditor = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Additional Tags</label>
                   <div className="flex gap-2 mb-2">
-                    <input
-                      type="text"
+              <input
+                type="text"
                       placeholder="Add custom tag..."
-                      value={newTag}
-                      onChange={(e) => setNewTag(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && addGeneralTag()}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    />
-                    <button
-                      onClick={addGeneralTag}
-                      className="px-3 py-2 bg-gray-500 text-white rounded-md text-sm hover:bg-gray-600"
-                    >
-                      <Tag className="h-4 w-4" />
-                    </button>
-                  </div>
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && addGeneralTag()}
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
+              />
+              <button
+                onClick={addGeneralTag}
+                className="px-3 py-2 bg-gray-500 text-white rounded-md text-sm hover:bg-gray-600"
+              >
+                <Tag className="h-4 w-4" />
+              </button>
+            </div>
                 </div>
               )}
 
               {/* Display All Tags */}
-              <div className="flex flex-wrap gap-2">
-                {tags.map(tag => (
-                  <span
-                    key={tag}
-                    className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm flex items-center gap-1"
-                  >
-                    {tag}
+            <div className="flex flex-wrap gap-2">
+              {tags.map(tag => (
+                <span
+                  key={tag}
+                  className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm flex items-center gap-1"
+                >
+                  {tag}
                     {canEdit && (
-                      <button
-                        onClick={() => removeGeneralTag(tag)}
-                        className="hover:bg-blue-200 rounded-full p-1"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
+                  <button
+                    onClick={() => removeGeneralTag(tag)}
+                    className="hover:bg-blue-200 rounded-full p-1"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
                     )}
-                  </span>
-                ))}
+                </span>
+              ))}
               </div>
             </div>
           </div>
@@ -1496,8 +1477,8 @@ const ImageEditor = () => {
             </div>
           </div>
 
-
-        </div>
+            
+              </div>
       </div>
     </div>
     );

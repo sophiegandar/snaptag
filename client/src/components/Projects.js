@@ -320,7 +320,7 @@ const Projects = () => {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       {/* Complete Projects Section */}
       <div>
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-center mb-6">
           <div 
             className="flex items-center space-x-3 cursor-pointer hover:text-green-700 transition-colors"
             onClick={() => navigate('/projects/complete')}
@@ -328,7 +328,7 @@ const Projects = () => {
             <h2 className="text-xl font-semibold text-gray-900">Complete</h2>
           </div>
         </div>
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {completeProjects.map(project => (
             <ProjectThumbnail key={project.id} project={project} />
           ))}
@@ -337,7 +337,7 @@ const Projects = () => {
 
       {/* Current Projects Section */}
       <div>
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-center mb-6 relative">
           <div 
             className="flex items-center space-x-3 cursor-pointer hover:text-blue-700 transition-colors"
             onClick={() => navigate('/projects/current')}
@@ -347,7 +347,7 @@ const Projects = () => {
           {canEdit && (
             <button
               onClick={() => setShowNewProjectForm(true)}
-              className="flex items-center space-x-2 px-4 py-2 text-white rounded-lg transition-colors text-sm"
+              className="absolute right-0 flex items-center space-x-2 px-4 py-2 text-white rounded-lg transition-colors text-sm"
               style={{backgroundColor: '#6b7249', borderColor: '#84823a'}}
               onMouseEnter={(e) => e.target.style.backgroundColor = '#84823a'}
               onMouseLeave={(e) => e.target.style.backgroundColor = '#6b7249'}
@@ -393,7 +393,7 @@ const Projects = () => {
           </div>
         )}
         
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {currentProjects.map(project => (
             <ProjectThumbnail key={project.id} project={project} />
           ))}
@@ -450,15 +450,8 @@ const Projects = () => {
                 key={tab}
                 onClick={() => {
                   console.log(`🔄 TAB SWITCH: From ${activeProjectTab} to ${tab}`);
-                  setActiveProjectTab(tab);
-                  setStageFilter('');
-                  setRoomFilter('');
                   
-                  // Clear ALL cached images for this project to force fresh load
-                  const oldKey = `${activeProject.id}-${activeProjectTab}-${stageFilter}-${roomFilter}`;
-                  const newKey = `${activeProject.id}-${tab}--`;
-                  console.log(`🗑️ CACHE: Clearing old key ${oldKey}, will load ${newKey}`);
-                  
+                  // CRITICAL: Clear everything BEFORE setting new tab state
                   setProjectImages(prev => {
                     const updated = { ...prev };
                     // Clear all keys for this project to prevent any cache contamination
@@ -471,10 +464,18 @@ const Projects = () => {
                     return updated;
                   });
                   
-                  // Force a complete re-render
+                  // Force immediate re-render with new state
                   setForceRefresh(prev => prev + 1);
                   
-                  loadProjectImages(activeProject, tab, '', '');
+                  // Set all new states atomically
+                  setActiveProjectTab(tab);
+                  setStageFilter('');
+                  setRoomFilter('');
+                  
+                  // Load fresh data for new tab
+                  setTimeout(() => {
+                    loadProjectImages(activeProject, tab, '', '');
+                  }, 0);
                 }}
                 className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap capitalize ${
                   activeProjectTab === tab
@@ -559,27 +560,13 @@ const Projects = () => {
 
               const getImageCategory = () => {
                 const tags = image.tags || [];
-                const type = getImageType();
-                
-                if (type === 'Texture') {
-                  const materialCategories = ['brick', 'carpet', 'concrete', 'fabric', 'metal', 'stone', 'tile', 'wood', 'general'];
-                  const categoryTag = tags.find(tag => materialCategories.includes(tag.toLowerCase()));
-                  return categoryTag ? categoryTag.charAt(0).toUpperCase() + categoryTag.slice(1) : 'General';
-                }
-                
-                if (type === 'Precedent') {
-                  const precedentCategories = ['art', 'bathrooms', 'details', 'doors', 'exteriors', 'furniture', 'interiors', 'joinery', 'kitchens', 'landscape', 'lighting', 'spatial', 'stairs', 'structure', 'general'];
-                  const categoryTag = tags.find(tag => precedentCategories.includes(tag.toLowerCase()));
-                  return categoryTag ? categoryTag.charAt(0).toUpperCase() + categoryTag.slice(1) : 'General';
-                }
-                
-                return 'General';
+                const categoryTags = ['brick', 'carpet', 'concrete', 'fabric', 'metal', 'stone', 'tile', 'wood', 'general', 'art', 'bathrooms', 'details', 'doors', 'exteriors', 'furniture', 'interiors', 'joinery', 'kitchens', 'landscape', 'lighting', 'spatial', 'stairs', 'structure'];
+                const foundCategory = tags.find(tag => categoryTags.includes(tag.toLowerCase()));
+                return foundCategory ? foundCategory.charAt(0).toUpperCase() + foundCategory.slice(1).toLowerCase() : 'General';
               };
 
-              const getOtherTags = () => {
-                const tags = image.tags || [];
-                const excludeTags = ['precedent', 'texture', 'photos', 'brick', 'carpet', 'concrete', 'fabric', 'metal', 'stone', 'tile', 'wood', 'general', 'art', 'bathrooms', 'details', 'doors', 'exteriors', 'furniture', 'interiors', 'joinery', 'kitchens', 'landscape', 'lighting', 'spatial', 'stairs', 'structure'];
-                return tags.filter(tag => !excludeTags.includes(tag.toLowerCase()));
+              const getAllTags = () => {
+                return image.tags || [];
               };
 
               return (
@@ -609,9 +596,9 @@ const Projects = () => {
                           <div className="text-sm font-medium text-white/90 mb-2">
                             Category: {getImageCategory()}
                           </div>
-                          {getOtherTags().length > 0 && (
+                          {getAllTags().length > 0 && (
                             <div className="text-xs text-white/80">
-                              Properties: {getOtherTags().join(', ')}
+                              Tags: {getAllTags().join(', ')}
                             </div>
                           )}
                         </div>
