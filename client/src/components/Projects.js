@@ -42,11 +42,15 @@ const Projects = () => {
 
   const handleUrlRouting = () => {
     const path = location.pathname;
+    const projectId = params.projectId;
+    
+    console.log(`🌐 URL ROUTING: path=${path}, projectId=${projectId}`);
     
     if (path === '/projects/complete') {
+      console.log(`🌐 Setting view to complete`);
       setViewMode('complete');
-    } else if (path.startsWith('/projects/complete/')) {
-      const projectId = params.projectId || path.split('/').pop();
+    } else if (path.startsWith('/projects/complete/') && projectId) {
+      console.log(`🌐 Loading complete project: ${projectId}`);
       const project = completeProjects.find(p => p.id === projectId) || defaultCompleteProjects.find(p => p.id === projectId);
       if (project) {
         setActiveProject(project);
@@ -54,16 +58,19 @@ const Projects = () => {
         loadProjectImages(project, 'photos');
       }
     } else if (path === '/projects/current') {
+      console.log(`🌐 Setting view to current`);
       setViewMode('current');
-    } else if (path.startsWith('/projects/current/')) {
-      const projectId = params.projectId || path.split('/').pop();
+    } else if (path.startsWith('/projects/current/') && projectId) {
+      console.log(`🌐 Loading current project: ${projectId}`);
       const project = currentProjects.find(p => p.id === projectId);
       if (project) {
         setActiveProject(project);
         setViewMode('project');
+        setActiveProjectTab('precedent'); // Default to precedent for current projects
         loadProjectImages(project, 'precedent');
       }
     } else {
+      console.log(`🌐 Setting view to overview`);
       setViewMode('overview');
     }
   };
@@ -228,9 +235,11 @@ const Projects = () => {
     return (
       <div
         onClick={() => {
-          setActiveProject(project);
-          setViewMode('project');
-          loadProjectImages(project, project.type === 'complete' ? 'photos' : 'precedent');
+          const url = project.type === 'complete' 
+            ? `/projects/complete/${project.id}` 
+            : `/projects/current/${project.id}`;
+          console.log(`🔗 NAVIGATE: Going to ${url}`);
+          navigate(url);
         }}
         className="relative group cursor-pointer"
       >
@@ -375,7 +384,12 @@ const Projects = () => {
   const renderProjectView = () => {
     if (!activeProject) return null;
     
+    // Force reload of images when switching tabs to prevent cache issues
     const currentImages = projectImages[`${activeProject.id}-${activeProjectTab}-${stageFilter}-${roomFilter}`] || [];
+    
+    console.log(`🖼️ DISPLAY: Showing images for ${activeProject.id}-${activeProjectTab}-${stageFilter}-${roomFilter}`);
+    console.log(`🖼️ DISPLAY: Found ${currentImages.length} images in cache`);
+    console.log(`🖼️ DISPLAY: Available cache keys:`, Object.keys(projectImages));
     
     return (
       <div>
@@ -402,9 +416,22 @@ const Projects = () => {
               <button
                 key={tab}
                 onClick={() => {
+                  console.log(`🔄 TAB SWITCH: From ${activeProjectTab} to ${tab}`);
                   setActiveProjectTab(tab);
                   setStageFilter('');
                   setRoomFilter('');
+                  
+                  // Clear cached images for this tab to force fresh load
+                  const oldKey = `${activeProject.id}-${activeProjectTab}-${stageFilter}-${roomFilter}`;
+                  const newKey = `${activeProject.id}-${tab}--`;
+                  console.log(`🗑️ CACHE: Clearing old key ${oldKey}, will load ${newKey}`);
+                  
+                  setProjectImages(prev => {
+                    const updated = { ...prev };
+                    delete updated[oldKey];
+                    return updated;
+                  });
+                  
                   loadProjectImages(activeProject, tab, '', '');
                 }}
                 className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap capitalize ${

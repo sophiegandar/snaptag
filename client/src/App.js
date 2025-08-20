@@ -130,6 +130,10 @@ function AppContent() {
           <Route path="/tags" element={<TagManager />} />
           {canAccessProWorkflow && <Route path="/workflow" element={<ProfessionalWorkflow />} />}
           <Route path="/projects" element={<Projects />} />
+          <Route path="/projects/complete" element={<Projects />} />
+          <Route path="/projects/current" element={<Projects />} />
+          <Route path="/projects/complete/:projectId" element={<Projects />} />
+          <Route path="/projects/current/:projectId" element={<Projects />} />
           {canAccessSettings && <Route path="/settings" element={<Settings />} />}
         </Routes>
       </main>
