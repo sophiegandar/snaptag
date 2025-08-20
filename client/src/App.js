@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
-import { Search, Upload, Tag, Settings as SettingsIcon, FileText, FolderOpen, Eye, Edit3 } from 'lucide-react';
+import { Search, Upload, Tag, Settings as SettingsIcon, FileText, FolderOpen, Eye, Edit3, Database } from 'lucide-react';
 
 import { ModeProvider, useMode } from './context/ModeContext';
 
@@ -73,14 +73,6 @@ function Navigation() {
               </Link>
             )}
             
-            <Link
-              to="/tags"
-              className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
-            >
-              <Tag className="h-4 w-4" />
-              <span>Tags</span>
-            </Link>
-            
             {canAccessProWorkflow && (
               <Link
                 to="/workflow"
@@ -99,15 +91,13 @@ function Navigation() {
               <span>Projects</span>
             </Link>
             
-            {canAccessSettings && (
-              <Link
-                to="/settings"
-                className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
-              >
-                <SettingsIcon className="h-4 w-4" />
-                <span>Settings</span>
-              </Link>
-            )}
+            <Link
+              to="/dashboard"
+              className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+            >
+              <Database className="h-4 w-4" />
+              <span>Dashboard</span>
+            </Link>
           </div>
         </div>
       </div>
