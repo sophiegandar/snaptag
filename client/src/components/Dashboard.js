@@ -1,11 +1,89 @@
 import React, { useState, useEffect } from 'react';
-import { Database, Tags, Folder, Settings, Eye, Edit3, FileText, Layers, Save, TestTube, Check, AlertCircle, RefreshCw, Droplets, Copy, Search } from 'lucide-react';
+import { Database, Tags, Folder, Settings, Eye, Edit3, FileText, Layers, Save, TestTube, Check, AlertCircle, RefreshCw, Droplets, Copy, Search, Plus, Trash2, Calendar } from 'lucide-react';
 import { useMode } from '../context/ModeContext';
 import { toast } from 'react-toastify';
 
 const Dashboard = () => {
   const { canEdit } = useMode();
   const [activeSection, setActiveSection] = useState('tags');
+
+  // Projects state
+  const [currentProjects, setCurrentProjects] = useState([]);
+  const [newProjectName, setNewProjectName] = useState('');
+
+  // Projects functions
+  const loadCurrentProjects = () => {
+    try {
+      const stored = localStorage.getItem('snaptag-current-projects');
+      if (stored) {
+        const projects = JSON.parse(stored);
+        setCurrentProjects(Array.isArray(projects) ? projects : []);
+      }
+    } catch (error) {
+      console.error('Error loading current projects:', error);
+      setCurrentProjects([]);
+    }
+  };
+
+  const createNewProject = () => {
+    if (!newProjectName.trim()) {
+      toast.error('Please enter a project name');
+      return;
+    }
+
+    if (!canEdit) {
+      toast.error('Project creation is only available in edit mode');
+      return;
+    }
+
+    try {
+      const existing = currentProjects.find(p => 
+        p.name.toLowerCase() === newProjectName.trim().toLowerCase()
+      );
+      
+      if (existing) {
+        toast.error('A project with this name already exists');
+        return;
+      }
+
+      const newProject = {
+        id: newProjectName.toLowerCase().replace(/\s+/g, '-'),
+        name: newProjectName.trim(),
+        tags: [newProjectName.toLowerCase().replace(/\s+/g, ' ')],
+        type: 'current',
+        created: new Date().toISOString()
+      };
+
+      const updatedProjects = [...currentProjects, newProject];
+      setCurrentProjects(updatedProjects);
+      localStorage.setItem('snaptag-current-projects', JSON.stringify(updatedProjects));
+      
+      setNewProjectName('');
+      toast.success(`Project "${newProject.name}" created successfully`);
+    } catch (error) {
+      console.error('Error creating project:', error);
+      toast.error('Failed to create project');
+    }
+  };
+
+  const deleteProject = (projectId) => {
+    if (!canEdit) {
+      toast.error('Project deletion is only available in edit mode');
+      return;
+    }
+
+    try {
+      const updatedProjects = currentProjects.filter(p => p.id !== projectId);
+      setCurrentProjects(updatedProjects);
+      localStorage.setItem('snaptag-current-projects', JSON.stringify(updatedProjects));
+      
+      const deletedProject = currentProjects.find(p => p.id === projectId);
+      toast.success(`Project "${deletedProject?.name}" deleted successfully`);
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      toast.error('Failed to delete project');
+    }
+  };
 
   // Settings state (moved from Settings.js)
   const [settings, setSettings] = useState({
@@ -131,12 +209,14 @@ const Dashboard = () => {
     if (activeSection === 'settings' && canEdit) {
       loadSettings();
       loadStats();
+    } else if (activeSection === 'projects') {
+      loadCurrentProjects();
     }
   }, [activeSection, canEdit]);
 
   const sections = [
     { id: 'tags', label: 'Tags Database', icon: Tags, description: 'Manage all tags and categories' },
-    { id: 'projects', label: 'Project Names', icon: Folder, description: 'Add/edit/delete project names' },
+    { id: 'projects', label: 'Projects', icon: Folder, description: 'Manage current projects and view automatic complete project creation' },
     { id: 'categories', label: 'Categories', icon: Layers, description: 'Manage image categories' },
     { id: 'policies', label: 'Image Policies', icon: FileText, description: 'View tagging and categorization rules' },
   ];
@@ -227,14 +307,103 @@ const Dashboard = () => {
         )}
 
         {activeSection === 'projects' && (
-          <div>
-            <div className="text-center py-12 bg-white">
-              <Folder className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Project Names</h3>
-              <p className="text-gray-600 mb-2">Project management interface coming soon...</p>
-              <p className="text-sm text-gray-500">
-                Add, edit, and delete project names. Manage both current and complete projects.
-              </p>
+          <div className="space-y-6">
+            {/* Current Projects Section */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Current Projects</h3>
+                  <p className="text-gray-600">Manage active projects and create new ones</p>
+                </div>
+              </div>
+
+              {/* New Project Form - Only show in edit mode */}
+              {canEdit && (
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium text-gray-900 mb-3">Create New Project</h4>
+                  <div className="flex gap-3">
+                    <input
+                      type="text"
+                      value={newProjectName}
+                      onChange={(e) => setNewProjectName(e.target.value)}
+                      placeholder="Enter project name (e.g., 'Collins St')"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      onKeyPress={(e) => e.key === 'Enter' && createNewProject()}
+                    />
+                    <button
+                      onClick={createNewProject}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Create Project
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Current Projects List */}
+              <div>
+                {currentProjects.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Folder className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                    <p>No current projects found</p>
+                    {canEdit && <p className="text-sm">Create your first project above</p>}
+                  </div>
+                ) : (
+                  <div className="grid gap-3">
+                    {currentProjects.map((project) => (
+                      <div
+                        key={project.id}
+                        className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Folder className="h-5 w-5 text-blue-500" />
+                          <div>
+                            <h4 className="font-medium text-gray-900">{project.name}</h4>
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                              <Calendar className="h-3 w-3" />
+                              <span>Created {new Date(project.created).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                        {canEdit && (
+                          <button
+                            onClick={() => deleteProject(project.id)}
+                            className="p-2 text-red-500 hover:bg-red-50 rounded-md"
+                            title="Delete project"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Complete Projects Information */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="flex items-center gap-2 mb-4">
+                <Check className="h-5 w-5 text-green-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Complete Projects</h3>
+              </div>
+              
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h4 className="font-medium text-blue-900 mb-2">Automatic Project Creation</h4>
+                <p className="text-blue-800 text-sm mb-3">
+                  Complete projects are automatically created when images are tagged with:
+                </p>
+                <div className="space-y-1 text-sm text-blue-800 font-mono bg-blue-100 p-3 rounded">
+                  <div>• "archier" (team tag)</div>
+                  <div>• "complete" (status tag)</div>
+                  <div>• "[project name]" (specific project identifier)</div>
+                </div>
+                <p className="text-blue-800 text-sm mt-3">
+                  These projects will automatically appear in the "Complete" projects section 
+                  and be organized in Dropbox under <code>/SnapTag/Archier/[Project]/</code>
+                </p>
+              </div>
             </div>
           </div>
         )}
