@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { FolderOpen, Image as ImageIcon, Plus, CheckCircle, Clock, ArrowLeft, AlertTriangle, X } from 'lucide-react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -68,9 +68,9 @@ const Projects = () => {
     if (!loading && !isInitializing) {
       handleUrlRouting();
     }
-  }, [location.pathname, params.projectId, params.tabId, loading, isInitializing]);
+  }, [handleUrlRouting, loading, isInitializing]);
 
-  const handleUrlRouting = () => {
+  const handleUrlRouting = useCallback(() => {
     const path = location.pathname;
     const projectId = params.projectId;
     const tabId = params.tabId;
@@ -190,7 +190,7 @@ const Projects = () => {
       console.log(`🌐 Setting view to overview`);
       setViewMode('overview');
     }
-  };
+  }, [location.pathname, params.projectId, params.tabId, completeProjects, currentProjects, navigate]);
 
   const loadProjects = async () => {
     try {
@@ -497,9 +497,9 @@ const Projects = () => {
 
     useEffect(() => {
       loadThumbnail();
-    }, [project]);
+    }, [loadThumbnail]); // Depend on memoized function
 
-    const loadThumbnail = async () => {
+    const loadThumbnail = useCallback(async () => {
       try {
         setLoading(true);
         let searchTags = [];
@@ -527,7 +527,7 @@ const Projects = () => {
       } finally {
         setLoading(false);
       }
-    };
+    }, [project.id, project.type, project.name, project.tags]);
 
     return (
       <div
