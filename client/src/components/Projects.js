@@ -59,17 +59,6 @@ const Projects = () => {
     }
   ];
 
-  useEffect(() => {
-    loadProjects();
-  }, []);
-
-  useEffect(() => {
-    // Only handle URL routing after projects are loaded and not during initialization
-    if (!loading && !isInitializing) {
-      handleUrlRouting();
-    }
-  }, [handleUrlRouting, loading, isInitializing]);
-
   const handleUrlRouting = useCallback(() => {
     const path = location.pathname;
     const projectId = params.projectId;
@@ -191,6 +180,17 @@ const Projects = () => {
       setViewMode('overview');
     }
   }, [location.pathname, params.projectId, params.tabId, completeProjects, currentProjects, navigate]);
+
+  useEffect(() => {
+    loadProjects();
+  }, []);
+
+  useEffect(() => {
+    // Only handle URL routing after projects are loaded and not during initialization
+    if (!loading && !isInitializing) {
+      handleUrlRouting();
+    }
+  }, [handleUrlRouting, loading, isInitializing]);
 
   const loadProjects = async () => {
     try {
