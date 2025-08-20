@@ -234,7 +234,7 @@ const Projects = () => {
         }}
         className="relative group cursor-pointer"
       >
-        <div className="bg-white overflow-hidden shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 aspect-square w-24 h-24">
+        <div className="bg-white overflow-hidden shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 aspect-square w-48 h-48">
           <div className="relative w-full h-full overflow-hidden">
             {loading ? (
               <div className="w-full h-full bg-gray-100 flex items-center justify-center">
@@ -285,8 +285,7 @@ const Projects = () => {
             className="flex items-center space-x-3 cursor-pointer hover:text-green-700 transition-colors"
             onClick={() => navigate('/projects/complete')}
           >
-            <CheckCircle className="h-6 w-6 text-green-600" />
-            <h2 className="text-xl font-semibold text-gray-900">Complete Projects</h2>
+            <h2 className="text-xl font-semibold text-gray-900">Complete</h2>
           </div>
         </div>
         <div className="space-y-4">
@@ -303,13 +302,15 @@ const Projects = () => {
             className="flex items-center space-x-3 cursor-pointer hover:text-blue-700 transition-colors"
             onClick={() => navigate('/projects/current')}
           >
-            <Clock className="h-6 w-6 text-blue-600" />
-            <h2 className="text-xl font-semibold text-gray-900">Current Projects</h2>
+            <h2 className="text-xl font-semibold text-gray-900">Current</h2>
           </div>
           {canEdit && (
             <button
               onClick={() => setShowNewProjectForm(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              className="flex items-center space-x-2 px-4 py-2 text-white rounded-lg transition-colors text-sm"
+              style={{backgroundColor: '#6b7249', borderColor: '#84823a'}}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#84823a'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#6b7249'}
             >
               <Plus className="h-4 w-4" />
               <span>New Project</span>
@@ -389,19 +390,8 @@ const Projects = () => {
               <span>Back to Projects</span>
             </button>
           </div>
-          <div className="flex items-center space-x-3">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-              activeProject.type === 'complete' ? 'bg-green-100' : 'bg-blue-100'
-            }`}>
-              {activeProject.type === 'complete' ? (
-                <CheckCircle className="h-5 w-5 text-green-600" />
-              ) : (
-                <Clock className="h-5 w-5 text-blue-600" />
-              )}
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">{activeProject.name}</h1>
-            </div>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">{activeProject.name}</h1>
           </div>
         </div>
 
@@ -440,7 +430,7 @@ const Projects = () => {
                   setStageFilter(e.target.value);
                   loadProjectImages(activeProject, activeProjectTab, e.target.value, roomFilter);
                 }}
-                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 w-36"
               >
                 <option value="">All Stages</option>
                 <option value="feasibility">Feasibility</option>
@@ -457,7 +447,7 @@ const Projects = () => {
                   setRoomFilter(e.target.value);
                   loadProjectImages(activeProject, activeProjectTab, stageFilter, e.target.value);
                 }}
-                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 w-36"
               >
                 <option value="">All Rooms</option>
                 <option value="living">Living</option>
@@ -526,7 +516,6 @@ const Projects = () => {
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center space-x-2 mb-2">
-          <FolderOpen className="h-5 w-5 text-blue-600" />
           <h1 className="text-xl font-bold text-gray-900">Projects</h1>
         </div>
       </div>
