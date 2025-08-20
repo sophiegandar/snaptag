@@ -33,12 +33,14 @@ const Projects = () => {
 
   useEffect(() => {
     loadProjects();
-    handleUrlRouting();
   }, []);
 
   useEffect(() => {
-    handleUrlRouting();
-  }, [location.pathname, params]);
+    // Only handle URL routing after projects are loaded
+    if (!loading) {
+      handleUrlRouting();
+    }
+  }, [location.pathname, params, loading, currentProjects, completeProjects]);
 
   const handleUrlRouting = () => {
     const path = location.pathname;
@@ -62,12 +64,40 @@ const Projects = () => {
       setViewMode('current');
     } else if (path.startsWith('/projects/current/') && projectId) {
       console.log(`🌐 Loading current project: ${projectId}`);
+      console.log(`🌐 Available current projects:`, currentProjects.map(p => p.id));
       const project = currentProjects.find(p => p.id === projectId);
       if (project) {
+        console.log(`🌐 Found project:`, project);
         setActiveProject(project);
         setViewMode('project');
         setActiveProjectTab('precedent'); // Default to precedent for current projects
         loadProjectImages(project, 'precedent');
+      } else {
+        console.log(`🌐 Project ${projectId} not found in current projects`);
+        
+        // Try to create the project if it doesn't exist (for URL sharing)
+        if (projectId === 'couvreur') {
+          console.log(`🌐 Creating missing Couvreur project`);
+          const newProject = {
+            id: 'couvreur',
+            name: 'Couvreur',
+            tags: ['couvreur'],
+            type: 'current',
+            created: new Date().toISOString()
+          };
+          
+          const updatedCurrentProjects = [...currentProjects, newProject];
+          setCurrentProjects(updatedCurrentProjects);
+          localStorage.setItem('snaptag-current-projects', JSON.stringify(updatedCurrentProjects));
+          
+          setActiveProject(newProject);
+          setViewMode('project');
+          setActiveProjectTab('precedent');
+          loadProjectImages(newProject, 'precedent');
+        } else {
+          // If project not found, redirect to overview
+          navigate('/projects');
+        }
       }
     } else {
       console.log(`🌐 Setting view to overview`);
