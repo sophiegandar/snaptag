@@ -398,22 +398,24 @@ const Projects = () => {
 
     return (
       <div className="group cursor-pointer" onClick={() => navigate(`/projects/current/${project.id}`)}>
-        <div className="relative overflow-hidden shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 aspect-square w-24 h-24">
-          {/* Colored square with project name */}
-          <div className={`w-full h-full ${getProjectColor(project.name)} flex items-center justify-center`}>
-            <span className="text-white font-bold text-sm text-center px-2 leading-tight">
-              {project.name}
-            </span>
-          </div>
-          
-          {/* Hover Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end">
-            <div className="p-2 text-white">
-              <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{color: '#C9D468'}}>
-                Current
-              </div>
-              <div className="text-xs font-medium text-white/90">
+        <div className="bg-white overflow-hidden shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 aspect-square w-48 h-48">
+          <div className="relative w-full h-full overflow-hidden">
+            {/* Colored square with project name */}
+            <div className={`w-full h-full ${getProjectColor(project.name)} flex items-center justify-center`}>
+              <span className="text-white font-bold text-base text-center px-2 leading-tight">
                 {project.name}
+              </span>
+            </div>
+            
+            {/* Hover Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end">
+              <div className="p-2 text-white">
+                <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{color: '#C9D468'}}>
+                  Current
+                </div>
+                <div className="text-xs font-medium text-white/90">
+                  {project.name}
+                </div>
               </div>
             </div>
           </div>
@@ -425,7 +427,7 @@ const Projects = () => {
   const renderOverview = () => (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       {/* Complete Projects Section */}
-      <div className="bg-gray-100 p-6 rounded-lg">
+      <div className="bg-gray-200 p-6 rounded-lg border border-gray-300">
         <div className="flex items-center justify-center mb-6">
           <div 
             className="flex items-center space-x-3 cursor-pointer hover:text-green-700 transition-colors"
@@ -442,7 +444,7 @@ const Projects = () => {
       </div>
 
       {/* Current Projects Section */}
-      <div className="bg-gray-100 p-6 rounded-lg">
+      <div className="bg-gray-200 p-6 rounded-lg border border-gray-300">
         <div className="flex items-center justify-center mb-6">
           <div 
             className="flex items-center space-x-3 cursor-pointer hover:text-blue-700 transition-colors"
