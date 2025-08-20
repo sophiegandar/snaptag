@@ -773,7 +773,7 @@ const ImageEditor = () => {
 
   const getDesign = () => {
     // All project names (current projects)
-    const projectTags = ['couvreur', 'yandoit', 'de witt', 'dewitt'];
+    const projectTags = ['couvreur', 'yandoit', 'de witt st', 'de witt', 'dewitt'];
     const foundProjects = tags.filter(tag => projectTags.includes(tag.toLowerCase()));
     return foundProjects.map(project => project.charAt(0).toUpperCase() + project.slice(1).toLowerCase()).join(', ');
   };

@@ -90,6 +90,17 @@ const Projects = () => {
             type: 'current',
             created: new Date().toISOString()
           };
+        } else if (projectId === 'de-witt') {
+          console.log(`🌐 Creating missing De Witt St project`);
+          setIsInitializing(true); // Prevent re-render loop
+          
+          const newProject = {
+            id: 'de-witt',
+            name: 'De Witt St',
+            tags: ['de witt st'],
+            type: 'current',
+            created: new Date().toISOString()
+          };
           
           const updatedCurrentProjects = [...currentProjects, newProject];
           setCurrentProjects(updatedCurrentProjects);
@@ -189,19 +200,33 @@ const Projects = () => {
       // CRITICAL FIX: Use a more precise search approach
       console.log(`🔍 DEBUG: Searching for images with tags: [${searchTags.join(', ')}]`);
       
-      // For current projects, we need to search differently to handle name variants
+      // FIXED: Use exact tag matching for all projects to ensure precise filtering
       let searchBody;
-      if (project.type === 'current') {
-        // Use a combination of exact tag search for type and fuzzy search for project name
+      
+      if (project.type === 'current' && tab !== 'photos') {
+        // For current projects precedent/texture tabs: require BOTH project tag AND type tag
         const typeTag = tab === 'precedent' ? 'precedent' : tab === 'texture' ? 'texture' : null;
         
         if (typeTag) {
-          // Search for images that have the type tag AND contain the project name in any form
-          searchBody = {
-            searchTerm: project.name, // This will use fuzzy matching for project name
-            tags: [typeTag, ...(stage ? [stage] : []), ...(room ? [room] : [])] // Exact match for type/stage/room
-          };
-          console.log(`🔍 HYBRID SEARCH: searchTerm="${project.name}" + exact tags: [${[typeTag, ...(stage ? [stage] : []), ...(room ? [room] : [])].join(', ')}]`);
+          // Create comprehensive search tags that must ALL be present
+          const requiredTags = [];
+          
+          // Add project name variations - images should have one of these
+          if (project.id === 'de-witt') {
+            requiredTags.push('de witt st'); // Exact match for "de witt st"
+          } else {
+            requiredTags.push(project.name.toLowerCase());
+          }
+          
+          // Add type tag (precedent/texture)
+          requiredTags.push(typeTag);
+          
+          // Add stage and room filters if specified
+          if (stage) requiredTags.push(stage);
+          if (room) requiredTags.push(room);
+          
+          searchBody = { tags: requiredTags };
+          console.log(`🔍 EXACT TAG SEARCH: ALL required tags: [${requiredTags.join(', ')}]`);
         } else {
           // Photos tab - just search by project name
           searchBody = { searchTerm: project.name };
@@ -234,12 +259,13 @@ const Projects = () => {
           // Check if any images are incorrectly included
           images.slice(0, 5).forEach((img, idx) => {
             const hasProjectTag = img.tags?.some(tag => 
+              tag.toLowerCase() === 'de witt st' || 
               tag.toLowerCase().includes('de witt') || 
               tag.toLowerCase().includes('dewitt') || 
               tag.toLowerCase() === 'de-witt'
             );
             const hasTypeTag = img.tags?.some(tag => 
-              searchTags.includes(tag.toLowerCase())
+              ['precedent', 'texture'].includes(tag.toLowerCase())
             );
             console.log(`🔍 IMG ${idx + 1}: ${img.filename} | Project tag: ${hasProjectTag} | Type tags: ${hasTypeTag} | All tags: [${img.tags?.join(', ') || 'none'}]`);
           });
