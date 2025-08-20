@@ -29,15 +29,15 @@ const Projects = () => {
   // Helper function to get valid tabs for a project type
   const getValidTabs = (project) => {
     if (!project) return [];
-    // Complete projects: Final and WIP tabs, Current projects: Precedent, Texture only
-    // Photos tab removed - current projects move to Complete (Final/WIP) when tagged "complete"
-    return project.type === 'complete' ? ['final', 'wip'] : ['precedent', 'texture'];
+    // All projects have the same 3 tabs: Precedent, Texture, Photos
+    // Photos shows images tagged with "complete" + project name + optional final/wip
+    return ['precedent', 'texture', 'photos'];
   };
 
   // Helper function to get default tab for a project type
   const getDefaultTab = (project) => {
     if (!project) return 'precedent';
-    return project.type === 'complete' ? 'final' : 'precedent';
+    return 'precedent'; // All projects start with precedent tab
   };
 
   // Helper function to validate and fix tab state

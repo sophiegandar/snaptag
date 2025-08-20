@@ -341,32 +341,26 @@ class PostgresService {
         console.log('🔍 REWRITTEN POSTGRES QUERY: Required tags:', validTags);
         
         if (validTags.length > 0) {
-          // NEW APPROACH: Use subquery to count matching tags and ensure ALL are present
+          // SIMPLE AND RELIABLE: Use EXISTS for each required tag
           // This enforces strict AND logic - image must have ALL specified tags
           
-          const tagCountSubquery = `
-            (
-              SELECT COUNT(DISTINCT CASE 
-                WHEN LOWER(t2.name) = LOWER($${++paramCount}) OR LOWER(ft2.tag_name) = LOWER($${paramCount}) THEN 1 
-                ${validTags.slice(1).map(() => `WHEN LOWER(t2.name) = LOWER($${++paramCount}) OR LOWER(ft2.tag_name) = LOWER($${paramCount}) THEN 1`).join(' ')}
-                ELSE NULL 
-              END)
-              FROM image_tags it2 
-              LEFT JOIN tags t2 ON it2.tag_id = t2.id
-              LEFT JOIN focused_tags ft2 ON i.id = ft2.image_id
-              WHERE it2.image_id = i.id OR ft2.image_id = i.id
-            ) = ${validTags.length}
-          `;
-          
-          conditions.push(tagCountSubquery);
-          
-          // Add each tag twice (for regular and focused tag matching in the CASE statements)
           validTags.forEach(tag => {
             const trimmedTag = tag.toString().trim();
+            const existsCondition = `
+              EXISTS (
+                SELECT 1 FROM image_tags it2 
+                JOIN tags t2 ON it2.tag_id = t2.id 
+                WHERE it2.image_id = i.id AND LOWER(t2.name) = LOWER($${++paramCount})
+              ) OR EXISTS (
+                SELECT 1 FROM focused_tags ft2 
+                WHERE ft2.image_id = i.id AND LOWER(ft2.tag_name) = LOWER($${++paramCount})
+              )
+            `;
+            conditions.push(`(${existsCondition})`);
             params.push(trimmedTag, trimmedTag);
           });
           
-          console.log('🔍 POSTGRES AND Logic: Expecting exactly', validTags.length, 'matching tags');
+          console.log('🔍 POSTGRES AND Logic: Added', validTags.length, 'EXISTS conditions for tags:', validTags);
         }
       }
 
