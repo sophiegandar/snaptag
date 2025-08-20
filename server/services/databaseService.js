@@ -282,31 +282,56 @@ class DatabaseService {
         if (validTags.length > 0) {
           console.log('🔍 Tag filter - looking for ALL of these tags:', validTags);
           
-          console.log('🔍 Tag filter - looking for ALL of these tags:', validTags);
+          console.log('🔍 Tag filter - REWRITTEN: looking for ALL of these tags:', validTags);
           
-          // SIMPLE FIX: Use multiple EXISTS clauses - one for each required tag
+          // COMPLETE REWRITE: Use a different query structure for exact tag matching
+          // We'll rebuild the entire query to use proper tag counting
+          
+          query = `
+            SELECT DISTINCT i.*, 
+                   GROUP_CONCAT(DISTINCT t.name) AS tag_names,
+                   COUNT(DISTINCT ft.id) AS focused_tag_count
+            FROM images i
+            LEFT JOIN image_tags it ON i.id = it.image_id
+            LEFT JOIN tags t ON it.tag_id = t.id
+            LEFT JOIN focused_tags ft ON i.id = ft.image_id
+            WHERE i.id IN (
+              SELECT image_id FROM (
+                SELECT i2.id as image_id,
+                       SUM(CASE WHEN LOWER(t2.name) IN (${validTags.map(() => '?').join(',')}) THEN 1 ELSE 0 END) +
+                       SUM(CASE WHEN LOWER(ft2.tag_name) IN (${validTags.map(() => '?').join(',')}) THEN 1 ELSE 0 END) as matching_tags
+                FROM images i2
+                LEFT JOIN image_tags it2 ON i2.id = it2.image_id
+                LEFT JOIN tags t2 ON it2.tag_id = t2.id
+                LEFT JOIN focused_tags ft2 ON i2.id = ft2.image_id
+                GROUP BY i2.id
+                HAVING matching_tags >= ?
+              )
+            )
+          `;
+          
+          // Add all the tag parameters twice (for regular and focused tags)
           validTags.forEach(tag => {
             const normalizedTag = tag.toString().trim().toLowerCase();
-            
-            // Each tag must exist for this image (AND logic)
-            const tagExistsCondition = `EXISTS (
-              SELECT 1 FROM image_tags it_check 
-              JOIN tags t_check ON it_check.tag_id = t_check.id 
-              WHERE it_check.image_id = i.id AND LOWER(t_check.name) = ?
-            ) OR EXISTS (
-              SELECT 1 FROM focused_tags ft_check 
-              WHERE ft_check.image_id = i.id AND LOWER(ft_check.tag_name) = ?
-            )`;
-            
-            conditions.push(tagExistsCondition);
-            params.push(normalizedTag, normalizedTag);
+            params.push(normalizedTag);
+          });
+          validTags.forEach(tag => {
+            const normalizedTag = tag.toString().trim().toLowerCase();
+            params.push(normalizedTag);
           });
           
-          console.log('🔍 Added', validTags.length, 'tag existence conditions (ALL must be present)');
+          // Add the required count (must match ALL tags)
+          params.push(validTags.length);
+          
+          console.log(`🔍 REWRITTEN QUERY: Requires exactly ${validTags.length} matching tags`);
+          
+          // Clear conditions since we rebuilt the query
+          conditions = [];
         }
       }
 
-      if (conditions.length > 0) {
+      // Only add WHERE clause if we have non-tag conditions AND didn't rewrite the query
+      if (conditions.length > 0 && !query.includes('WHERE i.id IN')) {
         query += ' WHERE ' + conditions.join(' AND ');
       }
 
