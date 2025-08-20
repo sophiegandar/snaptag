@@ -282,21 +282,20 @@ class DatabaseService {
         if (validTags.length > 0) {
           console.log('🔍 Tag filter - looking for ALL of these tags:', validTags);
           
-          // FIXED: Use subqueries to ensure ALL tags are present on each image
-          // For each required tag, ensure the image has that specific tag
+          console.log('🔍 Tag filter - looking for ALL of these tags:', validTags);
+          
+          // SIMPLE FIX: Use multiple EXISTS clauses - one for each required tag
           validTags.forEach(tag => {
             const normalizedTag = tag.toString().trim().toLowerCase();
             
-            // This subquery ensures the image has this specific tag (either regular or focused)
-            const tagExistsCondition = `(
-              EXISTS (
-                SELECT 1 FROM image_tags it2 
-                JOIN tags t2 ON it2.tag_id = t2.id 
-                WHERE it2.image_id = i.id AND LOWER(t2.name) = ?
-              ) OR EXISTS (
-                SELECT 1 FROM focused_tags ft2 
-                WHERE ft2.image_id = i.id AND LOWER(ft2.tag_name) = ?
-              )
+            // Each tag must exist for this image (AND logic)
+            const tagExistsCondition = `EXISTS (
+              SELECT 1 FROM image_tags it_check 
+              JOIN tags t_check ON it_check.tag_id = t_check.id 
+              WHERE it_check.image_id = i.id AND LOWER(t_check.name) = ?
+            ) OR EXISTS (
+              SELECT 1 FROM focused_tags ft_check 
+              WHERE ft_check.image_id = i.id AND LOWER(ft_check.tag_name) = ?
             )`;
             
             conditions.push(tagExistsCondition);
