@@ -172,30 +172,10 @@ const Projects = () => {
       
       console.log(`🔎 FINAL SEARCH: Looking for images with ALL tags: [${searchTags.join(', ')}]`);
       
-      // For current projects, use searchTerm to leverage skipWords fix for short words like "de"
-      let searchBody;
-      if (project.type === 'current') {
-        // Use text search for project name to avoid "de" matching "precedent"  
-        const projectSearchTerm = project.name;
-        const requiredTags = [];
-        
-        // Add type-specific tags that must be present
-        if (tab === 'precedent') requiredTags.push('precedent');
-        if (tab === 'texture') requiredTags.push('texture');
-        if (stage) requiredTags.push(stage);
-        if (room) requiredTags.push(room);
-        
-        searchBody = {
-          searchTerm: projectSearchTerm,
-          tags: requiredTags.length > 0 ? requiredTags : undefined
-        };
-        
-        console.log(`🔎 TEXT SEARCH: searchTerm="${projectSearchTerm}", required tags: [${requiredTags.join(', ')}]`);
-      } else {
-        // Complete projects use exact tag matching
-        searchBody = { tags: searchTags };
-        console.log(`🔎 TAG SEARCH: tags: [${searchTags.join(', ')}]`);
-      }
+      // TEMPORARY DEBUG: Let's see what images actually have these tags
+      console.log(`🔍 DEBUG: Searching for images with tags: [${searchTags.join(', ')}]`);
+      
+      const searchBody = { tags: searchTags };
       
       const response = await apiCall('/api/images/search', {
         method: 'POST',
@@ -214,6 +194,19 @@ const Projects = () => {
             filename: img.filename,
             tags: img.tags
           })));
+          
+          // Check if any images are incorrectly included
+          images.slice(0, 5).forEach((img, idx) => {
+            const hasProjectTag = img.tags?.some(tag => 
+              tag.toLowerCase().includes('de witt') || 
+              tag.toLowerCase().includes('dewitt') || 
+              tag.toLowerCase() === 'de-witt'
+            );
+            const hasTypeTag = img.tags?.some(tag => 
+              searchTags.includes(tag.toLowerCase())
+            );
+            console.log(`🔍 IMG ${idx + 1}: ${img.filename} | Project tag: ${hasProjectTag} | Type tags: ${hasTypeTag} | All tags: [${img.tags?.join(', ') || 'none'}]`);
+          });
         }
         
         // Store images with project, tab, stage, and room key
@@ -380,10 +373,59 @@ const Projects = () => {
     );
   };
 
+  // CurrentProjectThumbnail component for colored squares
+  const CurrentProjectThumbnail = ({ project }) => {
+    // Generate a consistent color based on project name
+    const getProjectColor = (name) => {
+      const colors = [
+        'bg-blue-500',
+        'bg-green-500', 
+        'bg-purple-500',
+        'bg-red-500',
+        'bg-yellow-500',
+        'bg-indigo-500',
+        'bg-pink-500',
+        'bg-teal-500'
+      ];
+      
+      // Use project name to generate consistent color
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      return colors[Math.abs(hash) % colors.length];
+    };
+
+    return (
+      <div className="group cursor-pointer" onClick={() => navigate(`/projects/current/${project.id}`)}>
+        <div className="relative overflow-hidden shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 aspect-square w-24 h-24">
+          {/* Colored square with project name */}
+          <div className={`w-full h-full ${getProjectColor(project.name)} flex items-center justify-center`}>
+            <span className="text-white font-bold text-sm text-center px-2 leading-tight">
+              {project.name}
+            </span>
+          </div>
+          
+          {/* Hover Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end">
+            <div className="p-2 text-white">
+              <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{color: '#C9D468'}}>
+                Current
+              </div>
+              <div className="text-xs font-medium text-white/90">
+                {project.name}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderOverview = () => (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       {/* Complete Projects Section */}
-      <div>
+      <div className="bg-gray-100 p-6 rounded-lg">
         <div className="flex items-center justify-center mb-6">
           <div 
             className="flex items-center space-x-3 cursor-pointer hover:text-green-700 transition-colors"
@@ -400,7 +442,7 @@ const Projects = () => {
       </div>
 
       {/* Current Projects Section */}
-      <div>
+      <div className="bg-gray-100 p-6 rounded-lg">
         <div className="flex items-center justify-center mb-6">
           <div 
             className="flex items-center space-x-3 cursor-pointer hover:text-blue-700 transition-colors"
@@ -412,7 +454,7 @@ const Projects = () => {
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {currentProjects.map(project => (
-            <ProjectThumbnail key={project.id} project={project} />
+            <CurrentProjectThumbnail key={project.id} project={project} />
           ))}
           
           {currentProjects.length === 0 && (
@@ -579,7 +621,12 @@ const Projects = () => {
                 const tags = image.tags || [];
                 const categoryTags = ['brick', 'carpet', 'concrete', 'fabric', 'metal', 'stone', 'tile', 'wood', 'general', 'art', 'bathrooms', 'details', 'doors', 'exteriors', 'furniture', 'interiors', 'joinery', 'kitchens', 'landscape', 'lighting', 'spatial', 'stairs', 'structure'];
                 const foundCategory = tags.find(tag => categoryTags.includes(tag.toLowerCase()));
-                return foundCategory ? foundCategory.charAt(0).toUpperCase() + foundCategory.slice(1).toLowerCase() : 'General';
+                const result = foundCategory ? foundCategory.charAt(0).toUpperCase() + foundCategory.slice(1).toLowerCase() : 'General';
+                
+                // Debug log for category detection
+                console.log(`🏷️ CATEGORY DEBUG for ${image.filename}: tags=[${tags.join(', ')}], found=${foundCategory}, result=${result}`);
+                
+                return result;
               };
 
               const getAllTags = () => {
