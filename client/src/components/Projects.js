@@ -137,7 +137,7 @@ const Projects = () => {
         // Complete projects use their predefined tags
         searchTags = [...project.tags]; // Use spread to avoid mutations
       } else {
-        // Current projects search by project name
+        // Current projects - we'll use text search instead of tag search
         searchTags = [project.name.toLowerCase()];
       }
       
@@ -172,24 +172,69 @@ const Projects = () => {
       
       console.log(`🔎 FINAL SEARCH: Looking for images with ALL tags: [${searchTags.join(', ')}]`);
       
+      // For current projects, use searchTerm to leverage skipWords fix for short words like "de"
+      let searchBody;
+      if (project.type === 'current') {
+        // Use text search for project name to avoid "de" matching "precedent"  
+        const projectSearchTerm = project.name;
+        const requiredTags = [];
+        
+        // Add type-specific tags that must be present
+        if (tab === 'precedent') requiredTags.push('precedent');
+        if (tab === 'texture') requiredTags.push('texture');
+        if (stage) requiredTags.push(stage);
+        if (room) requiredTags.push(room);
+        
+        searchBody = {
+          searchTerm: projectSearchTerm,
+          tags: requiredTags.length > 0 ? requiredTags : undefined
+        };
+        
+        console.log(`🔎 TEXT SEARCH: searchTerm="${projectSearchTerm}", required tags: [${requiredTags.join(', ')}]`);
+      } else {
+        // Complete projects use exact tag matching
+        searchBody = { tags: searchTags };
+        console.log(`🔎 TAG SEARCH: tags: [${searchTags.join(', ')}]`);
+      }
+      
       const response = await apiCall('/api/images/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tags: searchTags
-        })
+        body: JSON.stringify(searchBody)
       });
       
       if (response.ok) {
         const images = await response.json();
         console.log(`✅ Found ${images?.length || 0} ${tab} images for ${project.name}`);
         
+        // Debug: Log first few images to verify they match the search
+        if (images.length > 0) {
+          console.log(`🔍 RESULT VERIFICATION: First 3 images:`, images.slice(0, 3).map(img => ({
+            id: img.id,
+            filename: img.filename,
+            tags: img.tags
+          })));
+        }
+        
         // Store images with project, tab, stage, and room key
         const key = `${project.id}-${tab}-${stage}-${room}`;
-        setProjectImages(prev => ({
-          ...prev,
-          [key]: images || []
-        }));
+        
+        // Clear any old cache entries for this project before setting new ones
+        setProjectImages(prev => {
+          const updated = { ...prev };
+          
+          // Remove any existing cache for this exact key
+          if (updated[key]) {
+            console.log(`🗑️ CACHE: Clearing existing cache for ${key}`);
+            delete updated[key];
+          }
+          
+          // Set new cache
+          updated[key] = images || [];
+          console.log(`💾 CACHE: Saved ${images.length} images to cache key: ${key}`);
+          
+          return updated;
+        });
         
         return images || [];
       } else {
