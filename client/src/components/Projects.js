@@ -21,6 +21,7 @@ const Projects = () => {
   const [currentProjects, setCurrentProjects] = useState([]);
   const [newProjectName, setNewProjectName] = useState('');
   const [showNewProjectForm, setShowNewProjectForm] = useState(false);
+  const [projectFilter, setProjectFilter] = useState('all'); // 'all', 'current', 'complete'
   const [stageFilter, setStageFilter] = useState('');
   const [roomFilter, setRoomFilter] = useState('');
   const [forceRefresh, setForceRefresh] = useState(0);
@@ -576,6 +577,19 @@ const Projects = () => {
     );
   };
 
+  const getFilteredProjects = () => {
+    const allProjects = [...completeProjects, ...currentProjects];
+    
+    switch (projectFilter) {
+      case 'current':
+        return currentProjects;
+      case 'complete':
+        return completeProjects;
+      default:
+        return allProjects;
+    }
+  };
+
   const renderOverview = () => (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       {/* Complete Projects Section */}
@@ -761,7 +775,16 @@ const Projects = () => {
         {/* Project Images - Force re-render with key */}
         <div key={`${activeProject.id}-${activeProjectTab}-${stageFilter}-${roomFilter}-${forceRefresh}`}>
           {console.log(`🔍 RENDER CHECK: currentImages.length = ${currentImages.length}, showing images:`, currentImages.slice(0, 2))}
-          {currentImages.length > 0 ? (
+          {/* Loading State - Show while waiting for API response */}
+          {projectImages[cacheKey] === null ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Loading {activeProjectTab} images...</h3>
+              <p className="text-gray-500">
+                Searching for {activeProject.name} {activeProjectTab}
+              </p>
+            </div>
+          ) : currentImages.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {currentImages.map((image, index) => {
               // Helper functions for image metadata display
@@ -835,17 +858,6 @@ const Projects = () => {
             <h3 className="text-lg font-medium text-gray-900 mb-2">No {activeProjectTab} images</h3>
             <p className="text-gray-500">
               No images found for {activeProject.name} {activeProjectTab}
-            </p>
-          </div>
-        )}
-        
-        {/* Loading State - Show while waiting for API response */}
-        {projectImages[cacheKey] === null && (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Loading {activeProjectTab} images...</h3>
-            <p className="text-gray-500">
-              Searching for {activeProject.name} {activeProjectTab}
             </p>
           </div>
         )}
