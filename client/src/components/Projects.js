@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { FolderOpen, Image as ImageIcon, Plus, CheckCircle, Clock, ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { apiCall } from '../utils/apiConfig';
 import { useMode } from '../context/ModeContext';
 
 const Projects = () => {
   const { canEdit } = useMode();
   const navigate = useNavigate();
+  const params = useParams();
+  const location = useLocation();
   const [viewMode, setViewMode] = useState('overview'); // 'overview', 'complete', 'current', 'project'
   const [activeProject, setActiveProject] = useState(null);
   const [activeProjectTab, setActiveProjectTab] = useState('photos'); // 'precedent', 'texture', 'photos'
@@ -31,7 +33,40 @@ const Projects = () => {
 
   useEffect(() => {
     loadProjects();
+    handleUrlRouting();
   }, []);
+
+  useEffect(() => {
+    handleUrlRouting();
+  }, [location.pathname, params]);
+
+  const handleUrlRouting = () => {
+    const path = location.pathname;
+    
+    if (path === '/projects/complete') {
+      setViewMode('complete');
+    } else if (path.startsWith('/projects/complete/')) {
+      const projectId = params.projectId || path.split('/').pop();
+      const project = completeProjects.find(p => p.id === projectId) || defaultCompleteProjects.find(p => p.id === projectId);
+      if (project) {
+        setActiveProject(project);
+        setViewMode('project');
+        loadProjectImages(project, 'photos');
+      }
+    } else if (path === '/projects/current') {
+      setViewMode('current');
+    } else if (path.startsWith('/projects/current/')) {
+      const projectId = params.projectId || path.split('/').pop();
+      const project = currentProjects.find(p => p.id === projectId);
+      if (project) {
+        setActiveProject(project);
+        setViewMode('project');
+        loadProjectImages(project, 'precedent');
+      }
+    } else {
+      setViewMode('overview');
+    }
+  };
 
   const loadProjects = async () => {
     try {
@@ -61,29 +96,42 @@ const Projects = () => {
       
       if (project.type === 'complete') {
         // Complete projects use their predefined tags
-        searchTags = project.tags;
+        searchTags = [...project.tags]; // Use spread to avoid mutations
       } else {
         // Current projects search by project name
         searchTags = [project.name.toLowerCase()];
       }
       
+      console.log(`📊 Initial search tags for ${project.name}:`, searchTags);
+      
       // Add tab-specific filtering - MUST have BOTH project tag AND type tag
       if (tab === 'precedent') {
         searchTags.push('precedent');
+        console.log(`🏷️ Added 'precedent' tag - now searching for ALL of: [${searchTags.join(', ')}]`);
       } else if (tab === 'texture') {
-        searchTags.push('texture');  
+        searchTags.push('texture');
+        console.log(`🏷️ Added 'texture' tag - now searching for ALL of: [${searchTags.join(', ')}]`);  
       } else if (tab === 'photos') {
         if (project.type === 'complete') {
           // Photos tab for complete projects - already includes complete tag
+          console.log(`📸 Photos tab for complete project - using tags: [${searchTags.join(', ')}]`);
         } else {
           // For current projects, photos might not have specific tags yet
-          // Just use project name for now
+          console.log(`📸 Photos tab for current project - using tags: [${searchTags.join(', ')}]`);
         }
       }
 
       // Add stage and room filters if specified
-      if (stage) searchTags.push(stage);
-      if (room) searchTags.push(room);
+      if (stage) {
+        searchTags.push(stage);
+        console.log(`🏗️ Added stage filter '${stage}' - now: [${searchTags.join(', ')}]`);
+      }
+      if (room) {
+        searchTags.push(room);
+        console.log(`🏠 Added room filter '${room}' - now: [${searchTags.join(', ')}]`);
+      }
+      
+      console.log(`🔎 FINAL SEARCH: Looking for images with ALL tags: [${searchTags.join(', ')}]`);
       
       const response = await apiCall('/api/images/search', {
         method: 'POST',
@@ -186,7 +234,7 @@ const Projects = () => {
         }}
         className="relative group cursor-pointer"
       >
-        <div className="bg-white overflow-hidden shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 aspect-square">
+        <div className="bg-white overflow-hidden shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 aspect-square w-24 h-24">
           <div className="relative w-full h-full overflow-hidden">
             {loading ? (
               <div className="w-full h-full bg-gray-100 flex items-center justify-center">
@@ -233,7 +281,10 @@ const Projects = () => {
       {/* Complete Projects Section */}
       <div>
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-3">
+          <div 
+            className="flex items-center space-x-3 cursor-pointer hover:text-green-700 transition-colors"
+            onClick={() => navigate('/projects/complete')}
+          >
             <CheckCircle className="h-6 w-6 text-green-600" />
             <h2 className="text-xl font-semibold text-gray-900">Complete Projects</h2>
           </div>
@@ -248,7 +299,10 @@ const Projects = () => {
       {/* Current Projects Section */}
       <div>
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-3">
+          <div 
+            className="flex items-center space-x-3 cursor-pointer hover:text-blue-700 transition-colors"
+            onClick={() => navigate('/projects/current')}
+          >
             <Clock className="h-6 w-6 text-blue-600" />
             <h2 className="text-xl font-semibold text-gray-900">Current Projects</h2>
           </div>
@@ -346,7 +400,7 @@ const Projects = () => {
               )}
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">{activeProject.name}</h1>
+              <h1 className="text-xl font-bold text-gray-900">{activeProject.name}</h1>
             </div>
           </div>
         </div>
@@ -470,10 +524,10 @@ const Projects = () => {
   return (
     <div className="max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6">
         <div className="flex items-center space-x-2 mb-2">
-          <FolderOpen className="h-6 w-6 text-blue-600" />
-          <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
+          <FolderOpen className="h-5 w-5 text-blue-600" />
+          <h1 className="text-xl font-bold text-gray-900">Projects</h1>
         </div>
       </div>
 
