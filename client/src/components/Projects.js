@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FolderOpen, Image as ImageIcon, Plus, CheckCircle, Clock, ArrowLeft } from 'lucide-react';
+import { FolderOpen, Image as ImageIcon, Plus, CheckCircle, Clock, ArrowLeft, AlertTriangle, X } from 'lucide-react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { apiCall } from '../utils/apiConfig';
@@ -12,7 +12,9 @@ const Projects = () => {
   const location = useLocation();
   const [viewMode, setViewMode] = useState('overview'); // 'overview', 'complete', 'current', 'project'
   const [activeProject, setActiveProject] = useState(null);
-  const [activeProjectTab, setActiveProjectTab] = useState('photos'); // 'precedent', 'texture', 'photos'
+  const [activeProjectTab, setActiveProjectTab] = useState('photos'); // 'precedent', 'texture', 'photos', 'final', 'wip'
+  const [error, setError] = useState(null);
+  const [apiLoading, setApiLoading] = useState(false);
   const [projectImages, setProjectImages] = useState({});
   const [loading, setLoading] = useState(true);
   const [completeProjects, setCompleteProjects] = useState([]);
@@ -23,6 +25,25 @@ const Projects = () => {
   const [roomFilter, setRoomFilter] = useState('');
   const [forceRefresh, setForceRefresh] = useState(0);
   const [isInitializing, setIsInitializing] = useState(false);
+
+  // Helper function to get valid tabs for a project type
+  const getValidTabs = (project) => {
+    if (!project) return [];
+    return project.type === 'complete' ? ['final', 'wip'] : ['precedent', 'texture', 'photos'];
+  };
+
+  // Helper function to get default tab for a project type
+  const getDefaultTab = (project) => {
+    if (!project) return 'photos';
+    return project.type === 'complete' ? 'final' : 'precedent';
+  };
+
+  // Helper function to validate and fix tab state
+  const validateAndFixTab = (project, currentTab) => {
+    if (!project) return 'photos';
+    const validTabs = getValidTabs(project);
+    return validTabs.includes(currentTab) ? currentTab : getDefaultTab(project);
+  };
 
   // Default projects that auto-generate from tags
   const defaultCompleteProjects = [
@@ -43,39 +64,65 @@ const Projects = () => {
     if (!loading && !isInitializing) {
       handleUrlRouting();
     }
-  }, [location.pathname, params.projectId, loading, isInitializing]);
+  }, [location.pathname, params.projectId, params.tabId, loading, isInitializing]);
 
   const handleUrlRouting = () => {
     const path = location.pathname;
     const projectId = params.projectId;
+    const tabId = params.tabId;
     
-    console.log(`🌐 URL ROUTING: path=${path}, projectId=${projectId}`);
+    console.log(`🌐 URL ROUTING: path=${path}, projectId=${projectId}, tabId=${tabId}`);
     
     if (path === '/projects/complete') {
       console.log(`🌐 Setting view to complete`);
       setViewMode('complete');
     } else if (path.startsWith('/projects/complete/') && projectId) {
-      console.log(`🌐 Loading complete project: ${projectId}`);
+      console.log(`🌐 Loading complete project: ${projectId}, tab: ${tabId}`);
       const project = completeProjects.find(p => p.id === projectId) || defaultCompleteProjects.find(p => p.id === projectId);
       if (project) {
+        console.log(`🌐 Found project:`, project);
         setActiveProject(project);
         setViewMode('project');
-        setActiveProjectTab('final'); // Default to final for complete projects
-        loadProjectImages(project, 'final');
+        
+        // URL-based tab routing with fallback
+        const validTabs = getValidTabs(project);
+        const selectedTab = tabId && validTabs.includes(tabId) ? tabId : getDefaultTab(project);
+        
+        // If URL doesn't have tab or has invalid tab, redirect to include correct tab
+        if (!tabId || !validTabs.includes(tabId)) {
+          console.log(`🌐 Redirecting to /projects/complete/${projectId}/${selectedTab}`);
+          navigate(`/projects/complete/${projectId}/${selectedTab}`, { replace: true });
+          return;
+        }
+        
+        setActiveProjectTab(selectedTab);
+        loadProjectImages(project, selectedTab);
       }
     } else if (path === '/projects/current') {
       console.log(`🌐 Setting view to current`);
       setViewMode('current');
     } else if (path.startsWith('/projects/current/') && projectId) {
-      console.log(`🌐 Loading current project: ${projectId}`);
+      console.log(`🌐 Loading current project: ${projectId}, tab: ${tabId}`);
       console.log(`🌐 Available current projects:`, currentProjects.map(p => p.id));
       const project = currentProjects.find(p => p.id === projectId);
       if (project) {
         console.log(`🌐 Found project:`, project);
         setActiveProject(project);
         setViewMode('project');
-        setActiveProjectTab('precedent'); // Default to precedent for current projects
-        loadProjectImages(project, 'precedent');
+        
+        // URL-based tab routing with fallback
+        const validTabs = getValidTabs(project);
+        const selectedTab = tabId && validTabs.includes(tabId) ? tabId : getDefaultTab(project);
+        
+        // If URL doesn't have tab or has invalid tab, redirect to include correct tab
+        if (!tabId || !validTabs.includes(tabId)) {
+          console.log(`🌐 Redirecting to /projects/current/${projectId}/${selectedTab}`);
+          navigate(`/projects/current/${projectId}/${selectedTab}`, { replace: true });
+          return;
+        }
+        
+        setActiveProjectTab(selectedTab);
+        loadProjectImages(project, selectedTab);
       } else {
         console.log(`🌐 Project ${projectId} not found in current projects`);
         
@@ -109,8 +156,10 @@ const Projects = () => {
           
           setActiveProject(newProject);
           setViewMode('project');
-          setActiveProjectTab('precedent');
-          loadProjectImages(newProject, 'precedent');
+          
+          // Redirect to proper URL with default tab
+          const defaultTab = getDefaultTab(newProject);
+          navigate(`/projects/current/${projectId}/${defaultTab}`, { replace: true });
           
           // Allow routing again after a brief delay
           setTimeout(() => setIsInitializing(false), 100);
@@ -132,10 +181,23 @@ const Projects = () => {
       // Load complete projects (those with 'complete' tag)
       setCompleteProjects(defaultCompleteProjects);
       
-      // Load current projects from localStorage or API (for now, use localStorage)
-      const savedCurrentProjects = localStorage.getItem('snaptag-current-projects');
-      if (savedCurrentProjects) {
-        setCurrentProjects(JSON.parse(savedCurrentProjects));
+      // Load current projects from localStorage with error handling
+      try {
+        const savedCurrentProjects = localStorage.getItem('snaptag-current-projects');
+        if (savedCurrentProjects) {
+          const parsed = JSON.parse(savedCurrentProjects);
+          // Validate the structure
+          if (Array.isArray(parsed) && parsed.every(p => p.id && p.name && p.type)) {
+            setCurrentProjects(parsed);
+            console.log(`✅ Loaded ${parsed.length} current projects from localStorage`);
+          } else {
+            console.warn('⚠️ Invalid current projects data in localStorage, clearing...');
+            localStorage.removeItem('snaptag-current-projects');
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error loading current projects from localStorage:', error);
+        localStorage.removeItem('snaptag-current-projects');
       }
       
     } catch (error) {
@@ -146,16 +208,32 @@ const Projects = () => {
   };
 
   const loadProjectImages = async (project, tab = 'photos', stage = '', room = '') => {
+    // FAILSAFE: Validate inputs
+    if (!project || !project.id || !project.name) {
+      console.error('❌ Invalid project data:', project);
+      setError('Invalid project data');
+      return [];
+    }
+
+    // FAILSAFE: Validate and fix tab
+    const validTab = validateAndFixTab(project, tab);
+    if (validTab !== tab) {
+      console.warn(`⚠️ Invalid tab "${tab}" for project type "${project.type}", using "${validTab}"`);
+      tab = validTab;
+    }
+
     const cacheKey = `${project.id}-${tab}-${stage}-${room}`;
     
     // Check if we already have cached results
-    if (projectImages[cacheKey]) {
+    if (projectImages[cacheKey] && Array.isArray(projectImages[cacheKey])) {
       console.log(`💨 CACHE HIT: Using cached images for ${cacheKey}`);
       return projectImages[cacheKey];
     }
     
     // Set loading state immediately
     setProjectImages(prev => ({ ...prev, [cacheKey]: null }));
+    setApiLoading(true);
+    setError(null);
     
     try {
       console.log(`🔍 Loading ${tab} images for project: ${project.name}`, { stage, room });
@@ -320,12 +398,27 @@ const Projects = () => {
         
         return images || [];
       } else {
-        console.warn(`Failed to load ${tab} images for ${project.name}`);
+        console.warn(`⚠️ API request failed for ${project.name} ${tab}: ${response.status}`);
+        const errorMessage = `Failed to load ${tab} images (${response.status})`;
+        setError(errorMessage);
+        
+        // Store empty array in cache to prevent retry loops
+        const key = `${project.id}-${tab}-${stage}-${room}`;
+        setProjectImages(prev => ({ ...prev, [key]: [] }));
         return [];
       }
     } catch (error) {
-      console.error(`Error loading ${tab} images for ${project.name}:`, error);
+      console.error(`❌ Error loading ${tab} images for ${project.name}:`, error);
+      const errorMessage = `Failed to load ${tab} images: ${error.message}`;
+      setError(errorMessage);
+      
+      // Store empty array in cache to prevent retry loops
+      const key = `${project.id}-${tab}-${stage}-${room}`;
+      setProjectImages(prev => ({ ...prev, [key]: [] }));
+      
       return [];
+    } finally {
+      setApiLoading(false);
     }
   };
 
@@ -544,37 +637,17 @@ const Projects = () => {
         {/* Project Tabs */}
         <div className="border-b border-gray-200 mb-6">
           <nav className="-mb-px flex space-x-8">
-            {(activeProject.type === 'complete' ? ['final', 'wip'] : ['precedent', 'texture', 'photos']).map((tab) => (
+            {getValidTabs(activeProject).map((tab) => (
               <button
                 key={tab}
                 onClick={() => {
                   console.log(`🔄 TAB SWITCH: From ${activeProjectTab} to ${tab}`);
                   
-                  // CRITICAL: Clear everything BEFORE setting new tab state
-                  setProjectImages(prev => {
-                    const updated = { ...prev };
-                    // Clear all keys for this project to prevent any cache contamination
-                    Object.keys(updated).forEach(key => {
-                      if (key.startsWith(`${activeProject.id}-`)) {
-                        delete updated[key];
-                        console.log(`🗑️ CACHE: Deleted cache key ${key}`);
-                      }
-                    });
-                    return updated;
-                  });
-                  
-                  // Force immediate re-render with new state
-                  setForceRefresh(prev => prev + 1);
-                  
-                  // Set all new states atomically
-                  setActiveProjectTab(tab);
-                  setStageFilter('');
-                  setRoomFilter('');
-                  
-                  // Load fresh data for new tab
-                  setTimeout(() => {
-                    loadProjectImages(activeProject, tab, '', '');
-                  }, 0);
+                  // Navigate to new URL with tab
+                  const projectType = activeProject.type === 'complete' ? 'complete' : 'current';
+                  const newUrl = `/projects/${projectType}/${activeProject.id}/${tab}`;
+                  console.log(`🌐 Navigating to: ${newUrl}`);
+                  navigate(newUrl);
                 }}
                 className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap capitalize ${
                   activeProjectTab === tab
@@ -587,6 +660,28 @@ const Projects = () => {
             ))}
           </nav>
         </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <AlertTriangle className="h-5 w-5 text-red-400" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-800">{error}</p>
+              </div>
+              <div className="ml-auto">
+                <button
+                  onClick={() => setError(null)}
+                  className="text-red-400 hover:text-red-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Stage and Room Filters (for precedent and texture tabs only) */}
         {activeProject.type === 'current' && (activeProjectTab === 'precedent' || activeProjectTab === 'texture') && (

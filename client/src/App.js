@@ -133,7 +133,9 @@ function AppContent() {
           <Route path="/projects/complete" element={<Projects />} />
           <Route path="/projects/current" element={<Projects />} />
           <Route path="/projects/complete/:projectId" element={<Projects />} />
+          <Route path="/projects/complete/:projectId/:tabId" element={<Projects />} />
           <Route path="/projects/current/:projectId" element={<Projects />} />
+          <Route path="/projects/current/:projectId/:tabId" element={<Projects />} />
           {canAccessSettings && <Route path="/settings" element={<Settings />} />}
         </Routes>
       </main>
