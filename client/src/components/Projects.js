@@ -107,6 +107,20 @@ const Projects = () => {
       const project = currentProjects.find(p => p.id === projectId);
       if (project) {
         console.log(`🌐 Found project:`, project);
+        
+        // CRITICAL FIX: Update project name if it's the old "De Witt" name
+        if (project.id === 'de-witt' && project.name !== 'De Witt St') {
+          console.log(`🔧 Updating project name from "${project.name}" to "De Witt St"`);
+          project.name = 'De Witt St';
+          
+          // Update in currentProjects array and localStorage
+          const updatedProjects = currentProjects.map(p => 
+            p.id === 'de-witt' ? { ...p, name: 'De Witt St' } : p
+          );
+          setCurrentProjects(updatedProjects);
+          localStorage.setItem('snaptag-current-projects', JSON.stringify(updatedProjects));
+        }
+        
         setActiveProject(project);
         setViewMode('project');
         
