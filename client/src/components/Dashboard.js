@@ -125,6 +125,15 @@ const Dashboard = () => {
   const [editingCategory, setEditingCategory] = useState(null);
   const [editingType, setEditingType] = useState(null);
 
+  // Pro Workflow state
+  const [scanning, setScanning] = useState(false);
+  const [scanResults, setScanResults] = useState({
+    archicadReady: 0,
+    indesignReady: 0,
+    totalScanned: 0,
+    lastScan: null
+  });
+
   // Projects functions
   const loadCurrentProjects = () => {
     try {
