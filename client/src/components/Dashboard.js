@@ -749,13 +749,82 @@ const Dashboard = () => {
       return;
     }
 
+    const normalizedNewName = newName.trim().toLowerCase();
+    const currentTag = tags.find(t => t.id === tagId);
+    
+    if (!currentTag) {
+      toast.error('Tag not found');
+      return;
+    }
+
+    // Check if we're trying to rename to an existing tag
+    const existingTag = tags.find(t => t.name.toLowerCase() === normalizedNewName && t.id !== tagId);
+    
+    if (existingTag) {
+      // Offer to merge the tags
+      const confirmed = window.confirm(
+        `A tag named "${existingTag.name}" already exists.\n\n` +
+        `Would you like to MERGE "${currentTag.name}" into "${existingTag.name}"?\n\n` +
+        `This will:\n` +
+        `• Move all ${currentTag.usage_count || 0} images from "${currentTag.name}" to "${existingTag.name}"\n` +
+        `• Delete the "${currentTag.name}" tag\n` +
+        `• Keep the "${existingTag.name}" tag\n\n` +
+        `Click OK to merge, or Cancel to choose a different name.`
+      );
+      
+      if (!confirmed) {
+        return; // User cancelled, stay in edit mode
+      }
+      
+      // User confirmed, proceed with merge
+      try {
+        const response = await apiCall('/api/tags/merge', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            sourceTagId: tagId, 
+            targetTagId: existingTag.id 
+          }),
+        });
+
+        if (!response.ok) throw new Error('Failed to merge tags');
+
+        const result = await response.json();
+        
+        // Remove the source tag from local state and update target tag usage count
+        setTags(prev => {
+          const filtered = prev.filter(t => t.id !== tagId);
+          return filtered.map(t => 
+            t.id === existingTag.id 
+              ? { ...t, usage_count: (t.usage_count || 0) + (currentTag.usage_count || 0) }
+              : t
+          ).sort((a, b) => a.name.localeCompare(b.name));
+        });
+        
+        setEditingTag(null);
+        toast.success(
+          `Successfully merged "${currentTag.name}" into "${existingTag.name}". ` +
+          `${result.mergedImageCount} images updated.`
+        );
+        
+      } catch (error) {
+        console.error('Error merging tags:', error);
+        toast.error('Failed to merge tags');
+      }
+      
+      return;
+    }
+
+    // No existing tag found, proceed with normal rename
     try {
       const response = await apiCall(`/api/tags/${tagId}/rename`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ newName: newName.trim() }),
+        body: JSON.stringify({ newName: normalizedNewName }),
       });
 
       if (response.status === 409) {
@@ -768,7 +837,7 @@ const Dashboard = () => {
       // Update the tag in the local state
       setTags(prev => 
         prev.map(tag => 
-          tag.id === tagId ? { ...tag, name: newName.trim().toLowerCase() } : tag
+          tag.id === tagId ? { ...tag, name: normalizedNewName } : tag
         ).sort((a, b) => a.name.localeCompare(b.name))
       );
       setEditingTag(null);

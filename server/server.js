@@ -1544,6 +1544,111 @@ app.post('/api/tags', async (req, res) => {
   }
 });
 
+// Merge two tags (moves all images from source tag to target tag)
+app.post('/api/tags/merge', async (req, res) => {
+  try {
+    const { sourceTagId, targetTagId } = req.body;
+    
+    if (!sourceTagId || !targetTagId) {
+      return res.status(400).json({ error: 'Both sourceTagId and targetTagId are required' });
+    }
+    
+    if (sourceTagId === targetTagId) {
+      return res.status(400).json({ error: 'Cannot merge a tag with itself' });
+    }
+    
+    console.log(`🔄 Merging tag ${sourceTagId} into ${targetTagId}`);
+    
+    // Get both tags to verify they exist
+    const sourceTagResult = await databaseService.query('SELECT * FROM tags WHERE id = $1', [sourceTagId]);
+    const targetTagResult = await databaseService.query('SELECT * FROM tags WHERE id = $1', [targetTagId]);
+    
+    if (sourceTagResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Source tag not found' });
+    }
+    
+    if (targetTagResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Target tag not found' });
+    }
+    
+    const sourceTag = sourceTagResult.rows[0];
+    const targetTag = targetTagResult.rows[0];
+    
+    console.log(`🔄 Merging "${sourceTag.name}" into "${targetTag.name}"`);
+    
+    // Get count of images that will be affected
+    const imageCountResult = await databaseService.query(`
+      SELECT COUNT(DISTINCT image_id) as count
+      FROM image_tags 
+      WHERE tag_id = $1
+    `, [sourceTagId]);
+    
+    const affectedImageCount = imageCountResult.rows[0].count;
+    console.log(`📊 Found ${affectedImageCount} images to merge`);
+    
+    // Start transaction
+    const client = await databaseService.pool.connect();
+    try {
+      await client.query('BEGIN');
+      
+      // Update all image_tags that reference the source tag to reference the target tag
+      // But first, check for duplicates (images that already have both tags)
+      const duplicateResult = await client.query(`
+        SELECT DISTINCT st.image_id
+        FROM image_tags st
+        JOIN image_tags tt ON st.image_id = tt.image_id
+        WHERE st.tag_id = $1 AND tt.tag_id = $2
+      `, [sourceTagId, targetTagId]);
+      
+      const duplicateImageIds = duplicateResult.rows.map(row => row.image_id);
+      console.log(`🔍 Found ${duplicateImageIds.length} images that already have both tags`);
+      
+      // For images that have both tags, just remove the source tag reference
+      if (duplicateImageIds.length > 0) {
+        await client.query(`
+          DELETE FROM image_tags 
+          WHERE tag_id = $1 AND image_id = ANY($2)
+        `, [sourceTagId, duplicateImageIds]);
+        console.log(`🗑️ Removed duplicate source tag references for ${duplicateImageIds.length} images`);
+      }
+      
+      // For images that only have the source tag, update to target tag
+      await client.query(`
+        UPDATE image_tags 
+        SET tag_id = $2 
+        WHERE tag_id = $1 AND image_id NOT IN (
+          SELECT image_id FROM image_tags WHERE tag_id = $2
+        )
+      `, [sourceTagId, targetTagId]);
+      
+      // Delete the source tag
+      await client.query('DELETE FROM tags WHERE id = $1', [sourceTagId]);
+      
+      await client.query('COMMIT');
+      
+      console.log(`✅ Successfully merged "${sourceTag.name}" into "${targetTag.name}"`);
+      
+      res.json({ 
+        success: true, 
+        message: `Successfully merged "${sourceTag.name}" into "${targetTag.name}"`,
+        affectedImageCount,
+        duplicateImageCount: duplicateImageIds.length,
+        mergedImageCount: affectedImageCount - duplicateImageIds.length
+      });
+      
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+    
+  } catch (error) {
+    console.error('❌ Error merging tags:', error);
+    res.status(500).json({ error: 'Failed to merge tags' });
+  }
+});
+
 // File locking mechanism to prevent concurrent moves
 const fileMoveLocks = new Set();
 
