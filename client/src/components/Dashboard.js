@@ -4,13 +4,14 @@ import { useMode } from '../context/ModeContext';
 import { toast } from 'react-toastify';
 
 // Inline editing components
-const EditCategoryFormInline = ({ category, onSave, onCancel }) => {
+const EditCategoryFormInline = ({ category, onSave, onCancel, types }) => {
   const [name, setName] = useState(category.name);
   const [description, setDescription] = useState(category.description);
+  const [type, setType] = useState(category.type || '');
 
   const handleSave = () => {
-    if (name.trim()) {
-      onSave(category.id, name, description);
+    if (name.trim() && type) {
+      onSave(category.id, name, description, type);
     }
   };
 
@@ -31,6 +32,16 @@ const EditCategoryFormInline = ({ category, onSave, onCancel }) => {
           className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
           placeholder="Description"
         />
+        <select
+          value={type}
+          onChange={(e) => setType(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+        >
+          <option value="">Select Type</option>
+          {types.map(t => (
+            <option key={t.id} value={t.id}>{t.name}</option>
+          ))}
+        </select>
       </div>
       <div className="flex gap-2">
         <button
@@ -109,6 +120,7 @@ const Dashboard = () => {
   const [categories, setCategories] = useState([]);
   const [types, setTypes] = useState([]);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryType, setNewCategoryType] = useState('');
   const [newTypeName, setNewTypeName] = useState('');
   const [editingCategory, setEditingCategory] = useState(null);
   const [editingType, setEditingType] = useState(null);
@@ -150,20 +162,22 @@ const Dashboard = () => {
         const parsed = JSON.parse(storedCategories);
         setCategories(Array.isArray(parsed) ? parsed : []);
       } else {
-        // Default categories (subfolders under main types)
+        // Default categories with their assigned types
         const defaultCategories = [
-          { id: 'exteriors', name: 'Exteriors', description: 'Building exterior views and facades' },
-          { id: 'interiors', name: 'Interiors', description: 'Interior spaces and rooms' },
-          { id: 'kitchens', name: 'Kitchens', description: 'Kitchen spaces and design' },
-          { id: 'bathrooms', name: 'Bathrooms', description: 'Bathroom spaces and fixtures' },
-          { id: 'stairs', name: 'Stairs', description: 'Staircase design and details' },
-          { id: 'general', name: 'General', description: 'General or uncategorized images' },
-          { id: 'tile', name: 'Tile', description: 'Tile materials and patterns' },
-          { id: 'wood', name: 'Wood', description: 'Wood materials and finishes' },
-          { id: 'stone', name: 'Stone', description: 'Stone materials and textures' },
-          { id: 'brick', name: 'Brick', description: 'Brick materials and patterns' },
-          { id: 'metal', name: 'Metal', description: 'Metal materials and finishes' },
-          { id: 'carpet', name: 'Carpet', description: 'Carpet and soft flooring materials' }
+          // Precedent categories
+          { id: 'exteriors', name: 'Exteriors', description: 'Building exterior views and facades', type: 'precedent' },
+          { id: 'interiors', name: 'Interiors', description: 'Interior spaces and rooms', type: 'precedent' },
+          { id: 'kitchens', name: 'Kitchens', description: 'Kitchen spaces and design', type: 'precedent' },
+          { id: 'bathrooms', name: 'Bathrooms', description: 'Bathroom spaces and fixtures', type: 'precedent' },
+          { id: 'stairs', name: 'Stairs', description: 'Staircase design and details', type: 'precedent' },
+          { id: 'general', name: 'General', description: 'General or uncategorized images', type: 'precedent' },
+          // Texture categories
+          { id: 'tile', name: 'Tile', description: 'Tile materials and patterns', type: 'texture' },
+          { id: 'wood', name: 'Wood', description: 'Wood materials and finishes', type: 'texture' },
+          { id: 'stone', name: 'Stone', description: 'Stone materials and textures', type: 'texture' },
+          { id: 'brick', name: 'Brick', description: 'Brick materials and patterns', type: 'texture' },
+          { id: 'metal', name: 'Metal', description: 'Metal materials and finishes', type: 'texture' },
+          { id: 'carpet', name: 'Carpet', description: 'Carpet and soft flooring materials', type: 'texture' }
         ];
         setCategories(defaultCategories);
         localStorage.setItem('snaptag-categories', JSON.stringify(defaultCategories));
@@ -195,6 +209,11 @@ const Dashboard = () => {
       return;
     }
 
+    if (!newCategoryType) {
+      toast.error('Please select a type for this category');
+      return;
+    }
+
     if (!canEdit) {
       toast.error('Category creation is only available in edit mode');
       return;
@@ -211,14 +230,16 @@ const Dashboard = () => {
     const newCategory = {
       id,
       name: newCategoryName.trim(),
-      description: `${newCategoryName.trim()} category`
+      description: `${newCategoryName.trim()} category`,
+      type: newCategoryType
     };
 
     const updatedCategories = [...categories, newCategory];
     setCategories(updatedCategories);
     localStorage.setItem('snaptag-categories', JSON.stringify(updatedCategories));
     setNewCategoryName('');
-    toast.success(`Category "${newCategory.name}" added successfully`);
+    setNewCategoryType('');
+    toast.success(`Category "${newCategory.name}" added to ${newCategoryType} type`);
   };
 
   const addType = () => {
@@ -253,7 +274,7 @@ const Dashboard = () => {
     toast.success(`Type "${newType.name}" added successfully`);
   };
 
-  const updateCategory = (categoryId, newName, newDescription) => {
+  const updateCategory = (categoryId, newName, newDescription, newType) => {
     if (!canEdit) {
       toast.error('Category editing is only available in edit mode');
       return;
@@ -261,7 +282,7 @@ const Dashboard = () => {
 
     const updatedCategories = categories.map(cat => 
       cat.id === categoryId 
-        ? { ...cat, name: newName.trim(), description: newDescription.trim() }
+        ? { ...cat, name: newName.trim(), description: newDescription.trim(), type: newType }
         : cat
     );
     
@@ -840,8 +861,8 @@ const Dashboard = () => {
             <div className="bg-white p-6 rounded-lg shadow">
               <div className="flex justify-between items-center mb-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Categories (Subfolders)</h3>
-                  <p className="text-gray-600">Subcategories that appear under each type folder for detailed organization</p>
+                  <h3 className="text-lg font-semibold text-gray-900">Categories</h3>
+                  <p className="text-gray-600">Categories assigned to specific types for organizing images</p>
                 </div>
               </div>
 
@@ -854,10 +875,19 @@ const Dashboard = () => {
                       type="text"
                       value={newCategoryName}
                       onChange={(e) => setNewCategoryName(e.target.value)}
-                      placeholder="Enter category name (e.g., 'Balconies', 'Glass', 'Concrete')"
+                      placeholder="Category name (e.g., 'Balconies', 'Glass')"
                       className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                      onKeyPress={(e) => e.key === 'Enter' && addCategory()}
                     />
+                    <select
+                      value={newCategoryType}
+                      onChange={(e) => setNewCategoryType(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">Select Type</option>
+                      {types.map(type => (
+                        <option key={type.id} value={type.id}>{type.name}</option>
+                      ))}
+                    </select>
                     <button
                       onClick={addCategory}
                       className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
@@ -867,7 +897,7 @@ const Dashboard = () => {
                     </button>
                   </div>
                   <p className="text-sm text-gray-500 mt-2">
-                    Adding a new category will create subfolders under all type folders (Archier, Texture, Precedent).
+                    Categories must be assigned to a type (Archier, Texture, or Precedent).
                   </p>
                 </div>
               )}
@@ -882,53 +912,60 @@ const Dashboard = () => {
                   </div>
                 ) : (
                   <div className="grid gap-3">
-                    {categories.map((category) => (
-                      <div
-                        key={category.id}
-                        className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
-                      >
-                        {editingCategory === category.id ? (
-                          <EditCategoryFormInline
-                            category={category}
-                            onSave={updateCategory}
-                            onCancel={() => setEditingCategory(null)}
-                          />
-                        ) : (
-                          <>
-                            <div className="flex items-center gap-3 flex-1">
-                              <Layers className="h-5 w-5 text-blue-500" />
-                              <div>
-                                <h4 className="font-medium text-gray-900">{category.name}</h4>
-                                <p className="text-sm text-gray-500">{category.description}</p>
-                                <div className="text-xs text-blue-600 mt-1 space-y-1">
-                                  <div>Precedent: /SnapTag/Precedent/{category.name}/</div>
-                                  <div>Texture: /SnapTag/Texture/{category.name}/</div>
-                                  <div>Project: /SnapTag/Archier/[Project]/{category.name}/</div>
+                    {categories.map((category) => {
+                      const categoryType = types.find(t => t.id === category.type);
+                      return (
+                        <div
+                          key={category.id}
+                          className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+                        >
+                          {editingCategory === category.id ? (
+                            <EditCategoryFormInline
+                              category={category}
+                              types={types}
+                              onSave={updateCategory}
+                              onCancel={() => setEditingCategory(null)}
+                            />
+                          ) : (
+                            <>
+                              <div className="flex items-center gap-3 flex-1">
+                                <Layers className="h-5 w-5 text-blue-500" />
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <h4 className="font-medium text-gray-900">{category.name}</h4>
+                                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded">
+                                      {categoryType?.name || 'Unknown Type'}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-gray-500">{category.description}</p>
+                                  <p className="text-xs text-blue-600 mt-1">
+                                    Path: /SnapTag/{categoryType?.name || 'Unknown'}/{category.name}/
+                                  </p>
                                 </div>
                               </div>
-                            </div>
-                            {canEdit && (
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => setEditingCategory(category.id)}
-                                  className="p-2 text-blue-500 hover:bg-blue-50 rounded-md"
-                                  title="Edit category"
-                                >
-                                  <Edit3 className="h-4 w-4" />
-                                </button>
-                                <button
-                                  onClick={() => deleteCategory(category.id)}
-                                  className="p-2 text-red-500 hover:bg-red-50 rounded-md"
-                                  title="Delete category"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    ))}
+                              {canEdit && (
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => setEditingCategory(category.id)}
+                                    className="p-2 text-blue-500 hover:bg-blue-50 rounded-md"
+                                    title="Edit category"
+                                  >
+                                    <Edit3 className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => deleteCategory(category.id)}
+                                    className="p-2 text-red-500 hover:bg-red-50 rounded-md"
+                                    title="Delete category"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
