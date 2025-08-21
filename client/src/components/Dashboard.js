@@ -1493,8 +1493,7 @@ const Dashboard = () => {
             <div className="bg-white p-6 rounded-lg shadow">
               <div className="flex justify-between items-center mb-4">
                 <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <RefreshCw className="h-5 w-5 text-purple-600" />
+                  <div className="mb-2">
                     <h3 className="text-lg font-semibold text-gray-900">Pro Workflow</h3>
                   </div>
 
@@ -1537,13 +1536,13 @@ const Dashboard = () => {
               {/* ArchiCAD Scanner */}
               <div className="p-6 rounded-lg border" style={{backgroundColor: '#C9D468', borderColor: '#C9D468'}}>
                 <div className="mb-4">
-                  <h4 className="font-medium text-white">ArchiCAD</h4>
+                  <h4 className="font-medium text-black">ArchiCAD</h4>
                 </div>
                 
-                <div className="text-sm text-white">
-                  <p className="text-white/90 mb-3">3D modeling & texture mapping</p>
+                <div className="text-sm text-black">
+                  <p className="text-black mb-3">3D modeling & texture mapping</p>
                   
-                  <ul className="space-y-1 text-white/80 text-xs mb-4">
+                  <ul className="space-y-1 text-black text-xs mb-4">
                     <li>• High resolution textures</li>
                     <li>• Seamless tiling patterns</li>
                     <li>• Material library ready</li>
@@ -1551,22 +1550,22 @@ const Dashboard = () => {
                   </ul>
 
                   {scanResults.total > 0 && (
-                    <div className="pt-3 border-t border-white/20">
+                    <div className="pt-3 border-t border-black/20">
                       <div className="flex justify-between items-center mb-2">
-                        <span className="font-medium text-white">Ready:</span>
-                        <span className="text-lg font-bold text-white">{scanResults.archicadReady}</span>
+                        <span className="font-medium text-black">Ready:</span>
+                        <span className="text-lg font-bold text-black">{scanResults.archicadReady}</span>
                       </div>
                     </div>
                   )}
 
                   {scanResults.archicadIssues && scanResults.archicadIssues.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-white/20">
-                      <h5 className="font-medium text-white mb-2">Issues Found:</h5>
+                    <div className="mt-3 pt-3 border-t border-black/20">
+                      <h5 className="font-medium text-black mb-2">Issues Found:</h5>
                       <div className="space-y-1 max-h-32 overflow-y-auto">
                         {scanResults.archicadIssues.map((issue, idx) => (
-                          <div key={idx} className="text-xs text-white/80 bg-white/10 p-2 rounded">
+                          <div key={idx} className="text-xs text-black bg-black/10 p-2 rounded">
                             <div className="font-medium truncate">{issue.filename}</div>
-                            <div className="text-white/70">{issue.reason}</div>
+                            <div className="text-black/70">{issue.reason}</div>
                           </div>
                         ))}
                       </div>
@@ -1578,13 +1577,13 @@ const Dashboard = () => {
               {/* InDesign Scanner */}
               <div className="p-6 rounded-lg border" style={{backgroundColor: '#BDAE93', borderColor: '#BDAE93'}}>
                 <div className="mb-4">
-                  <h4 className="font-medium text-white">InDesign</h4>
+                  <h4 className="font-medium text-black">InDesign</h4>
                 </div>
                 
-                <div className="text-sm text-white">
-                  <p className="text-white/90 mb-3">Print & digital publication</p>
+                <div className="text-sm text-black">
+                  <p className="text-black mb-3">Print & digital publication</p>
                   
-                  <ul className="space-y-1 text-white/80 text-xs mb-4">
+                  <ul className="space-y-1 text-black text-xs mb-4">
                     <li>• 300+ DPI resolution</li>
                     <li>• CMYK color profile</li>
                     <li>• Print-ready formats</li>
@@ -1592,22 +1591,22 @@ const Dashboard = () => {
                   </ul>
 
                   {scanResults.total > 0 && (
-                    <div className="pt-3 border-t border-white/20">
+                    <div className="pt-3 border-t border-black/20">
                       <div className="flex justify-between items-center mb-2">
-                        <span className="font-medium text-white">Ready:</span>
-                        <span className="text-lg font-bold text-white">{scanResults.indesignReady}</span>
+                        <span className="font-medium text-black">Ready:</span>
+                        <span className="text-lg font-bold text-black">{scanResults.indesignReady}</span>
                       </div>
                     </div>
                   )}
 
                   {scanResults.indesignIssues && scanResults.indesignIssues.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-white/20">
-                      <h5 className="font-medium text-white mb-2">Issues Found:</h5>
+                    <div className="mt-3 pt-3 border-t border-black/20">
+                      <h5 className="font-medium text-black mb-2">Issues Found:</h5>
                       <div className="space-y-1 max-h-32 overflow-y-auto">
                         {scanResults.indesignIssues.map((issue, idx) => (
-                          <div key={idx} className="text-xs text-white/80 bg-white/10 p-2 rounded">
+                          <div key={idx} className="text-xs text-black bg-black/10 p-2 rounded">
                             <div className="font-medium truncate">{issue.filename}</div>
-                            <div className="text-white/70">{issue.reason}</div>
+                            <div className="text-black/70">{issue.reason}</div>
                           </div>
                         ))}
                       </div>
