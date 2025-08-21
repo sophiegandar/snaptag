@@ -1519,7 +1519,7 @@ const Dashboard = () => {
                     {currentProjects.map((project) => (
                       <div
                         key={project.id}
-                        className="p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+                        className="p-3 bg-white border-2 border-black rounded-lg hover:bg-gray-50"
                       >
                         {editingProject === project.id ? (
                           <EditProjectFormInline
@@ -1531,7 +1531,7 @@ const Dashboard = () => {
                           <>
                             <div className="text-center">
                               <h4 className="font-medium text-gray-900">{project.name}</h4>
-                              <div className="text-sm text-gray-500 mt-1">
+                              <div className="text-xs text-gray-500 mt-1">
                                 Created {new Date(project.created).toLocaleDateString()}
                               </div>
                             </div>
@@ -1582,7 +1582,7 @@ const Dashboard = () => {
                     {completeProjects.map((project) => (
                       <div
                         key={project.id}
-                        className="p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+                        className="p-3 bg-white border-2 border-black rounded-lg hover:bg-gray-50"
                       >
                         <div className="text-center">
                           <h4 className="font-medium text-gray-900">{project.name}</h4>
