@@ -73,15 +73,6 @@ function Navigation() {
               </Link>
             )}
             
-            {canAccessProWorkflow && (
-              <Link
-                to="/workflow"
-                className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
-              >
-                <FileText className="h-4 w-4" />
-                <span>Pro Workflow</span>
-              </Link>
-            )}
             
             <Link
               to="/projects"

@@ -270,9 +270,9 @@ const Dashboard = () => {
       } else {
         // Default types (main folder structure)
         const defaultTypes = [
-          { id: 'archier', name: 'Archier', description: 'Team project images organized by project name' },
-          { id: 'texture', name: 'Texture', description: 'Material samples organized by material type' },
-          { id: 'precedent', name: 'Precedent', description: 'Reference images organized by category' }
+          { id: 'archier', name: 'Archier', description: 'Team project images organised by project name' },
+          { id: 'texture', name: 'Texture', description: 'Material samples organised by material type' },
+          { id: 'precedent', name: 'Precedent', description: 'Reference images organised by category' }
         ];
         setTypes(defaultTypes);
         localStorage.setItem('snaptag-types', JSON.stringify(defaultTypes));
@@ -397,12 +397,16 @@ const Dashboard = () => {
       return;
     }
 
+    const category = categories.find(c => c.id === categoryId);
+    if (!window.confirm(`Are you sure you want to delete the "${category?.name}" category? This action cannot be undone.`)) {
+      return;
+    }
+
     const updatedCategories = categories.filter(c => c.id !== categoryId);
     setCategories(updatedCategories);
     localStorage.setItem('snaptag-categories', JSON.stringify(updatedCategories));
     
-    const deletedCategory = categories.find(c => c.id === categoryId);
-    toast.success(`Category "${deletedCategory?.name}" deleted successfully`);
+    toast.success(`Category "${category?.name}" deleted successfully`);
   };
 
   const deleteType = (typeId) => {
@@ -411,12 +415,16 @@ const Dashboard = () => {
       return;
     }
 
+    const type = types.find(t => t.id === typeId);
+    if (!window.confirm(`Are you sure you want to delete the "${type?.name}" type? This action cannot be undone and will affect all categories using this type.`)) {
+      return;
+    }
+
     const updatedTypes = types.filter(t => t.id !== typeId);
     setTypes(updatedTypes);
     localStorage.setItem('snaptag-types', JSON.stringify(updatedTypes));
     
-    const deletedType = types.find(t => t.id === typeId);
-    toast.success(`Type "${deletedType?.name}" deleted successfully`);
+    toast.success(`Type "${type?.name}" deleted successfully`);
   };
 
   // Pro Workflow functions
@@ -761,8 +769,8 @@ const Dashboard = () => {
 
   const sections = [
     { id: 'tags', label: 'Tags Database', description: 'Manage all tags and categories' },
-    { id: 'projects', label: 'Projects', description: 'Manage current projects and view automatic complete project creation' },
-    { id: 'categories', label: 'Categories', description: 'Manage image categories' },
+    { id: 'projects', label: 'Projects', description: '' },
+    { id: 'categories', label: 'Categories', description: '' },
     { id: 'policies', label: 'Image Policies', description: 'View tagging and categorization rules' },
     { id: 'workflow', label: 'Pro Workflow', description: '' },
   ];
@@ -897,11 +905,11 @@ const Dashboard = () => {
                     {canEdit && <p className="text-sm">Create your first project above</p>}
                   </div>
                 ) : (
-                  <div className="grid gap-3">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     {currentProjects.map((project) => (
                       <div
                         key={project.id}
-                        className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+                        className="p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
                       >
                         {editingProject === project.id ? (
                           <EditProjectFormInline
@@ -911,28 +919,26 @@ const Dashboard = () => {
                           />
                         ) : (
                           <>
-                            <div className="flex items-center gap-3">
-                              <Folder className="h-5 w-5 text-blue-500" />
-                              <div>
-                                <h4 className="font-medium text-gray-900">{project.name}</h4>
-                                <div className="flex items-center gap-2 text-sm text-gray-500">
-                                  <Calendar className="h-3 w-3" />
-                                  <span>Created {new Date(project.created).toLocaleDateString()}</span>
-                                </div>
+                            <div className="text-center">
+                              <h4 className="font-medium text-gray-900">{project.name}</h4>
+                              <div className="text-sm text-gray-500 mt-1">
+                                Created {new Date(project.created).toLocaleDateString()}
                               </div>
                             </div>
                             {canEdit && (
-                              <div className="flex gap-2">
+                              <div className="flex gap-2 justify-center mt-3">
                                 <button
                                   onClick={() => setEditingProject(project.id)}
-                                  className="p-2 text-blue-500 hover:bg-blue-50 rounded-md"
+                                  className="p-2 rounded-md"
+                                  style={{color: '#C9D468'}}
                                   title="Edit project name"
                                 >
                                   <Edit3 className="h-4 w-4" />
                                 </button>
                                 <button
                                   onClick={() => deleteProject(project.id)}
-                                  className="p-2 text-red-500 hover:bg-red-50 rounded-md"
+                                  className="p-2 rounded-md"
+                                  style={{color: '#BDAE93'}}
                                   title="Delete project"
                                 >
                                   <Trash2 className="h-4 w-4" />
@@ -950,8 +956,7 @@ const Dashboard = () => {
 
             {/* Complete Projects Section */}
             <div className="bg-white p-6 rounded-lg shadow">
-              <div className="flex items-center gap-2 mb-6">
-                <Check className="h-5 w-5 text-green-600" />
+              <div className="mb-6">
                 <h3 className="text-lg font-semibold text-gray-900">Complete Projects</h3>
               </div>
               
@@ -967,20 +972,17 @@ const Dashboard = () => {
                     {completeProjects.map((project) => (
                       <div
                         key={project.id}
-                        className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg"
+                        className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg"
                       >
-                        <div className="flex items-center gap-3">
-                          <Check className="h-5 w-5 text-green-600" />
-                          <div>
-                            <h4 className="font-medium text-gray-900">{project.name}</h4>
-                            <div className="flex items-center gap-2 text-sm text-gray-500">
-                              <span>Complete Project</span>
-                              <span>•</span>
-                              <span>Tags: {project.tags.join(', ')}</span>
-                            </div>
+                        <div>
+                          <h4 className="font-medium text-gray-900">{project.name}</h4>
+                          <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <span>Complete Project</span>
+                            <span>•</span>
+                            <span>Tags: {project.tags.join(', ')}</span>
                           </div>
                         </div>
-                        <div className="text-sm text-green-600 font-medium">
+                        <div className="text-sm font-medium" style={{color: '#C9D468'}}>
                           Complete
                         </div>
                       </div>
@@ -1001,7 +1003,7 @@ const Dashboard = () => {
                   <div>• "[project name]" (specific project identifier)</div>
                 </div>
                 <p className="text-blue-800 text-sm mt-3">
-                  These projects will automatically appear above and be organized in Dropbox under <code>/SnapTag/Archier/[Project]/</code>
+                  These projects will automatically appear above and be organised in Dropbox under <code>/SnapTag/Archier/[Project]/</code>
                 </p>
               </div>
             </div>
@@ -1033,7 +1035,8 @@ const Dashboard = () => {
                     />
                     <button
                       onClick={addType}
-                      className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
+                      className="flex items-center gap-2 px-4 py-2 text-white rounded-md hover:opacity-90"
+                      style={{backgroundColor: '#C9D468'}}
                     >
                       <Plus className="h-4 w-4" />
                       Add Type
@@ -1054,11 +1057,11 @@ const Dashboard = () => {
                     {canEdit && <p className="text-sm">Add your first type above</p>}
                   </div>
                 ) : (
-                  <div className="grid gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {types.map((type) => (
                       <div
                         key={type.id}
-                        className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100"
+                        className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
                       >
                         {editingType === type.id ? (
                           <EditTypeFormInline
@@ -1068,15 +1071,12 @@ const Dashboard = () => {
                           />
                         ) : (
                           <>
-                            <div className="flex items-center gap-3 flex-1">
-                              <Folder className="h-5 w-5 text-green-600" />
-                              <div>
-                                <h4 className="font-medium text-gray-900">{type.name}</h4>
-                                <p className="text-sm text-gray-500">{type.description}</p>
-                                <p className="text-xs text-green-600 mt-1">
-                                  Dropbox: /SnapTag/{type.name}/
-                                </p>
-                              </div>
+                            <div className="flex-1 text-center">
+                              <h4 className="font-medium text-gray-900">{type.name}</h4>
+                              <p className="text-sm text-gray-500">{type.description}</p>
+                              <p className="text-xs text-black mt-1">
+                                /SnapTag/{type.name}/
+                              </p>
                             </div>
                             {canEdit && (
                               <div className="flex gap-2">
@@ -1161,7 +1161,7 @@ const Dashboard = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Precedent Categories Column */}
                     <div>
-                      <h4 className="text-lg font-medium mb-4" style={{color: '#C9D468'}}>
+                      <h4 className="text-lg font-medium mb-4 text-black">
                         Precedent Categories ({categories.filter(c => c.type === 'precedent').length})
                       </h4>
                       <div className="space-y-3">
@@ -1185,7 +1185,7 @@ const Dashboard = () => {
                                   <div className="flex items-center gap-3 flex-1">
                                     <div>
                                       <h5 className="font-medium text-gray-900">{category.name}</h5>
-                                      <p className="text-xs mt-1" style={{color: '#BDAE93'}}>
+                                      <p className="text-xs mt-1 text-black">
                                         /SnapTag/Precedent/{category.name}/
                                       </p>
                                     </div>
@@ -1218,7 +1218,7 @@ const Dashboard = () => {
 
                     {/* Texture Categories Column */}
                     <div>
-                      <h4 className="text-lg font-medium mb-4" style={{color: '#BDAE93'}}>
+                      <h4 className="text-lg font-medium mb-4 text-black">
                         Texture Categories ({categories.filter(c => c.type === 'texture').length})
                       </h4>
                       <div className="space-y-3">
@@ -1242,7 +1242,7 @@ const Dashboard = () => {
                                   <div className="flex items-center gap-3 flex-1">
                                     <div>
                                       <h5 className="font-medium text-gray-900">{category.name}</h5>
-                                      <p className="text-xs mt-1" style={{color: '#C9D468'}}>
+                                      <p className="text-xs mt-1 text-black">
                                         /SnapTag/Texture/{category.name}/
                                       </p>
                                     </div>

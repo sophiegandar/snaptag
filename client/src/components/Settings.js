@@ -373,7 +373,7 @@ const Settings = () => {
             <div className="mt-2 p-3 bg-blue-50 rounded-md">
               <h4 className="text-sm font-medium text-blue-900 mb-2">📁 EXACT Folder Organization Structure</h4>
               <div className="text-xs text-blue-800 space-y-1">
-                <p><strong>Images are automatically organized into:</strong></p>
+                <p><strong>Images are automatically organised into:</strong></p>
                 <p>• <strong>Archier projects:</strong> <code>/SnapTag/Archier/[Project]/[Final|WIP]/</code></p>
                 <p>• <strong>Precedents:</strong> <code>/SnapTag/Precedents/[Category]/</code></p>
                 <p>• <strong>Materials:</strong> <code>/SnapTag/Materials/[Type]/</code></p>
