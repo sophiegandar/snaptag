@@ -1180,7 +1180,7 @@ const Dashboard = () => {
   }, [activeSection, canEdit]);
 
   const sections = [
-    { id: 'tags', label: 'Tags Database', description: 'Manage all tags and categories' },
+    { id: 'tags', label: 'Tags Database', description: '' },
     { id: 'projects', label: 'Projects', description: '' },
     { id: 'categories', label: 'Categories', description: '' },
     { id: 'policies', label: 'Image Policies', description: '' },
@@ -1292,19 +1292,23 @@ const Dashboard = () => {
               )}
 
               {/* Typo Scan */}
-              {canEdit && (
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h4 className="text-md font-medium text-gray-900">Typo Detection</h4>
-                      <p className="text-sm text-gray-500">Scan for similar tags that might be typos</p>
-                    </div>
-                    <button
-                      onClick={scanForTypos}
-                      disabled={typoScanning || tags.length < 2}
-                      className="px-4 py-2 text-white rounded-md hover:opacity-90 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                      style={{backgroundColor: '#BDAE93'}}
-                    >
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h4 className="text-md font-medium text-gray-900">Typo Detection</h4>
+                    <p className="text-sm text-gray-500">
+                      Scan for similar tags that might be typos
+                      {!canEdit && (
+                        <span className="text-gray-400"> (Edit mode required)</span>
+                      )}
+                    </p>
+                  </div>
+                  <button
+                    onClick={scanForTypos}
+                    disabled={!canEdit || typoScanning || tags.length < 2}
+                    className="px-4 py-2 text-white rounded-md hover:opacity-90 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{backgroundColor: '#BDAE93'}}
+                  >
                       {typoScanning ? (
                         <>
                           <RefreshCw className="h-4 w-4 animate-spin" />
@@ -1394,7 +1398,6 @@ const Dashboard = () => {
                     </div>
                   )}
                 </div>
-              )}
 
               {/* Tags List */}
               {tagsLoading ? (
