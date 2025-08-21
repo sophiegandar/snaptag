@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Database, Tags, Folder, Settings, Eye, Edit3, FileText, Layers, Save, TestTube, Check, AlertCircle, RefreshCw, Droplets, Copy, Search, Plus, Trash2, Calendar, X } from 'lucide-react';
+import { Database, Tags, Folder, Settings, Eye, Edit3, FileText, Layers, Save, TestTube, Check, AlertCircle, RefreshCw, Droplets, Copy, Search, Plus, Trash2, Calendar, X, BarChart3, Box } from 'lucide-react';
 import { useMode } from '../context/ModeContext';
 import { toast } from 'react-toastify';
 
@@ -182,7 +182,9 @@ const Dashboard = () => {
   const [scanResults, setScanResults] = useState({
     archicadReady: 0,
     indesignReady: 0,
-    totalScanned: 0,
+    total: 0,
+    archicadIssues: [],
+    indesignIssues: [],
     lastScan: null
   });
 
@@ -437,32 +439,84 @@ const Dashboard = () => {
       const images = await response.json();
       let archicadReady = 0;
       let indesignReady = 0;
+      const archicadIssues = [];
+      const indesignIssues = [];
 
-      // Simulate scanning process with compatibility checks
+      // Detailed compatibility analysis
       for (const image of images) {
-        // ArchiCAD compatibility (check for common texture formats and resolution)
-        if (image.filename && (
-          image.filename.includes('texture') || 
-          image.filename.includes('material') ||
-          image.filename.includes('precedent')
-        )) {
-          archicadReady++;
+        const filename = image.filename || '';
+        
+        // ArchiCAD compatibility analysis
+        let archicadCompatible = true;
+        const archicadReasons = [];
+        
+        // Check for texture/material content
+        if (!filename.includes('texture') && !filename.includes('material') && !filename.includes('precedent')) {
+          archicadCompatible = false;
+          archicadReasons.push('Not tagged as texture/material/precedent');
+        }
+        
+        // Check for low resolution indicators
+        if (filename.includes('thumb') || filename.includes('low') || filename.includes('preview')) {
+          archicadCompatible = false;
+          archicadReasons.push('Appears to be low resolution/thumbnail');
+        }
+        
+        // Check for unsupported formats for 3D mapping
+        if (filename.endsWith('.gif') || filename.endsWith('.webp')) {
+          archicadCompatible = false;
+          archicadReasons.push('Unsupported format for 3D texture mapping');
         }
 
-        // InDesign compatibility (check for high-res formats)
-        if (image.filename && (
-          image.filename.endsWith('.jpg') ||
-          image.filename.endsWith('.png') ||
-          image.filename.endsWith('.tiff')
-        )) {
+        if (archicadCompatible) {
+          archicadReady++;
+        } else if (archicadIssues.length < 10) { // Limit to first 10 issues
+          archicadIssues.push({
+            filename: filename,
+            reason: archicadReasons.join(', ')
+          });
+        }
+
+        // InDesign compatibility analysis
+        let indesignCompatible = true;
+        const indesignReasons = [];
+        
+        // Check for print-ready formats
+        if (!filename.endsWith('.jpg') && !filename.endsWith('.jpeg') && 
+            !filename.endsWith('.png') && !filename.endsWith('.tiff') && 
+            !filename.endsWith('.eps') && !filename.endsWith('.psd')) {
+          indesignCompatible = false;
+          indesignReasons.push('Unsupported format for print workflow');
+        }
+        
+        // Check for web-only formats
+        if (filename.endsWith('.gif') || filename.endsWith('.webp')) {
+          indesignCompatible = false;
+          indesignReasons.push('Web-only format, not suitable for print');
+        }
+        
+        // Check for potential low resolution
+        if (filename.includes('thumb') || filename.includes('low') || filename.includes('72dpi')) {
+          indesignCompatible = false;
+          indesignReasons.push('Likely below 300 DPI print requirement');
+        }
+
+        if (indesignCompatible) {
           indesignReady++;
+        } else if (indesignIssues.length < 10) { // Limit to first 10 issues
+          indesignIssues.push({
+            filename: filename,
+            reason: indesignReasons.join(', ')
+          });
         }
       }
 
       setScanResults({
         archicadReady,
         indesignReady,
-        totalScanned: images.length,
+        total: images.length,
+        archicadIssues,
+        indesignIssues,
         lastScan: new Date().toLocaleString()
       });
 
@@ -706,11 +760,11 @@ const Dashboard = () => {
   }, [activeSection, canEdit]);
 
   const sections = [
-    { id: 'tags', label: 'Tags Database', icon: Tags, description: 'Manage all tags and categories' },
-    { id: 'projects', label: 'Projects', icon: Folder, description: 'Manage current projects and view automatic complete project creation' },
-    { id: 'categories', label: 'Categories', icon: Layers, description: 'Manage image categories' },
-    { id: 'policies', label: 'Image Policies', icon: FileText, description: 'View tagging and categorization rules' },
-    { id: 'workflow', label: 'Pro Workflow', icon: RefreshCw, description: 'Advanced workflow tools and automation' },
+    { id: 'tags', label: 'Tags Database', description: 'Manage all tags and categories' },
+    { id: 'projects', label: 'Projects', description: 'Manage current projects and view automatic complete project creation' },
+    { id: 'categories', label: 'Categories', description: 'Manage image categories' },
+    { id: 'policies', label: 'Image Policies', description: 'View tagging and categorization rules' },
+    { id: 'workflow', label: 'Pro Workflow', description: 'Advanced workflow tools and automation' },
   ];
 
   // Only show settings in edit mode
@@ -718,7 +772,6 @@ const Dashboard = () => {
     sections.push({
       id: 'settings', 
       label: 'Settings', 
-      icon: Settings, 
       description: 'Dropbox connection, folder structure and server configuration'
     });
   }
@@ -755,18 +808,20 @@ const Dashboard = () => {
         <div className="border-b border-gray-200">
           <nav className="-mb-px flex space-x-8">
             {sections.map((section) => {
-              const Icon = section.icon;
               return (
                 <button
                   key={section.id}
                   onClick={() => setActiveSection(section.id)}
                   className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                     activeSection === section.id
-                      ? 'border-blue-500 text-blue-600'
+                      ? 'text-white'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
+                  style={activeSection === section.id ? {
+                    borderBottomColor: '#C9D468',
+                    color: '#4a5568'
+                  } : {}}
                 >
-                  <Icon className="h-4 w-4" />
                   <span>{section.label}</span>
                 </button>
               );
@@ -1106,8 +1161,7 @@ const Dashboard = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Precedent Categories Column */}
                     <div>
-                      <h4 className="text-lg font-medium text-purple-900 mb-4 flex items-center gap-2">
-                        <Layers className="h-5 w-5 text-purple-600" />
+                      <h4 className="text-lg font-medium mb-4" style={{color: '#C9D468'}}>
                         Precedent Categories ({categories.filter(c => c.type === 'precedent').length})
                       </h4>
                       <div className="space-y-3">
@@ -1116,7 +1170,8 @@ const Dashboard = () => {
                           return (
                             <div
                               key={category.id}
-                              className="flex items-center justify-between p-3 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100"
+                              className="flex items-center justify-between p-3 rounded-lg hover:opacity-80"
+                              style={{backgroundColor: '#C9D468', borderColor: '#C9D468'}}
                             >
                               {editingCategory === category.id ? (
                                 <EditCategoryFormInline
@@ -1130,7 +1185,7 @@ const Dashboard = () => {
                                   <div className="flex items-center gap-3 flex-1">
                                     <div>
                                       <h5 className="font-medium text-gray-900">{category.name}</h5>
-                                      <p className="text-xs text-purple-600 mt-1">
+                                      <p className="text-xs mt-1" style={{color: '#BDAE93'}}>
                                         /SnapTag/Precedent/{category.name}/
                                       </p>
                                     </div>
@@ -1163,8 +1218,7 @@ const Dashboard = () => {
 
                     {/* Texture Categories Column */}
                     <div>
-                      <h4 className="text-lg font-medium text-orange-900 mb-4 flex items-center gap-2">
-                        <Layers className="h-5 w-5 text-orange-600" />
+                      <h4 className="text-lg font-medium mb-4" style={{color: '#BDAE93'}}>
                         Texture Categories ({categories.filter(c => c.type === 'texture').length})
                       </h4>
                       <div className="space-y-3">
@@ -1173,7 +1227,8 @@ const Dashboard = () => {
                           return (
                             <div
                               key={category.id}
-                              className="flex items-center justify-between p-3 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100"
+                              className="flex items-center justify-between p-3 rounded-lg hover:opacity-80"
+                              style={{backgroundColor: '#BDAE93', borderColor: '#BDAE93'}}
                             >
                               {editingCategory === category.id ? (
                                 <EditCategoryFormInline
@@ -1187,7 +1242,7 @@ const Dashboard = () => {
                                   <div className="flex items-center gap-3 flex-1">
                                     <div>
                                       <h5 className="font-medium text-gray-900">{category.name}</h5>
-                                      <p className="text-xs text-orange-600 mt-1">
+                                      <p className="text-xs mt-1" style={{color: '#C9D468'}}>
                                         /SnapTag/Texture/{category.name}/
                                       </p>
                                     </div>
@@ -1339,15 +1394,15 @@ const Dashboard = () => {
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h4 className="font-medium text-gray-900 mb-3">Automatic Folder Structure:</h4>
                 <div className="text-sm text-gray-700 space-y-2 font-mono">
-                  <div className="pl-0">📁 /SnapTag/</div>
-                  <div className="pl-4">📁 Archier/ <span className="text-gray-500">(team projects)</span></div>
-                  <div className="pl-8">📁 [Project Name]/ <span className="text-gray-500">(e.g., "De Witt St")</span></div>
-                  <div className="pl-12">📁 Final/ <span className="text-gray-500">(images tagged "final")</span></div>
-                  <div className="pl-12">📁 WIP/ <span className="text-gray-500">(images tagged "wip")</span></div>
-                  <div className="pl-4">📁 Precedents/ <span className="text-gray-500">(reference images)</span></div>
-                  <div className="pl-8">📁 [Category]/ <span className="text-gray-500">(exteriors, interiors, etc.)</span></div>
-                  <div className="pl-4">📁 Materials/ <span className="text-gray-500">(texture images)</span></div>
-                  <div className="pl-8">📁 [Material Type]/ <span className="text-gray-500">(tile, wood, stone, etc.)</span></div>
+                  <div className="pl-0">/SnapTag/</div>
+                  <div className="pl-4">Archier/ <span className="text-gray-500">(team projects)</span></div>
+                  <div className="pl-8">[Project Name]/ <span className="text-gray-500">(e.g., "De Witt St")</span></div>
+                  <div className="pl-12">Final/ <span className="text-gray-500">(images tagged "final")</span></div>
+                  <div className="pl-12">WIP/ <span className="text-gray-500">(images tagged "wip")</span></div>
+                  <div className="pl-4">Precedent/ <span className="text-gray-500">(reference images)</span></div>
+                  <div className="pl-8">[Category]/ <span className="text-gray-500">(exteriors, interiors, etc.)</span></div>
+                  <div className="pl-4">Texture/ <span className="text-gray-500">(material images)</span></div>
+                  <div className="pl-8">[Material Type]/ <span className="text-gray-500">(tile, wood, stone, etc.)</span></div>
                 </div>
               </div>
             </div>
@@ -1468,119 +1523,162 @@ const Dashboard = () => {
                     </>
                   )}
                 </button>
-                {!canEdit && (
-                  <p className="text-xs text-gray-500 mt-1">Enable Edit Mode (ESC + E) to scan images</p>
-                )}
               </div>
               
+              {!canEdit && (
+                <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p className="text-sm text-amber-700">
+                    Enable edit mode (ESC + E) to scan images for software compatibility.
+                  </p>
+                </div>
+              )}
+
               {scanResults.lastScan && (
                 <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
                   <div className="flex justify-between text-sm">
                     <span className="text-green-800">Last scan: {scanResults.lastScan}</span>
-                    <span className="text-green-600">{scanResults.totalScanned} images scanned</span>
+                    <span className="text-green-600">{scanResults.total} images scanned</span>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* ArchiCAD Compatibility */}
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="flex items-center gap-2 mb-4">
-                <Database className="h-5 w-5 text-blue-600" />
-                <h3 className="text-lg font-semibold text-gray-900">ArchiCAD Suitability Scanner</h3>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-blue-900 mb-2">Image Compatibility Analysis</h4>
-                  <p className="text-blue-800 text-sm mb-3">
-                    Analyze images for optimal use in ArchiCAD workflows and 3D modeling.
-                  </p>
-                  <div className="text-blue-800 text-sm space-y-1">
-                    <div>• Resolution and format compatibility check</div>
-                    <div>• Texture mapping suitability assessment</div>
-                    <div>• Material library integration readiness</div>
-                    <div>• Surface detail and seamless tiling analysis</div>
-                  </div>
+            {/* Three side-by-side containers */}
+            <div className="grid md:grid-cols-3 gap-6">
+              {/* ArchiCAD Scanner */}
+              <div className="p-6 rounded-lg border" style={{backgroundColor: '#C9D468', borderColor: '#C9D468'}}>
+                <div className="mb-4">
+                  <h4 className="font-medium text-white">ArchiCAD</h4>
                 </div>
+                
+                <div className="text-sm text-white">
+                  <p className="text-white/90 mb-3">3D modeling & texture mapping</p>
+                  
+                  <ul className="space-y-1 text-white/80 text-xs mb-4">
+                    <li>• High resolution textures</li>
+                    <li>• Seamless tiling patterns</li>
+                    <li>• Material library ready</li>
+                    <li>• Surface detail analysis</li>
+                  </ul>
 
-
-              </div>
-            </div>
-
-            {/* InDesign Compatibility */}
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="flex items-center gap-2 mb-4">
-                <FileText className="h-5 w-5 text-pink-600" />
-                <h3 className="text-lg font-semibold text-gray-900">InDesign Suitability Scanner</h3>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="bg-pink-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-pink-900 mb-2">Publication Readiness Analysis</h4>
-                  <p className="text-pink-800 text-sm mb-3">
-                    Evaluate images for print and digital publication workflows in InDesign.
-                  </p>
-                  <div className="text-pink-800 text-sm space-y-1">
-                    <div>• Print resolution standards (300 DPI minimum)</div>
-                    <div>• Color profile and CMYK compatibility</div>
-                    <div>• File format optimization (TIFF, EPS, PSD)</div>
-                    <div>• Aspect ratio and layout suitability</div>
-                  </div>
-                </div>
-
-
-              </div>
-            </div>
-
-            {/* Scan Results */}
-            <div className="bg-white p-6 rounded-lg shadow border-l-4 border-green-500">
-              <div className="flex items-center gap-2 mb-4">
-                <Check className="h-5 w-5 text-green-600" />
-                <h3 className="text-lg font-semibold text-gray-900">Scan Results</h3>
-              </div>
-              
-              <div className="bg-gray-50 p-4 rounded-lg">
-                {scanResults.lastScan ? (
-                  <>
-                    <p className="text-gray-600 text-sm mb-3">
-                      Compatibility analysis completed. Results show image readiness for professional workflows.
-                    </p>
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">{scanResults.archicadReady}</div>
-                        <div className="font-medium text-gray-900">ArchiCAD Ready</div>
-                        <div className="text-gray-600">Suitable for 3D modeling</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-pink-600">{scanResults.indesignReady}</div>
-                        <div className="font-medium text-gray-900">InDesign Ready</div>
-                        <div className="text-gray-600">Publication quality</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-gray-600">{scanResults.totalScanned}</div>
-                        <div className="font-medium text-gray-900">Total Scanned</div>
-                        <div className="text-gray-600">Images analyzed</div>
+                  {scanResults.total > 0 && (
+                    <div className="pt-3 border-t border-white/20">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-medium text-white">Ready:</span>
+                        <span className="text-lg font-bold text-white">{scanResults.archicadReady}</span>
                       </div>
                     </div>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-gray-600 text-sm mb-3">
-                      Run a scan to see compatibility results for your images across ArchiCAD and InDesign workflows.
-                    </p>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <div className="font-medium text-gray-900">ArchiCAD Ready:</div>
-                        <div className="text-gray-600">No scan results yet</div>
-                      </div>
-                      <div>
-                        <div className="font-medium text-gray-900">InDesign Ready:</div>
-                        <div className="text-gray-600">No scan results yet</div>
+                  )}
+
+                  {scanResults.archicadIssues && scanResults.archicadIssues.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-white/20">
+                      <h5 className="font-medium text-white mb-2">Issues Found:</h5>
+                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                        {scanResults.archicadIssues.map((issue, idx) => (
+                          <div key={idx} className="text-xs text-white/80 bg-white/10 p-2 rounded">
+                            <div className="font-medium truncate">{issue.filename}</div>
+                            <div className="text-white/70">{issue.reason}</div>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  </>
-                )}
+                  )}
+                </div>
+              </div>
+
+              {/* InDesign Scanner */}
+              <div className="p-6 rounded-lg border" style={{backgroundColor: '#BDAE93', borderColor: '#BDAE93'}}>
+                <div className="mb-4">
+                  <h4 className="font-medium text-white">InDesign</h4>
+                </div>
+                
+                <div className="text-sm text-white">
+                  <p className="text-white/90 mb-3">Print & digital publication</p>
+                  
+                  <ul className="space-y-1 text-white/80 text-xs mb-4">
+                    <li>• 300+ DPI resolution</li>
+                    <li>• CMYK color profile</li>
+                    <li>• Print-ready formats</li>
+                    <li>• Layout optimization</li>
+                  </ul>
+
+                  {scanResults.total > 0 && (
+                    <div className="pt-3 border-t border-white/20">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-medium text-white">Ready:</span>
+                        <span className="text-lg font-bold text-white">{scanResults.indesignReady}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {scanResults.indesignIssues && scanResults.indesignIssues.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-white/20">
+                      <h5 className="font-medium text-white mb-2">Issues Found:</h5>
+                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                        {scanResults.indesignIssues.map((issue, idx) => (
+                          <div key={idx} className="text-xs text-white/80 bg-white/10 p-2 rounded">
+                            <div className="font-medium truncate">{issue.filename}</div>
+                            <div className="text-white/70">{issue.reason}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* General Analysis */}
+              <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                <div className="mb-4">
+                  <h4 className="font-medium text-gray-900">Analysis</h4>
+                </div>
+                
+                <div className="text-sm text-gray-800">
+                  <p className="text-gray-700 mb-3">Compatibility overview</p>
+                  
+                  {scanResults.total > 0 ? (
+                    <div className="space-y-3 text-xs">
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span>ArchiCAD Ready:</span>
+                          <span className="font-medium" style={{color: '#C9D468'}}>{scanResults.archicadReady}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>InDesign Ready:</span>
+                          <span className="font-medium" style={{color: '#BDAE93'}}>{scanResults.indesignReady}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Total Scanned:</span>
+                          <span className="font-medium">{scanResults.total}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="pt-3 border-t border-gray-200">
+                        <div className="flex justify-between">
+                          <span>Success Rate:</span>
+                          <span className="font-medium" style={{color: '#C9D468'}}>
+                            {Math.round(((scanResults.archicadReady + scanResults.indesignReady) / (scanResults.total * 2)) * 100)}%
+                          </span>
+                        </div>
+                      </div>
+
+                      {(scanResults.archicadIssues?.length > 0 || scanResults.indesignIssues?.length > 0) && (
+                        <div className="pt-3 border-t border-gray-200">
+                          <div className="text-gray-600">
+                            <div>Issues: {(scanResults.archicadIssues?.length || 0) + (scanResults.indesignIssues?.length || 0)}</div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              See detailed issues in the software-specific panels
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-gray-500">
+                      Run a scan to see compatibility analysis
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -1714,15 +1812,15 @@ const Dashboard = () => {
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h4 className="font-medium text-gray-900 mb-2">Current Organization:</h4>
                 <div className="text-sm text-gray-700 space-y-1 font-mono">
-                  <div>📁 /SnapTag/</div>
-                  <div className="ml-4">📁 Archier/</div>
-                  <div className="ml-8">📁 [Project Name]/</div>
-                  <div className="ml-12">📁 Final/ → Images tagged "final"</div>
-                  <div className="ml-12">📁 WIP/ → Images tagged "wip"</div>
-                  <div className="ml-4">📁 Precedents/</div>
-                  <div className="ml-8">📁 [Category]/ → exteriors, interiors, etc.</div>
-                  <div className="ml-4">📁 Materials/</div>
-                  <div className="ml-8">📁 [Material Type]/ → tile, wood, stone, etc.</div>
+                  <div>/SnapTag/</div>
+                  <div className="ml-4">Archier/</div>
+                  <div className="ml-8">[Project Name]/</div>
+                  <div className="ml-12">Final/ → Images tagged "final"</div>
+                  <div className="ml-12">WIP/ → Images tagged "wip"</div>
+                  <div className="ml-4">Precedent/</div>
+                  <div className="ml-8">[Category]/ → exteriors, interiors, etc.</div>
+                  <div className="ml-4">Texture/</div>
+                  <div className="ml-8">[Material Type]/ → tile, wood, stone, etc.</div>
                 </div>
               </div>
             </div>
