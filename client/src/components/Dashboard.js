@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Database, Tags, Folder, Settings, Eye, Edit3, FileText, Layers, Save, TestTube, Check, AlertCircle, RefreshCw, Droplets, Copy, Search, Plus, Trash2, Calendar, X, BarChart3, Box } from 'lucide-react';
 import { useMode } from '../context/ModeContext';
 import { toast } from 'react-toastify';
+import { apiCall } from '../utils/apiConfig';
 
 // Inline editing components
 const EditCategoryFormInline = ({ category, onSave, onCancel, types }) => {
@@ -156,6 +157,46 @@ const EditProjectFormInline = ({ project, onSave, onCancel }) => {
   );
 };
 
+const EditTagFormInline = ({ tag, onSave, onCancel }) => {
+  const [name, setName] = useState(tag.name);
+
+  const handleSave = () => {
+    if (name.trim()) {
+      onSave(tag.id, name);
+    }
+  };
+
+  return (
+    <div className="flex-1 space-y-3">
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          placeholder="Tag name"
+        />
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={handleSave}
+          className="px-3 py-1 text-white rounded text-sm hover:opacity-90"
+          style={{backgroundColor: '#C9D468'}}
+        >
+          <Check className="h-3 w-3" />
+        </button>
+        <button
+          onClick={onCancel}
+          className="px-3 py-1 text-white rounded text-sm hover:opacity-90"
+          style={{backgroundColor: '#BDAE93'}}
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const Dashboard = () => {
   const { canEdit } = useMode();
   const [activeSection, setActiveSection] = useState('tags');
@@ -176,6 +217,12 @@ const Dashboard = () => {
 
   // Project editing state
   const [editingProject, setEditingProject] = useState(null);
+
+  // Tags state
+  const [tags, setTags] = useState([]);
+  const [newTagName, setNewTagName] = useState('');
+  const [editingTag, setEditingTag] = useState(null);
+  const [tagsLoading, setTagsLoading] = useState(false);
 
   // Pro Workflow state
   const [scanning, setScanning] = useState(false);
@@ -218,7 +265,7 @@ const Dashboard = () => {
   // Categories functions
   const loadCategories = () => {
     try {
-      // Force reset categories to ensure proper type assignments
+      // Force reset categories to ensure correct Dropbox folder structure categories
       localStorage.removeItem('snaptag-categories');
       localStorage.removeItem('snaptag-types');
       
@@ -232,33 +279,33 @@ const Dashboard = () => {
         // Default categories with their assigned types (ONLY 3 TYPES: archier, texture, precedent)
         const defaultCategories = [
           // Precedent categories (15 total)
-          { id: 'exteriors', name: 'Exteriors', description: 'Building exterior views and facades', type: 'precedent' },
-          { id: 'interiors', name: 'Interiors', description: 'Interior spaces and rooms', type: 'precedent' },
-          { id: 'kitchens', name: 'Kitchens', description: 'Kitchen spaces and design', type: 'precedent' },
+          { id: 'art', name: 'Art', description: 'Artwork and artistic references', type: 'precedent' },
           { id: 'bathrooms', name: 'Bathrooms', description: 'Bathroom spaces and fixtures', type: 'precedent' },
-          { id: 'stairs', name: 'Stairs', description: 'Staircase design and details', type: 'precedent' },
+          { id: 'details', name: 'Details', description: 'Architectural details and elements', type: 'precedent' },
+          { id: 'doors', name: 'Doors', description: 'Door designs and hardware', type: 'precedent' },
+          { id: 'exteriors', name: 'Exteriors', description: 'Building exterior views and facades', type: 'precedent' },
+          { id: 'furniture', name: 'Furniture', description: 'Furniture design and arrangements', type: 'precedent' },
           { id: 'general', name: 'General', description: 'General or uncategorized images', type: 'precedent' },
-          { id: 'living-rooms', name: 'Living Rooms', description: 'Living room and lounge spaces', type: 'precedent' },
-          { id: 'bedrooms', name: 'Bedrooms', description: 'Bedroom spaces and design', type: 'precedent' },
-          { id: 'dining-rooms', name: 'Dining Rooms', description: 'Dining room spaces', type: 'precedent' },
-          { id: 'offices', name: 'Offices', description: 'Office and workspace design', type: 'precedent' },
-          { id: 'balconies', name: 'Balconies', description: 'Balcony and outdoor spaces', type: 'precedent' },
-          { id: 'courtyards', name: 'Courtyards', description: 'Courtyard and garden spaces', type: 'precedent' },
-          { id: 'facades', name: 'Facades', description: 'Building facade details', type: 'precedent' },
-          { id: 'rooftops', name: 'Rooftops', description: 'Rooftop and terrace spaces', type: 'precedent' },
-          { id: 'entrances', name: 'Entrances', description: 'Entrance and foyer design', type: 'precedent' },
+          { id: 'interiors', name: 'Interiors', description: 'Interior spaces and rooms', type: 'precedent' },
+          { id: 'joinery', name: 'Joinery', description: 'Custom joinery and built-in furniture', type: 'precedent' },
+          { id: 'kitchens', name: 'Kitchens', description: 'Kitchen spaces and design', type: 'precedent' },
+          { id: 'landscape', name: 'Landscape', description: 'Landscape and garden design', type: 'precedent' },
+          { id: 'lighting', name: 'Lighting', description: 'Lighting design and fixtures', type: 'precedent' },
+          { id: 'spatial', name: 'Spatial', description: 'Spatial arrangements and layouts', type: 'precedent' },
+          { id: 'stairs', name: 'Stairs', description: 'Staircase design and details', type: 'precedent' },
+          { id: 'structure', name: 'Structure', description: 'Structural elements and systems', type: 'precedent' },
           
           // Texture categories (10 total)
-          { id: 'tile', name: 'Tile', description: 'Tile materials and patterns', type: 'texture' },
-          { id: 'wood', name: 'Wood', description: 'Wood materials and finishes', type: 'texture' },
-          { id: 'stone', name: 'Stone', description: 'Stone materials and textures', type: 'texture' },
           { id: 'brick', name: 'Brick', description: 'Brick materials and patterns', type: 'texture' },
-          { id: 'metal', name: 'Metal', description: 'Metal materials and finishes', type: 'texture' },
           { id: 'carpet', name: 'Carpet', description: 'Carpet and soft flooring materials', type: 'texture' },
           { id: 'concrete', name: 'Concrete', description: 'Concrete finishes and textures', type: 'texture' },
-          { id: 'glass', name: 'Glass', description: 'Glass materials and treatments', type: 'texture' },
           { id: 'fabric', name: 'Fabric', description: 'Fabric and textile materials', type: 'texture' },
-          { id: 'paint', name: 'Paint', description: 'Paint finishes and colors', type: 'texture' }
+          { id: 'general', name: 'General', description: 'General texture materials', type: 'texture' },
+          { id: 'landscape', name: 'Landscape', description: 'Landscape materials and textures', type: 'texture' },
+          { id: 'metal', name: 'Metal', description: 'Metal materials and finishes', type: 'texture' },
+          { id: 'stone', name: 'Stone', description: 'Stone materials and textures', type: 'texture' },
+          { id: 'tile', name: 'Tile', description: 'Tile materials and patterns', type: 'texture' },
+          { id: 'wood', name: 'Wood', description: 'Wood materials and finishes', type: 'texture' }
         ];
         setCategories(defaultCategories);
         localStorage.setItem('snaptag-categories', JSON.stringify(defaultCategories));
@@ -635,6 +682,133 @@ const Dashboard = () => {
     }
   };
 
+  // Tags functions
+  const loadTags = async () => {
+    try {
+      setTagsLoading(true);
+      const response = await apiCall('/api/tags');
+      if (!response.ok) throw new Error('Failed to load tags');
+      
+      const data = await response.json();
+      // Sort tags alphabetically by name
+      const sortedTags = data.sort((a, b) => a.name.localeCompare(b.name));
+      setTags(sortedTags);
+    } catch (error) {
+      console.error('Error loading tags:', error);
+      toast.error('Failed to load tags');
+    } finally {
+      setTagsLoading(false);
+    }
+  };
+
+  const addTag = async () => {
+    if (!newTagName.trim()) {
+      toast.error('Please enter a tag name');
+      return;
+    }
+
+    if (!canEdit) {
+      toast.error('Tag creation is only available in edit mode');
+      return;
+    }
+
+    try {
+      const response = await apiCall('/api/tags', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: newTagName.trim() }),
+      });
+
+      if (response.status === 409) {
+        toast.error('A tag with this name already exists');
+        return;
+      }
+
+      if (!response.ok) throw new Error('Failed to create tag');
+
+      const newTag = await response.json();
+      setTags(prev => [...prev, newTag].sort((a, b) => a.name.localeCompare(b.name)));
+      setNewTagName('');
+      toast.success('Tag added successfully');
+    } catch (error) {
+      console.error('Error adding tag:', error);
+      toast.error('Failed to add tag');
+    }
+  };
+
+  const updateTag = async (tagId, newName) => {
+    if (!canEdit) {
+      toast.error('Tag editing is only available in edit mode');
+      return;
+    }
+
+    if (!newName.trim()) {
+      toast.error('Tag name cannot be empty');
+      return;
+    }
+
+    try {
+      const response = await apiCall(`/api/tags/${tagId}/rename`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ newName: newName.trim() }),
+      });
+
+      if (response.status === 409) {
+        toast.error('A tag with this name already exists');
+        return;
+      }
+
+      if (!response.ok) throw new Error('Failed to update tag');
+
+      // Update the tag in the local state
+      setTags(prev => 
+        prev.map(tag => 
+          tag.id === tagId ? { ...tag, name: newName.trim().toLowerCase() } : tag
+        ).sort((a, b) => a.name.localeCompare(b.name))
+      );
+      setEditingTag(null);
+      toast.success('Tag updated successfully');
+    } catch (error) {
+      console.error('Error updating tag:', error);
+      toast.error('Failed to update tag');
+    }
+  };
+
+  const deleteTag = async (tagId) => {
+    if (!canEdit) {
+      toast.error('Tag deletion is only available in edit mode');
+      return;
+    }
+
+    const tag = tags.find(t => t.id === tagId);
+    if (!tag) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete the tag "${tag.name}"? This will remove it from all ${tag.usage_count || 0} images that use it.`
+    );
+    
+    if (!confirmed) return;
+
+    try {
+      const response = await apiCall(`/api/tags/${tagId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) throw new Error('Failed to delete tag');
+
+      setTags(prev => prev.filter(t => t.id !== tagId));
+      toast.success('Tag deleted successfully');
+    } catch (error) {
+      console.error('Error deleting tag:', error);
+      toast.error('Failed to delete tag');
+    }
+  };
+
   // Settings state (moved from Settings.js)
   const [settings, setSettings] = useState({
     dropboxToken: '',
@@ -764,6 +938,8 @@ const Dashboard = () => {
       loadCompleteProjects();
     } else if (activeSection === 'categories') {
       loadCategories();
+    } else if (activeSection === 'tags') {
+      loadTags();
     }
   }, [activeSection, canEdit]);
 
@@ -771,7 +947,7 @@ const Dashboard = () => {
     { id: 'tags', label: 'Tags Database', description: 'Manage all tags and categories' },
     { id: 'projects', label: 'Projects', description: '' },
     { id: 'categories', label: 'Categories', description: '' },
-    { id: 'policies', label: 'Image Policies', description: 'View tagging and categorization rules' },
+    { id: 'policies', label: 'Image Policies', description: '' },
     { id: 'workflow', label: 'Pro Workflow', description: '' },
   ];
 
@@ -791,7 +967,7 @@ const Dashboard = () => {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-gray-600">Central hub for image management and tagging system</p>
+
           </div>
           
           {/* Mode Indicator */}
@@ -848,15 +1024,108 @@ const Dashboard = () => {
       {/* Section Content */}
       <div>
         {activeSection === 'tags' && (
-          <div>
-            <div className="text-center py-12 bg-white">
-              <Tags className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Tags Database</h3>
-              <p className="text-gray-600 mb-2">Tags management interface coming soon...</p>
-              <p className="text-sm text-gray-500">
-                View all existing tags, edit individual tags, and add new ones. 
-                Hyperlinked to replace current Tags page functionality.
-              </p>
+          <div className="space-y-6">
+            {/* Tags Header */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900">Tags Database</h3>
+              </div>
+
+              {/* Add New Tag */}
+              {canEdit && (
+                <div className="mb-6">
+                  <div className="flex gap-3">
+                    <input
+                      type="text"
+                      value={newTagName}
+                      onChange={(e) => setNewTagName(e.target.value)}
+                      placeholder="Enter new tag name"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      onKeyPress={(e) => e.key === 'Enter' && addTag()}
+                    />
+                    <button
+                      onClick={addTag}
+                      className="px-4 py-2 text-white rounded-md hover:opacity-90 flex items-center gap-2"
+                      style={{backgroundColor: '#C9D468'}}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Tag
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Tags List */}
+              {tagsLoading ? (
+                <div className="text-center py-8">
+                  <RefreshCw className="h-8 w-8 text-gray-400 mx-auto mb-4 animate-spin" />
+                  <p className="text-gray-600">Loading tags...</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-500 mb-4">
+                    Total tags: {tags.length} | Showing all tags alphabetically
+                  </p>
+                  
+                  {tags.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Database className="h-8 w-8 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600">No tags found</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {tags.map((tag) => (
+                        <div key={tag.id} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                          {editingTag === tag.id ? (
+                            <EditTagFormInline 
+                              tag={tag}
+                              onSave={updateTag}
+                              onCancel={() => setEditingTag(null)}
+                            />
+                          ) : (
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-black">{tag.name}</span>
+                                  <span className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded">
+                                    {tag.usage_count || 0} uses
+                                  </span>
+                                </div>
+                                {tag.created_at && (
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Created: {new Date(tag.created_at).toLocaleDateString()}
+                                  </p>
+                                )}
+                              </div>
+                              
+                              {canEdit && (
+                                <div className="flex gap-2 ml-3">
+                                  <button
+                                    onClick={() => setEditingTag(tag.id)}
+                                    className="p-1 text-white rounded hover:opacity-90"
+                                    style={{backgroundColor: '#C9D468'}}
+                                    title="Edit tag"
+                                  >
+                                    <Edit3 className="h-3 w-3" />
+                                  </button>
+                                  <button
+                                    onClick={() => deleteTag(tag.id)}
+                                    className="p-1 text-white rounded hover:opacity-90"
+                                    style={{backgroundColor: '#BDAE93'}}
+                                    title="Delete tag"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -865,11 +1134,8 @@ const Dashboard = () => {
           <div className="space-y-6">
             {/* Current Projects Section */}
             <div className="bg-white p-6 rounded-lg shadow">
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Current Projects</h3>
-                  <p className="text-gray-600">Manage active projects and create new ones</p>
-                </div>
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900">Current Projects</h3>
               </div>
 
               {/* New Project Form - Only show in edit mode */}
@@ -968,22 +1234,25 @@ const Dashboard = () => {
                     <p>No complete projects found</p>
                   </div>
                 ) : (
-                  <div className="grid gap-3">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     {completeProjects.map((project) => (
                       <div
                         key={project.id}
-                        className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg"
+                        className="p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
                       >
-                        <div>
+                        <div className="text-center">
                           <h4 className="font-medium text-gray-900">{project.name}</h4>
-                          <div className="flex items-center gap-2 text-sm text-gray-500">
-                            <span>Complete Project</span>
-                            <span>•</span>
-                            <span>Tags: {project.tags.join(', ')}</span>
+                          <div className="text-sm text-gray-500 mt-1">
+                            Complete Project
+                          </div>
+                          <div className="text-xs text-gray-400 mt-1">
+                            Tags: {project.tags.join(', ')}
                           </div>
                         </div>
-                        <div className="text-sm font-medium" style={{color: '#C9D468'}}>
-                          Complete
+                        <div className="text-center mt-2">
+                          <div className="text-sm font-medium" style={{color: '#C9D468'}}>
+                            Complete
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -992,17 +1261,17 @@ const Dashboard = () => {
               </div>
 
               {/* Automatic Creation Info */}
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h4 className="font-medium text-blue-900 mb-2">Automatic Project Creation</h4>
-                <p className="text-blue-800 text-sm mb-3">
+              <div className="p-4 rounded-lg" style={{backgroundColor: '#BDAE93'}}>
+                <h4 className="font-medium text-black mb-2">Automatic Project Creation</h4>
+                <p className="text-black text-sm mb-3">
                   Complete projects are automatically created when images are tagged with:
                 </p>
-                <div className="space-y-1 text-sm text-blue-800 font-mono bg-blue-100 p-3 rounded">
+                <div className="space-y-1 text-sm text-black font-mono bg-black/10 p-3 rounded">
                   <div>• "archier" (team tag)</div>
                   <div>• "complete" (status tag)</div>
                   <div>• "[project name]" (specific project identifier)</div>
                 </div>
-                <p className="text-blue-800 text-sm mt-3">
+                <p className="text-black text-sm mt-3">
                   These projects will automatically appear above and be organised in Dropbox under <code>/SnapTag/Archier/[Project]/</code>
                 </p>
               </div>
@@ -1314,12 +1583,12 @@ const Dashboard = () => {
                 <h3 className="text-lg font-semibold text-gray-900">Filename Format</h3>
               </div>
               
-              <div className="bg-blue-50 p-4 rounded-lg mb-4">
-                <h4 className="font-medium text-blue-900 mb-2">Standard Format:</h4>
-                <div className="text-blue-800 font-mono text-sm bg-blue-100 p-3 rounded">
+              <div className="p-4 rounded-lg mb-4" style={{backgroundColor: '#C9D468'}}>
+                <h4 className="font-medium text-black mb-2">Standard Format:</h4>
+                <div className="text-black font-mono text-sm bg-black/10 p-3 rounded">
                   AXXXX-type-category.jpg
                 </div>
-                <div className="text-blue-800 text-sm mt-2 space-y-1">
+                <div className="text-black text-sm mt-2 space-y-1">
                   <div>• <strong>A</strong> = Alphabetical prefix</div>
                   <div>• <strong>XXXX</strong> = 4-digit sequential number</div>
                   <div>• <strong>type</strong> = precedent, texture, or project-specific</div>
@@ -1384,7 +1653,7 @@ const Dashboard = () => {
             {/* Folder Structure Policy */}
             <div className="bg-white p-6 rounded-lg shadow">
               <div className="mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Dropbox Organization</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Dropbox Organisation</h3>
               </div>
               
               <div className="bg-gray-50 p-4 rounded-lg">
@@ -1405,27 +1674,26 @@ const Dashboard = () => {
 
             {/* Search and Filter Logic */}
             <div className="bg-white p-6 rounded-lg shadow">
-              <div className="flex items-center gap-2 mb-4">
-                <Search className="h-5 w-5 text-indigo-600" />
+              <div className="mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Search & Filter Logic</h3>
               </div>
 
               <div className="space-y-4">
-                <div className="bg-yellow-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-yellow-900 mb-2">AND Logic (All Required)</h4>
-                  <p className="text-yellow-800 text-sm mb-2">
+                <div className="p-4 rounded-lg" style={{backgroundColor: '#C9D468'}}>
+                  <h4 className="font-medium text-black mb-2">AND Logic (All Required)</h4>
+                  <p className="text-black text-sm mb-2">
                     Images must have ALL specified tags to appear in results:
                   </p>
-                  <div className="text-yellow-800 text-sm space-y-1">
+                  <div className="text-black text-sm space-y-1">
                     <div>• Project tab: project name + tab type (e.g., "de witt st" + "precedent")</div>
                     <div>• Photos tab: project name + "complete" + filter ("final" or "wip")</div>
                     <div>• Texture tab: project name + "texture"</div>
                   </div>
                 </div>
 
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-green-900 mb-2">Project Tab Behavior</h4>
-                  <div className="text-green-800 text-sm space-y-1">
+                <div className="p-4 rounded-lg" style={{backgroundColor: '#BDAE93'}}>
+                  <h4 className="font-medium text-black mb-2">Project Tab Behavior</h4>
+                  <div className="text-black text-sm space-y-1">
                     <div>• <strong>Current Projects:</strong> Precedent, Texture, Photos tabs</div>
                     <div>• <strong>Complete Projects:</strong> Final, WIP tabs (Photos tab with filters)</div>
                     <div>• <strong>Photos Tab:</strong> Only shows images with "complete" tag</div>
@@ -1437,15 +1705,14 @@ const Dashboard = () => {
 
             {/* Project Lifecycle */}
             <div className="bg-white p-6 rounded-lg shadow">
-              <div className="flex items-center gap-2 mb-4">
-                <RefreshCw className="h-5 w-5 text-teal-600" />
+              <div className="mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Project Lifecycle</h3>
               </div>
 
               <div className="space-y-4">
                 <div className="flex items-start gap-4">
-                  <div className="bg-blue-100 rounded-full p-2">
-                    <span className="text-blue-600 font-bold text-sm">1</span>
+                  <div className="bg-gray-100 rounded-full p-2">
+                    <span className="text-black font-bold text-sm">1</span>
                   </div>
                   <div>
                     <h4 className="font-medium text-gray-900">Current Project Creation</h4>
@@ -1454,8 +1721,8 @@ const Dashboard = () => {
                 </div>
 
                 <div className="flex items-start gap-4">
-                  <div className="bg-purple-100 rounded-full p-2">
-                    <span className="text-purple-600 font-bold text-sm">2</span>
+                  <div className="bg-gray-100 rounded-full p-2">
+                    <span className="text-black font-bold text-sm">2</span>
                   </div>
                   <div>
                     <h4 className="font-medium text-gray-900">Image Collection</h4>
@@ -1464,8 +1731,8 @@ const Dashboard = () => {
                 </div>
 
                 <div className="flex items-start gap-4">
-                  <div className="bg-orange-100 rounded-full p-2">
-                    <span className="text-orange-600 font-bold text-sm">3</span>
+                  <div className="bg-gray-100 rounded-full p-2">
+                    <span className="text-black font-bold text-sm">3</span>
                   </div>
                   <div>
                     <h4 className="font-medium text-gray-900">Project Completion</h4>
@@ -1474,8 +1741,8 @@ const Dashboard = () => {
                 </div>
 
                 <div className="flex items-start gap-4">
-                  <div className="bg-green-100 rounded-full p-2">
-                    <span className="text-green-600 font-bold text-sm">4</span>
+                  <div className="bg-gray-100 rounded-full p-2">
+                    <span className="text-black font-bold text-sm">4</span>
                   </div>
                   <div>
                     <h4 className="font-medium text-gray-900">Automatic Migration</h4>

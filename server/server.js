@@ -1503,6 +1503,47 @@ app.delete('/api/tags/:id', async (req, res) => {
   }
 });
 
+// Create a new tag
+app.post('/api/tags', async (req, res) => {
+  try {
+    const { name } = req.body;
+    
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Tag name is required' });
+    }
+    
+    const trimmedName = name.trim().toLowerCase();
+    console.log(`🏷️ Creating new tag: "${trimmedName}"`);
+    
+    // Check if tag already exists
+    const existingTagResult = await databaseService.query('SELECT id FROM tags WHERE LOWER(name) = $1', [trimmedName]);
+    if (existingTagResult.rows.length > 0) {
+      return res.status(409).json({ error: `Tag "${trimmedName}" already exists` });
+    }
+    
+    // Create the tag using getOrCreateTag (which will create since we checked it doesn't exist)
+    const tagId = await databaseService.getOrCreateTag(trimmedName);
+    
+    // Get the created tag with usage count
+    const createdTagResult = await databaseService.query(`
+      SELECT t.id, t.name, t.created_at, 
+             COUNT(it.image_id) as usage_count
+      FROM tags t
+      LEFT JOIN image_tags it ON t.id = it.tag_id
+      WHERE t.id = $1
+      GROUP BY t.id, t.name, t.created_at
+    `, [tagId]);
+    
+    const createdTag = createdTagResult.rows[0];
+    console.log('✅ Tag created successfully:', createdTag);
+    
+    res.status(201).json(createdTag);
+  } catch (error) {
+    console.error('❌ Error creating tag:', error);
+    res.status(500).json({ error: 'Failed to create tag' });
+  }
+});
+
 // File locking mechanism to prevent concurrent moves
 const fileMoveLocks = new Set();
 
