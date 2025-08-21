@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Database, Tags, Folder, Settings, Eye, Edit3, FileText, Layers, Save, TestTube, Check, AlertCircle, RefreshCw, Droplets, Copy, Search, Plus, Trash2, Calendar } from 'lucide-react';
+import { Database, Tags, Folder, Settings, Eye, Edit3, FileText, Layers, Save, TestTube, Check, AlertCircle, RefreshCw, Droplets, Copy, Search, Plus, Trash2, Calendar, X } from 'lucide-react';
 import { useMode } from '../context/ModeContext';
 import { toast } from 'react-toastify';
 
@@ -9,7 +9,16 @@ const Dashboard = () => {
 
   // Projects state
   const [currentProjects, setCurrentProjects] = useState([]);
+  const [completeProjects, setCompleteProjects] = useState([]);
   const [newProjectName, setNewProjectName] = useState('');
+
+  // Categories state
+  const [categories, setCategories] = useState([]);
+  const [types, setTypes] = useState([]);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newTypeName, setNewTypeName] = useState('');
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [editingType, setEditingType] = useState(null);
 
   // Projects functions
   const loadCurrentProjects = () => {
@@ -23,6 +32,195 @@ const Dashboard = () => {
       console.error('Error loading current projects:', error);
       setCurrentProjects([]);
     }
+  };
+
+  const loadCompleteProjects = () => {
+    // Load hardcoded complete projects (matching Projects.js)
+    const defaultCompleteProjects = [
+      {
+        id: 'yandoit',
+        name: 'Yandoit',
+        tags: ['archier', 'yandoit', 'complete'],
+        type: 'complete'
+      }
+    ];
+    setCompleteProjects(defaultCompleteProjects);
+  };
+
+  // Categories functions
+  const loadCategories = () => {
+    try {
+      const storedCategories = localStorage.getItem('snaptag-categories');
+      const storedTypes = localStorage.getItem('snaptag-types');
+      
+      if (storedCategories) {
+        const parsed = JSON.parse(storedCategories);
+        setCategories(Array.isArray(parsed) ? parsed : []);
+      } else {
+        // Default categories
+        const defaultCategories = [
+          { id: 'exteriors', name: 'Exteriors', description: 'Building exterior views and facades' },
+          { id: 'interiors', name: 'Interiors', description: 'Interior spaces and rooms' },
+          { id: 'kitchens', name: 'Kitchens', description: 'Kitchen spaces and design' },
+          { id: 'bathrooms', name: 'Bathrooms', description: 'Bathroom spaces and fixtures' },
+          { id: 'stairs', name: 'Stairs', description: 'Staircase design and details' },
+          { id: 'general', name: 'General', description: 'General or uncategorized images' }
+        ];
+        setCategories(defaultCategories);
+        localStorage.setItem('snaptag-categories', JSON.stringify(defaultCategories));
+      }
+
+      if (storedTypes) {
+        const parsed = JSON.parse(storedTypes);
+        setTypes(Array.isArray(parsed) ? parsed : []);
+      } else {
+        // Default types
+        const defaultTypes = [
+          { id: 'precedent', name: 'Precedent', description: 'Reference images for design inspiration' },
+          { id: 'texture', name: 'Texture', description: 'Material samples and texture references' },
+          { id: 'tile', name: 'Tile', description: 'Tile materials and patterns' },
+          { id: 'wood', name: 'Wood', description: 'Wood materials and finishes' },
+          { id: 'stone', name: 'Stone', description: 'Stone materials and textures' },
+          { id: 'brick', name: 'Brick', description: 'Brick materials and patterns' },
+          { id: 'metal', name: 'Metal', description: 'Metal materials and finishes' },
+          { id: 'carpet', name: 'Carpet', description: 'Carpet and soft flooring materials' }
+        ];
+        setTypes(defaultTypes);
+        localStorage.setItem('snaptag-types', JSON.stringify(defaultTypes));
+      }
+    } catch (error) {
+      console.error('Error loading categories/types:', error);
+      setCategories([]);
+      setTypes([]);
+    }
+  };
+
+  const addCategory = () => {
+    if (!newCategoryName.trim()) {
+      toast.error('Please enter a category name');
+      return;
+    }
+
+    if (!canEdit) {
+      toast.error('Category creation is only available in edit mode');
+      return;
+    }
+
+    const id = newCategoryName.toLowerCase().replace(/\s+/g, '-');
+    const existing = categories.find(c => c.id === id);
+    
+    if (existing) {
+      toast.error('A category with this name already exists');
+      return;
+    }
+
+    const newCategory = {
+      id,
+      name: newCategoryName.trim(),
+      description: `${newCategoryName.trim()} category`
+    };
+
+    const updatedCategories = [...categories, newCategory];
+    setCategories(updatedCategories);
+    localStorage.setItem('snaptag-categories', JSON.stringify(updatedCategories));
+    setNewCategoryName('');
+    toast.success(`Category "${newCategory.name}" added successfully`);
+  };
+
+  const addType = () => {
+    if (!newTypeName.trim()) {
+      toast.error('Please enter a type name');
+      return;
+    }
+
+    if (!canEdit) {
+      toast.error('Type creation is only available in edit mode');
+      return;
+    }
+
+    const id = newTypeName.toLowerCase().replace(/\s+/g, '-');
+    const existing = types.find(t => t.id === id);
+    
+    if (existing) {
+      toast.error('A type with this name already exists');
+      return;
+    }
+
+    const newType = {
+      id,
+      name: newTypeName.trim(),
+      description: `${newTypeName.trim()} type`
+    };
+
+    const updatedTypes = [...types, newType];
+    setTypes(updatedTypes);
+    localStorage.setItem('snaptag-types', JSON.stringify(updatedTypes));
+    setNewTypeName('');
+    toast.success(`Type "${newType.name}" added successfully`);
+  };
+
+  const updateCategory = (categoryId, newName, newDescription) => {
+    if (!canEdit) {
+      toast.error('Category editing is only available in edit mode');
+      return;
+    }
+
+    const updatedCategories = categories.map(cat => 
+      cat.id === categoryId 
+        ? { ...cat, name: newName.trim(), description: newDescription.trim() }
+        : cat
+    );
+    
+    setCategories(updatedCategories);
+    localStorage.setItem('snaptag-categories', JSON.stringify(updatedCategories));
+    setEditingCategory(null);
+    toast.success('Category updated successfully');
+  };
+
+  const updateType = (typeId, newName, newDescription) => {
+    if (!canEdit) {
+      toast.error('Type editing is only available in edit mode');
+      return;
+    }
+
+    const updatedTypes = types.map(type => 
+      type.id === typeId 
+        ? { ...type, name: newName.trim(), description: newDescription.trim() }
+        : type
+    );
+    
+    setTypes(updatedTypes);
+    localStorage.setItem('snaptag-types', JSON.stringify(updatedTypes));
+    setEditingType(null);
+    toast.success('Type updated successfully');
+  };
+
+  const deleteCategory = (categoryId) => {
+    if (!canEdit) {
+      toast.error('Category deletion is only available in edit mode');
+      return;
+    }
+
+    const updatedCategories = categories.filter(c => c.id !== categoryId);
+    setCategories(updatedCategories);
+    localStorage.setItem('snaptag-categories', JSON.stringify(updatedCategories));
+    
+    const deletedCategory = categories.find(c => c.id === categoryId);
+    toast.success(`Category "${deletedCategory?.name}" deleted successfully`);
+  };
+
+  const deleteType = (typeId) => {
+    if (!canEdit) {
+      toast.error('Type deletion is only available in edit mode');
+      return;
+    }
+
+    const updatedTypes = types.filter(t => t.id !== typeId);
+    setTypes(updatedTypes);
+    localStorage.setItem('snaptag-types', JSON.stringify(updatedTypes));
+    
+    const deletedType = types.find(t => t.id === typeId);
+    toast.success(`Type "${deletedType?.name}" deleted successfully`);
   };
 
   const createNewProject = () => {
@@ -211,6 +409,9 @@ const Dashboard = () => {
       loadStats();
     } else if (activeSection === 'projects') {
       loadCurrentProjects();
+      loadCompleteProjects();
+    } else if (activeSection === 'categories') {
+      loadCategories();
     }
   }, [activeSection, canEdit]);
 
@@ -219,6 +420,7 @@ const Dashboard = () => {
     { id: 'projects', label: 'Projects', icon: Folder, description: 'Manage current projects and view automatic complete project creation' },
     { id: 'categories', label: 'Categories', icon: Layers, description: 'Manage image categories' },
     { id: 'policies', label: 'Image Policies', icon: FileText, description: 'View tagging and categorization rules' },
+    { id: 'workflow', label: 'Pro Workflow', icon: RefreshCw, description: 'Advanced workflow tools and automation' },
   ];
 
   // Only show settings in edit mode
@@ -382,13 +584,48 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Complete Projects Information */}
+            {/* Complete Projects Section */}
             <div className="bg-white p-6 rounded-lg shadow">
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center gap-2 mb-6">
                 <Check className="h-5 w-5 text-green-600" />
                 <h3 className="text-lg font-semibold text-gray-900">Complete Projects</h3>
               </div>
               
+              {/* Complete Projects List */}
+              <div className="mb-6">
+                {completeProjects.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Check className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                    <p>No complete projects found</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-3">
+                    {completeProjects.map((project) => (
+                      <div
+                        key={project.id}
+                        className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Check className="h-5 w-5 text-green-600" />
+                          <div>
+                            <h4 className="font-medium text-gray-900">{project.name}</h4>
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                              <span>Complete Project</span>
+                              <span>•</span>
+                              <span>Tags: {project.tags.join(', ')}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-sm text-green-600 font-medium">
+                          Complete
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Automatic Creation Info */}
               <div className="bg-blue-50 p-4 rounded-lg">
                 <h4 className="font-medium text-blue-900 mb-2">Automatic Project Creation</h4>
                 <p className="text-blue-800 text-sm mb-3">
@@ -400,8 +637,7 @@ const Dashboard = () => {
                   <div>• "[project name]" (specific project identifier)</div>
                 </div>
                 <p className="text-blue-800 text-sm mt-3">
-                  These projects will automatically appear in the "Complete" projects section 
-                  and be organized in Dropbox under <code>/SnapTag/Archier/[Project]/</code>
+                  These projects will automatically appear above and be organized in Dropbox under <code>/SnapTag/Archier/[Project]/</code>
                 </p>
               </div>
             </div>
@@ -409,29 +645,539 @@ const Dashboard = () => {
         )}
 
         {activeSection === 'categories' && (
-          <div>
-            <div className="text-center py-12 bg-white">
-              <Layers className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Categories</h3>
-              <p className="text-gray-600 mb-2">Categories management interface coming soon...</p>
-              <p className="text-sm text-gray-500">
-                Manage image categories like exteriors, interiors, kitchens, bathrooms, etc.
-              </p>
+          <div className="space-y-6">
+            {/* Categories Section */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Image Categories</h3>
+                  <p className="text-gray-600">Categories used for organizing and classifying images</p>
+                </div>
+              </div>
+
+              {/* Add New Category - Only show in edit mode */}
+              {canEdit && (
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium text-gray-900 mb-3">Add New Category</h4>
+                  <div className="flex gap-3">
+                    <input
+                      type="text"
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      placeholder="Enter category name (e.g., 'Balconies')"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      onKeyPress={(e) => e.key === 'Enter' && addCategory()}
+                    />
+                    <button
+                      onClick={addCategory}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Category
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Categories List */}
+              <div>
+                {categories.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Layers className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                    <p>No categories found</p>
+                    {canEdit && <p className="text-sm">Add your first category above</p>}
+                  </div>
+                ) : (
+                  <div className="grid gap-3">
+                    {categories.map((category) => (
+                      <div
+                        key={category.id}
+                        className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+                      >
+                        {editingCategory === category.id ? (
+                          <EditCategoryForm
+                            category={category}
+                            onSave={updateCategory}
+                            onCancel={() => setEditingCategory(null)}
+                          />
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-3 flex-1">
+                              <Layers className="h-5 w-5 text-blue-500" />
+                              <div>
+                                <h4 className="font-medium text-gray-900">{category.name}</h4>
+                                <p className="text-sm text-gray-500">{category.description}</p>
+                              </div>
+                            </div>
+                            {canEdit && (
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => setEditingCategory(category.id)}
+                                  className="p-2 text-blue-500 hover:bg-blue-50 rounded-md"
+                                  title="Edit category"
+                                >
+                                  <Edit3 className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => deleteCategory(category.id)}
+                                  className="p-2 text-red-500 hover:bg-red-50 rounded-md"
+                                  title="Delete category"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Types Section */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Image Types</h3>
+                  <p className="text-gray-600">Types used for classifying image content and materials</p>
+                </div>
+              </div>
+
+              {/* Add New Type - Only show in edit mode */}
+              {canEdit && (
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium text-gray-900 mb-3">Add New Type</h4>
+                  <div className="flex gap-3">
+                    <input
+                      type="text"
+                      value={newTypeName}
+                      onChange={(e) => setNewTypeName(e.target.value)}
+                      placeholder="Enter type name (e.g., 'Glass', 'Concrete')"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      onKeyPress={(e) => e.key === 'Enter' && addType()}
+                    />
+                    <button
+                      onClick={addType}
+                      className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Type
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Types List */}
+              <div>
+                {types.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Tags className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                    <p>No types found</p>
+                    {canEdit && <p className="text-sm">Add your first type above</p>}
+                  </div>
+                ) : (
+                  <div className="grid gap-3">
+                    {types.map((type) => (
+                      <div
+                        key={type.id}
+                        className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+                      >
+                        {editingType === type.id ? (
+                          <EditTypeForm
+                            type={type}
+                            onSave={updateType}
+                            onCancel={() => setEditingType(null)}
+                          />
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-3 flex-1">
+                              <Tags className="h-5 w-5 text-green-500" />
+                              <div>
+                                <h4 className="font-medium text-gray-900">{type.name}</h4>
+                                <p className="text-sm text-gray-500">{type.description}</p>
+                              </div>
+                            </div>
+                            {canEdit && (
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => setEditingType(type.id)}
+                                  className="p-2 text-blue-500 hover:bg-blue-50 rounded-md"
+                                  title="Edit type"
+                                >
+                                  <Edit3 className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => deleteType(type.id)}
+                                  className="p-2 text-red-500 hover:bg-red-50 rounded-md"
+                                  title="Delete type"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
 
         {activeSection === 'policies' && (
-          <div>
-            <div className="text-center py-12 bg-white">
-              <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Image Policies</h3>
-              <p className="text-gray-600 mb-2">Image policies and tagging rules interface coming soon...</p>
-              <p className="text-sm text-gray-500">
-                View how images are defined, tagging policies, and categorization rules.
-                Available in both view and edit modes.
+          <div className="space-y-6">
+            {/* Filename Format Policy */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="flex items-center gap-2 mb-4">
+                <FileText className="h-5 w-5 text-blue-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Filename Format</h3>
+              </div>
+              
+              <div className="bg-blue-50 p-4 rounded-lg mb-4">
+                <h4 className="font-medium text-blue-900 mb-2">Standard Format:</h4>
+                <div className="text-blue-800 font-mono text-sm bg-blue-100 p-3 rounded">
+                  AXXXX-type-category.jpg
+                </div>
+                <div className="text-blue-800 text-sm mt-2 space-y-1">
+                  <div>• <strong>A</strong> = Alphabetical prefix</div>
+                  <div>• <strong>XXXX</strong> = 4-digit sequential number</div>
+                  <div>• <strong>type</strong> = precedent, texture, or project-specific</div>
+                  <div>• <strong>category</strong> = exteriors, interiors, kitchens, bathrooms, stairs, etc.</div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <h5 className="font-medium text-gray-900 mb-2">Example Precedent:</h5>
+                  <code className="text-blue-600">A0124-precedent-exteriors.jpg</code>
+                </div>
+                <div>
+                  <h5 className="font-medium text-gray-900 mb-2">Example Texture:</h5>
+                  <code className="text-blue-600">A0168-texture-tile.jpg</code>
+                </div>
+              </div>
+            </div>
+
+            {/* Tagging Policies */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="flex items-center gap-2 mb-4">
+                <Tags className="h-5 w-5 text-green-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Tagging Policies</h3>
+              </div>
+
+              <div className="space-y-4">
+                {/* Project Images */}
+                <div className="border-l-4 border-blue-500 pl-4">
+                  <h4 className="font-medium text-gray-900 mb-2">Project Images</h4>
+                  <div className="text-sm text-gray-700 space-y-1">
+                    <div><strong>Required Tags:</strong> project name (e.g., "de witt st", "couvreur")</div>
+                    <div><strong>Status Tags:</strong> "wip" (work in progress) or "final" (completed)</div>
+                    <div><strong>Completion Tags:</strong> "complete" + "archier" (automatically creates complete project)</div>
+                    <div><strong>Category Tags:</strong> exteriors, interiors, kitchens, bathrooms, stairs, etc.</div>
+                  </div>
+                </div>
+
+                {/* Precedent Images */}
+                <div className="border-l-4 border-purple-500 pl-4">
+                  <h4 className="font-medium text-gray-900 mb-2">Precedent Images</h4>
+                  <div className="text-sm text-gray-700 space-y-1">
+                    <div><strong>Required Tags:</strong> "precedent"</div>
+                    <div><strong>Optional Project Tags:</strong> project name (for project-specific precedents)</div>
+                    <div><strong>Category Tags:</strong> exteriors, interiors, general, stairs, etc.</div>
+                    <div><strong>Usage:</strong> Reference images for design inspiration</div>
+                  </div>
+                </div>
+
+                {/* Texture Images */}
+                <div className="border-l-4 border-orange-500 pl-4">
+                  <h4 className="font-medium text-gray-900 mb-2">Texture Images</h4>
+                  <div className="text-sm text-gray-700 space-y-1">
+                    <div><strong>Required Tags:</strong> "texture"</div>
+                    <div><strong>Optional Project Tags:</strong> project name (for project-specific materials)</div>
+                    <div><strong>Material Tags:</strong> tile, wood, stone, brick, carpet, metal, etc.</div>
+                    <div><strong>Usage:</strong> Material samples and texture references</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Folder Structure Policy */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="flex items-center gap-2 mb-4">
+                <Folder className="h-5 w-5 text-purple-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Dropbox Organization</h3>
+              </div>
+              
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-medium text-gray-900 mb-3">Automatic Folder Structure:</h4>
+                <div className="text-sm text-gray-700 space-y-2 font-mono">
+                  <div className="pl-0">📁 /SnapTag/</div>
+                  <div className="pl-4">📁 Archier/ <span className="text-gray-500">(team projects)</span></div>
+                  <div className="pl-8">📁 [Project Name]/ <span className="text-gray-500">(e.g., "De Witt St")</span></div>
+                  <div className="pl-12">📁 Final/ <span className="text-gray-500">(images tagged "final")</span></div>
+                  <div className="pl-12">📁 WIP/ <span className="text-gray-500">(images tagged "wip")</span></div>
+                  <div className="pl-4">📁 Precedents/ <span className="text-gray-500">(reference images)</span></div>
+                  <div className="pl-8">📁 [Category]/ <span className="text-gray-500">(exteriors, interiors, etc.)</span></div>
+                  <div className="pl-4">📁 Materials/ <span className="text-gray-500">(texture images)</span></div>
+                  <div className="pl-8">📁 [Material Type]/ <span className="text-gray-500">(tile, wood, stone, etc.)</span></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Search and Filter Logic */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="flex items-center gap-2 mb-4">
+                <Search className="h-5 w-5 text-indigo-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Search & Filter Logic</h3>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-yellow-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-yellow-900 mb-2">AND Logic (All Required)</h4>
+                  <p className="text-yellow-800 text-sm mb-2">
+                    Images must have ALL specified tags to appear in results:
+                  </p>
+                  <div className="text-yellow-800 text-sm space-y-1">
+                    <div>• Project tab: project name + tab type (e.g., "de witt st" + "precedent")</div>
+                    <div>• Photos tab: project name + "complete" + filter ("final" or "wip")</div>
+                    <div>• Texture tab: project name + "texture"</div>
+                  </div>
+                </div>
+
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-green-900 mb-2">Project Tab Behavior</h4>
+                  <div className="text-green-800 text-sm space-y-1">
+                    <div>• <strong>Current Projects:</strong> Precedent, Texture, Photos tabs</div>
+                    <div>• <strong>Complete Projects:</strong> Final, WIP tabs (Photos tab with filters)</div>
+                    <div>• <strong>Photos Tab:</strong> Only shows images with "complete" tag</div>
+                    <div>• <strong>Filters:</strong> Final/WIP dropdown in Photos tab</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Project Lifecycle */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="flex items-center gap-2 mb-4">
+                <RefreshCw className="h-5 w-5 text-teal-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Project Lifecycle</h3>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-start gap-4">
+                  <div className="bg-blue-100 rounded-full p-2">
+                    <span className="text-blue-600 font-bold text-sm">1</span>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-900">Current Project Creation</h4>
+                    <p className="text-gray-600 text-sm">Manual creation via Dashboard or Projects page</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="bg-purple-100 rounded-full p-2">
+                    <span className="text-purple-600 font-bold text-sm">2</span>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-900">Image Collection</h4>
+                    <p className="text-gray-600 text-sm">Add precedents, textures, and WIP images with project tags</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="bg-orange-100 rounded-full p-2">
+                    <span className="text-orange-600 font-bold text-sm">3</span>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-900">Project Completion</h4>
+                    <p className="text-gray-600 text-sm">Tag final images with "complete" + "archier" + project name</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="bg-green-100 rounded-full p-2">
+                    <span className="text-green-600 font-bold text-sm">4</span>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-900">Automatic Migration</h4>
+                    <p className="text-gray-600 text-sm">Project automatically appears in Complete section with Final/WIP tabs</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeSection === 'workflow' && (
+          <div className="space-y-6">
+            {/* Pro Workflow Header */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="flex items-center gap-2 mb-4">
+                <RefreshCw className="h-5 w-5 text-purple-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Pro Workflow</h3>
+              </div>
+              <p className="text-gray-600">
+                Advanced tools and automation for professional image management workflows.
               </p>
             </div>
+
+            {/* Batch Operations */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="flex items-center gap-2 mb-4">
+                <Layers className="h-5 w-5 text-blue-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Batch Operations</h3>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-blue-900 mb-2">Bulk Tagging</h4>
+                  <p className="text-blue-800 text-sm mb-3">
+                    Apply tags to multiple images simultaneously based on filename patterns or selections.
+                  </p>
+                  <div className="text-blue-800 text-sm space-y-1">
+                    <div>• Pattern-based tagging (e.g., all *-precedent-* files)</div>
+                    <div>• Project-specific bulk operations</div>
+                    <div>• Category and type batch assignment</div>
+                  </div>
+                </div>
+
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-green-900 mb-2">Folder Synchronization</h4>
+                  <p className="text-green-800 text-sm mb-3">
+                    Automatic organization and synchronization with Dropbox folder structure.
+                  </p>
+                  <div className="text-green-800 text-sm space-y-1">
+                    <div>• Auto-move images based on tags</div>
+                    <div>• Dropbox folder structure maintenance</div>
+                    <div>• Duplicate detection and handling</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Automation Rules */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="flex items-center gap-2 mb-4">
+                <Settings className="h-5 w-5 text-orange-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Automation Rules</h3>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="bg-orange-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-orange-900 mb-2">Auto-Tagging Rules</h4>
+                  <p className="text-orange-800 text-sm mb-3">
+                    Automatically apply tags based on filename patterns and content analysis.
+                  </p>
+                  <div className="text-orange-800 text-sm font-mono bg-orange-100 p-3 rounded space-y-1">
+                    <div>AXXXX-precedent-exteriors.jpg → [precedent, exteriors]</div>
+                    <div>AXXXX-texture-tile.jpg → [texture, tile]</div>
+                    <div>Project images → [project-name, category]</div>
+                  </div>
+                </div>
+
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-purple-900 mb-2">Project Lifecycle Automation</h4>
+                  <p className="text-purple-800 text-sm mb-3">
+                    Automated project status management and folder organization.
+                  </p>
+                  <div className="text-purple-800 text-sm space-y-1">
+                    <div>• Auto-complete projects when tagged with "complete" + "archier"</div>
+                    <div>• Move WIP images to Final folders when status changes</div>
+                    <div>• Create project archives for completed work</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quality Control */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="flex items-center gap-2 mb-4">
+                <Check className="h-5 w-5 text-teal-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Quality Control</h3>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="bg-yellow-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-yellow-900 mb-2">Validation Checks</h4>
+                  <div className="text-yellow-800 text-sm space-y-1">
+                    <div>• Filename format compliance (AXXXX-type-category.jpg)</div>
+                    <div>• Required tag validation</div>
+                    <div>• Duplicate image detection</div>
+                    <div>• Missing category assignments</div>
+                  </div>
+                </div>
+
+                <div className="bg-teal-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-teal-900 mb-2">Data Integrity</h4>
+                  <div className="text-teal-800 text-sm space-y-1">
+                    <div>• Orphaned images (missing project references)</div>
+                    <div>• Inconsistent tagging patterns</div>
+                    <div>• Broken Dropbox synchronization</div>
+                    <div>• Database consistency checks</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Analytics & Reporting */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="flex items-center gap-2 mb-4">
+                <Database className="h-5 w-5 text-indigo-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Analytics & Reporting</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-indigo-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-indigo-900 mb-2">Usage Statistics</h4>
+                  <div className="text-indigo-800 text-sm space-y-1">
+                    <div>• Images per project breakdown</div>
+                    <div>• Most used categories and types</div>
+                    <div>• Storage usage by project</div>
+                    <div>• Tagging completion rates</div>
+                  </div>
+                </div>
+
+                <div className="bg-pink-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-pink-900 mb-2">Project Reports</h4>
+                  <div className="text-pink-800 text-sm space-y-1">
+                    <div>• Project timeline and progress</div>
+                    <div>• Image collection summaries</div>
+                    <div>• Team collaboration metrics</div>
+                    <div>• Export capabilities (PDF, CSV)</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Advanced Tools */}
+            {canEdit && (
+              <div className="bg-white p-6 rounded-lg shadow border-l-4 border-purple-500">
+                <div className="flex items-center gap-2 mb-4">
+                  <AlertCircle className="h-5 w-5 text-purple-600" />
+                  <h3 className="text-lg font-semibold text-gray-900">Advanced Tools</h3>
+                  <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded">Edit Mode Only</span>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                    <h4 className="font-medium text-red-900 mb-2">⚠️ Danger Zone</h4>
+                    <div className="text-red-800 text-sm space-y-2">
+                      <div>• Bulk delete operations</div>
+                      <div>• Database cleanup and optimization</div>
+                      <div>• Reset project configurations</div>
+                      <div>• Force Dropbox re-synchronization</div>
+                    </div>
+                    <p className="text-red-700 text-xs mt-3 italic">
+                      These operations cannot be undone. Use with extreme caution.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
