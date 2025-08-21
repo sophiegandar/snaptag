@@ -150,14 +150,20 @@ const Dashboard = () => {
         const parsed = JSON.parse(storedCategories);
         setCategories(Array.isArray(parsed) ? parsed : []);
       } else {
-        // Default categories
+        // Default categories (subfolders under main types)
         const defaultCategories = [
           { id: 'exteriors', name: 'Exteriors', description: 'Building exterior views and facades' },
           { id: 'interiors', name: 'Interiors', description: 'Interior spaces and rooms' },
           { id: 'kitchens', name: 'Kitchens', description: 'Kitchen spaces and design' },
           { id: 'bathrooms', name: 'Bathrooms', description: 'Bathroom spaces and fixtures' },
           { id: 'stairs', name: 'Stairs', description: 'Staircase design and details' },
-          { id: 'general', name: 'General', description: 'General or uncategorized images' }
+          { id: 'general', name: 'General', description: 'General or uncategorized images' },
+          { id: 'tile', name: 'Tile', description: 'Tile materials and patterns' },
+          { id: 'wood', name: 'Wood', description: 'Wood materials and finishes' },
+          { id: 'stone', name: 'Stone', description: 'Stone materials and textures' },
+          { id: 'brick', name: 'Brick', description: 'Brick materials and patterns' },
+          { id: 'metal', name: 'Metal', description: 'Metal materials and finishes' },
+          { id: 'carpet', name: 'Carpet', description: 'Carpet and soft flooring materials' }
         ];
         setCategories(defaultCategories);
         localStorage.setItem('snaptag-categories', JSON.stringify(defaultCategories));
@@ -167,16 +173,11 @@ const Dashboard = () => {
         const parsed = JSON.parse(storedTypes);
         setTypes(Array.isArray(parsed) ? parsed : []);
       } else {
-        // Default types
+        // Default types (main folder structure)
         const defaultTypes = [
-          { id: 'precedent', name: 'Precedent', description: 'Reference images for design inspiration' },
-          { id: 'texture', name: 'Texture', description: 'Material samples and texture references' },
-          { id: 'tile', name: 'Tile', description: 'Tile materials and patterns' },
-          { id: 'wood', name: 'Wood', description: 'Wood materials and finishes' },
-          { id: 'stone', name: 'Stone', description: 'Stone materials and textures' },
-          { id: 'brick', name: 'Brick', description: 'Brick materials and patterns' },
-          { id: 'metal', name: 'Metal', description: 'Metal materials and finishes' },
-          { id: 'carpet', name: 'Carpet', description: 'Carpet and soft flooring materials' }
+          { id: 'archier', name: 'Archier', description: 'Team project images organized by project name' },
+          { id: 'texture', name: 'Texture', description: 'Material samples organized by material type' },
+          { id: 'precedent', name: 'Precedent', description: 'Reference images organized by category' }
         ];
         setTypes(defaultTypes);
         localStorage.setItem('snaptag-types', JSON.stringify(defaultTypes));
@@ -739,12 +740,108 @@ const Dashboard = () => {
 
         {activeSection === 'categories' && (
           <div className="space-y-6">
+            {/* Types Section */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Dropbox Types (Main Folders)</h3>
+                  <p className="text-gray-600">Primary folder structure in Dropbox for organizing different types of images</p>
+                </div>
+              </div>
+
+              {/* Add New Type - Only show in edit mode */}
+              {canEdit && (
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium text-gray-900 mb-3">Add New Type</h4>
+                  <div className="flex gap-3">
+                    <input
+                      type="text"
+                      value={newTypeName}
+                      onChange={(e) => setNewTypeName(e.target.value)}
+                      placeholder="Enter type name (e.g., 'Materials')"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      onKeyPress={(e) => e.key === 'Enter' && addType()}
+                    />
+                    <button
+                      onClick={addType}
+                      className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Type
+                    </button>
+                  </div>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Adding a new type will create a new main folder in the Dropbox structure.
+                  </p>
+                </div>
+              )}
+
+              {/* Types List */}
+              <div>
+                {types.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Folder className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                    <p>No types found</p>
+                    {canEdit && <p className="text-sm">Add your first type above</p>}
+                  </div>
+                ) : (
+                  <div className="grid gap-3">
+                    {types.map((type) => (
+                      <div
+                        key={type.id}
+                        className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100"
+                      >
+                        {editingType === type.id ? (
+                          <EditTypeFormInline
+                            type={type}
+                            onSave={updateType}
+                            onCancel={() => setEditingType(null)}
+                          />
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-3 flex-1">
+                              <Folder className="h-5 w-5 text-green-600" />
+                              <div>
+                                <h4 className="font-medium text-gray-900">{type.name}</h4>
+                                <p className="text-sm text-gray-500">{type.description}</p>
+                                <p className="text-xs text-green-600 mt-1">
+                                  Dropbox: /SnapTag/{type.name}/
+                                </p>
+                              </div>
+                            </div>
+                            {canEdit && (
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => setEditingType(type.id)}
+                                  className="p-2 text-blue-500 hover:bg-blue-50 rounded-md"
+                                  title="Edit type"
+                                >
+                                  <Edit3 className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => deleteType(type.id)}
+                                  className="p-2 text-red-500 hover:bg-red-50 rounded-md"
+                                  title="Delete type"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Categories Section */}
             <div className="bg-white p-6 rounded-lg shadow">
               <div className="flex justify-between items-center mb-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Image Categories</h3>
-                  <p className="text-gray-600">Categories used for organizing and classifying images</p>
+                  <h3 className="text-lg font-semibold text-gray-900">Categories (Subfolders)</h3>
+                  <p className="text-gray-600">Subcategories that appear under each type folder for detailed organization</p>
                 </div>
               </div>
 
@@ -757,7 +854,7 @@ const Dashboard = () => {
                       type="text"
                       value={newCategoryName}
                       onChange={(e) => setNewCategoryName(e.target.value)}
-                      placeholder="Enter category name (e.g., 'Balconies')"
+                      placeholder="Enter category name (e.g., 'Balconies', 'Glass', 'Concrete')"
                       className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                       onKeyPress={(e) => e.key === 'Enter' && addCategory()}
                     />
@@ -769,6 +866,9 @@ const Dashboard = () => {
                       Add Category
                     </button>
                   </div>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Adding a new category will create subfolders under all type folders (Archier, Texture, Precedent).
+                  </p>
                 </div>
               )}
 
@@ -800,6 +900,11 @@ const Dashboard = () => {
                               <div>
                                 <h4 className="font-medium text-gray-900">{category.name}</h4>
                                 <p className="text-sm text-gray-500">{category.description}</p>
+                                <div className="text-xs text-blue-600 mt-1 space-y-1">
+                                  <div>Precedent: /SnapTag/Precedent/{category.name}/</div>
+                                  <div>Texture: /SnapTag/Texture/{category.name}/</div>
+                                  <div>Project: /SnapTag/Archier/[Project]/{category.name}/</div>
+                                </div>
                               </div>
                             </div>
                             {canEdit && (
@@ -829,93 +934,31 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Types Section */}
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Image Types</h3>
-                  <p className="text-gray-600">Types used for classifying image content and materials</p>
-                </div>
+            {/* Dropbox Integration Info */}
+            <div className="bg-white p-6 rounded-lg shadow border-l-4 border-blue-500">
+              <div className="flex items-center gap-2 mb-4">
+                <Droplets className="h-5 w-5 text-blue-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Dropbox Folder Sync</h3>
               </div>
-
-              {/* Add New Type - Only show in edit mode */}
-              {canEdit && (
-                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium text-gray-900 mb-3">Add New Type</h4>
-                  <div className="flex gap-3">
-                    <input
-                      type="text"
-                      value={newTypeName}
-                      onChange={(e) => setNewTypeName(e.target.value)}
-                      placeholder="Enter type name (e.g., 'Glass', 'Concrete')"
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                      onKeyPress={(e) => e.key === 'Enter' && addType()}
-                    />
-                    <button
-                      onClick={addType}
-                      className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add Type
-                    </button>
+              
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h4 className="font-medium text-blue-900 mb-2">Automatic Folder Creation</h4>
+                <p className="text-blue-800 text-sm mb-3">
+                  When you add new types or categories, the corresponding folder structure will be automatically created in Dropbox:
+                </p>
+                <div className="text-blue-800 text-sm space-y-2">
+                  <div>• <strong>New Type:</strong> Creates /SnapTag/[TypeName]/ main folder</div>
+                  <div>• <strong>New Category:</strong> Creates subfolders under all existing types</div>
+                  <div>• <strong>Image Upload:</strong> Automatically sorted into correct folders based on tags</div>
+                </div>
+                <div className="mt-4 p-3 bg-blue-100 rounded text-blue-900 text-sm">
+                  <strong>Example:</strong> Adding "Glass" category creates:
+                  <div className="mt-1 font-mono text-xs">
+                    /SnapTag/Precedent/Glass/<br/>
+                    /SnapTag/Texture/Glass/<br/>
+                    /SnapTag/Archier/[Project]/Glass/
                   </div>
                 </div>
-              )}
-
-              {/* Types List */}
-              <div>
-                {types.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <Tags className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                    <p>No types found</p>
-                    {canEdit && <p className="text-sm">Add your first type above</p>}
-                  </div>
-                ) : (
-                  <div className="grid gap-3">
-                    {types.map((type) => (
-                      <div
-                        key={type.id}
-                        className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
-                      >
-                        {editingType === type.id ? (
-                          <EditTypeFormInline
-                            type={type}
-                            onSave={updateType}
-                            onCancel={() => setEditingType(null)}
-                          />
-                        ) : (
-                          <>
-                            <div className="flex items-center gap-3 flex-1">
-                              <Tags className="h-5 w-5 text-green-500" />
-                              <div>
-                                <h4 className="font-medium text-gray-900">{type.name}</h4>
-                                <p className="text-sm text-gray-500">{type.description}</p>
-                              </div>
-                            </div>
-                            {canEdit && (
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => setEditingType(type.id)}
-                                  className="p-2 text-blue-500 hover:bg-blue-50 rounded-md"
-                                  title="Edit type"
-                                >
-                                  <Edit3 className="h-4 w-4" />
-                                </button>
-                                <button
-                                  onClick={() => deleteType(type.id)}
-                                  className="p-2 text-red-500 hover:bg-red-50 rounded-md"
-                                  title="Delete type"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
           </div>
