@@ -107,6 +107,55 @@ const EditTypeFormInline = ({ type, onSave, onCancel }) => {
   );
 };
 
+const EditProjectFormInline = ({ project, onSave, onCancel }) => {
+  const [name, setName] = useState(project.name);
+
+  const handleSave = () => {
+    if (name.trim()) {
+      onSave(project.id, name);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSave();
+    } else if (e.key === 'Escape') {
+      onCancel();
+    }
+  };
+
+  return (
+    <div className="flex-1 flex items-center gap-3">
+      <Folder className="h-5 w-5 text-blue-500" />
+      <div className="flex-1">
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyPress={handleKeyPress}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 font-medium"
+          placeholder="Project name"
+          autoFocus
+        />
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={handleSave}
+          className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+        >
+          <Check className="h-3 w-3" />
+        </button>
+        <button
+          onClick={onCancel}
+          className="px-3 py-1 bg-gray-500 text-white rounded text-sm hover:bg-gray-600"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const Dashboard = () => {
   const { canEdit } = useMode();
   const [activeSection, setActiveSection] = useState('tags');
@@ -124,6 +173,9 @@ const Dashboard = () => {
   const [newTypeName, setNewTypeName] = useState('');
   const [editingCategory, setEditingCategory] = useState(null);
   const [editingType, setEditingType] = useState(null);
+
+  // Project editing state
+  const [editingProject, setEditingProject] = useState(null);
 
   // Pro Workflow state
   const [scanning, setScanning] = useState(false);
@@ -483,6 +535,44 @@ const Dashboard = () => {
     }
   };
 
+  const updateProject = (projectId, newName) => {
+    if (!canEdit) {
+      toast.error('Project editing is only available in edit mode');
+      return;
+    }
+
+    if (!newName.trim()) {
+      toast.error('Project name cannot be empty');
+      return;
+    }
+
+    try {
+      // Check if another project already has this name
+      const existing = currentProjects.find(p => 
+        p.id !== projectId && p.name.toLowerCase() === newName.trim().toLowerCase()
+      );
+      
+      if (existing) {
+        toast.error('A project with this name already exists');
+        return;
+      }
+
+      const updatedProjects = currentProjects.map(project => 
+        project.id === projectId 
+          ? { ...project, name: newName.trim(), tags: [newName.toLowerCase().replace(/\s+/g, ' ')] }
+          : project
+      );
+      
+      setCurrentProjects(updatedProjects);
+      localStorage.setItem('snaptag-current-projects', JSON.stringify(updatedProjects));
+      setEditingProject(null);
+      toast.success('Project name updated successfully');
+    } catch (error) {
+      console.error('Error updating project:', error);
+      toast.error('Failed to update project');
+    }
+  };
+
   // Settings state (moved from Settings.js)
   const [settings, setSettings] = useState({
     dropboxToken: '',
@@ -758,24 +848,43 @@ const Dashboard = () => {
                         key={project.id}
                         className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
                       >
-                        <div className="flex items-center gap-3">
-                          <Folder className="h-5 w-5 text-blue-500" />
-                          <div>
-                            <h4 className="font-medium text-gray-900">{project.name}</h4>
-                            <div className="flex items-center gap-2 text-sm text-gray-500">
-                              <Calendar className="h-3 w-3" />
-                              <span>Created {new Date(project.created).toLocaleDateString()}</span>
+                        {editingProject === project.id ? (
+                          <EditProjectFormInline
+                            project={project}
+                            onSave={updateProject}
+                            onCancel={() => setEditingProject(null)}
+                          />
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-3">
+                              <Folder className="h-5 w-5 text-blue-500" />
+                              <div>
+                                <h4 className="font-medium text-gray-900">{project.name}</h4>
+                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                  <Calendar className="h-3 w-3" />
+                                  <span>Created {new Date(project.created).toLocaleDateString()}</span>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                        {canEdit && (
-                          <button
-                            onClick={() => deleteProject(project.id)}
-                            className="p-2 text-red-500 hover:bg-red-50 rounded-md"
-                            title="Delete project"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                            {canEdit && (
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => setEditingProject(project.id)}
+                                  className="p-2 text-blue-500 hover:bg-blue-50 rounded-md"
+                                  title="Edit project name"
+                                >
+                                  <Edit3 className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => deleteProject(project.id)}
+                                  className="p-2 text-red-500 hover:bg-red-50 rounded-md"
+                                  title="Delete project"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     ))}
