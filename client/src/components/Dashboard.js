@@ -3,6 +3,99 @@ import { Database, Tags, Folder, Settings, Eye, Edit3, FileText, Layers, Save, T
 import { useMode } from '../context/ModeContext';
 import { toast } from 'react-toastify';
 
+// Inline editing components
+const EditCategoryFormInline = ({ category, onSave, onCancel }) => {
+  const [name, setName] = useState(category.name);
+  const [description, setDescription] = useState(category.description);
+
+  const handleSave = () => {
+    if (name.trim()) {
+      onSave(category.id, name, description);
+    }
+  };
+
+  return (
+    <div className="flex-1 space-y-3">
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          placeholder="Category name"
+        />
+        <input
+          type="text"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          placeholder="Description"
+        />
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={handleSave}
+          className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+        >
+          <Check className="h-3 w-3" />
+        </button>
+        <button
+          onClick={onCancel}
+          className="px-3 py-1 bg-gray-500 text-white rounded text-sm hover:bg-gray-600"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const EditTypeFormInline = ({ type, onSave, onCancel }) => {
+  const [name, setName] = useState(type.name);
+  const [description, setDescription] = useState(type.description);
+
+  const handleSave = () => {
+    if (name.trim()) {
+      onSave(type.id, name, description);
+    }
+  };
+
+  return (
+    <div className="flex-1 space-y-3">
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          placeholder="Type name"
+        />
+        <input
+          type="text"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          placeholder="Description"
+        />
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={handleSave}
+          className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+        >
+          <Check className="h-3 w-3" />
+        </button>
+        <button
+          onClick={onCancel}
+          className="px-3 py-1 bg-gray-500 text-white rounded text-sm hover:bg-gray-600"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const Dashboard = () => {
   const { canEdit } = useMode();
   const [activeSection, setActiveSection] = useState('tags');
@@ -695,7 +788,7 @@ const Dashboard = () => {
                         className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
                       >
                         {editingCategory === category.id ? (
-                          <EditCategoryForm
+                          <EditCategoryFormInline
                             category={category}
                             onSave={updateCategory}
                             onCancel={() => setEditingCategory(null)}
@@ -785,7 +878,7 @@ const Dashboard = () => {
                         className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
                       >
                         {editingType === type.id ? (
-                          <EditTypeForm
+                          <EditTypeFormInline
                             type={type}
                             onSave={updateType}
                             onCancel={() => setEditingType(null)}
