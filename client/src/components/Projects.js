@@ -504,24 +504,28 @@ const Projects = () => {
     const loadThumbnail = useCallback(async () => {
       try {
         setLoading(true);
-        let searchTags = [];
         
-        if (project.type === 'complete') {
-          searchTags = project.tags;
-        } else {
-          searchTags = [project.name.toLowerCase()];
+        // For current projects, skip API call and use solid color
+        if (project.type === 'current') {
+          setLoading(false);
+          return;
         }
         
-        const response = await apiCall('/api/images/search', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tags: searchTags })
-        });
-        
-        if (response.ok) {
-          const images = await response.json();
-          if (images.length > 0) {
-            setThumbnailImage(images[0]);
+        // For complete projects, load actual images
+        if (project.type === 'complete') {
+          const searchTags = project.tags;
+          
+          const response = await apiCall('/api/images/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tags: searchTags })
+          });
+          
+          if (response.ok) {
+            const images = await response.json();
+            if (images.length > 0) {
+              setThumbnailImage(images[0]);
+            }
           }
         }
       } catch (error) {
@@ -551,6 +555,13 @@ const Projects = () => {
             {loading ? (
               <div className="w-full h-full bg-gray-100 flex items-center justify-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              </div>
+            ) : project.type === 'current' ? (
+              <div className="w-full h-full flex items-center justify-center" style={{backgroundColor: '#BDAE93'}}>
+                <div className="text-center">
+                  <FolderOpen className="h-12 w-12 text-white/80 mx-auto mb-2" />
+                  <p className="text-white font-medium">{project.name}</p>
+                </div>
               </div>
             ) : thumbnailImage ? (
               <img
