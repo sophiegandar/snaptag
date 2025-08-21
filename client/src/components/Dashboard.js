@@ -224,6 +224,11 @@ const Dashboard = () => {
   const [editingTag, setEditingTag] = useState(null);
   const [tagsLoading, setTagsLoading] = useState(false);
 
+  // Typo scan state
+  const [typoScanning, setTypoScanning] = useState(false);
+  const [typoSuggestions, setTypoSuggestions] = useState([]);
+  const [showTypoResults, setShowTypoResults] = useState(false);
+
   // Pro Workflow state
   const [scanning, setScanning] = useState(false);
   const [scanResults, setScanResults] = useState({
@@ -878,6 +883,168 @@ const Dashboard = () => {
     }
   };
 
+  // Typo detection functions
+  const levenshteinDistance = (str1, str2) => {
+    const matrix = [];
+    const len1 = str1.length;
+    const len2 = str2.length;
+
+    // Create matrix
+    for (let i = 0; i <= len2; i++) {
+      matrix[i] = [i];
+    }
+    for (let j = 0; j <= len1; j++) {
+      matrix[0][j] = j;
+    }
+
+    // Fill matrix
+    for (let i = 1; i <= len2; i++) {
+      for (let j = 1; j <= len1; j++) {
+        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1, // substitution
+            matrix[i][j - 1] + 1,     // insertion
+            matrix[i - 1][j] + 1      // deletion
+          );
+        }
+      }
+    }
+
+    return matrix[len2][len1];
+  };
+
+  const calculateSimilarity = (str1, str2) => {
+    const maxLen = Math.max(str1.length, str2.length);
+    if (maxLen === 0) return 1;
+    const distance = levenshteinDistance(str1, str2);
+    return (maxLen - distance) / maxLen;
+  };
+
+  const scanForTypos = () => {
+    if (!canEdit) {
+      toast.error('Typo scanning is only available in edit mode');
+      return;
+    }
+
+    setTypoScanning(true);
+    setTypoSuggestions([]);
+    setShowTypoResults(false);
+
+    try {
+      const suggestions = [];
+      const processed = new Set();
+
+      // Compare each tag with every other tag
+      for (let i = 0; i < tags.length; i++) {
+        for (let j = i + 1; j < tags.length; j++) {
+          const tag1 = tags[i];
+          const tag2 = tags[j];
+          
+          // Skip if we've already processed this pair
+          const pairKey = `${Math.min(tag1.id, tag2.id)}-${Math.max(tag1.id, tag2.id)}`;
+          if (processed.has(pairKey)) continue;
+          processed.add(pairKey);
+
+          const similarity = calculateSimilarity(tag1.name.toLowerCase(), tag2.name.toLowerCase());
+          
+          // Consider it a potential typo if:
+          // 1. Similarity is between 0.6 and 0.95 (similar but not identical)
+          // 2. Length difference is small (within 3 characters)
+          // 3. At least one tag has some usage
+          const lengthDiff = Math.abs(tag1.name.length - tag2.name.length);
+          const hasUsage = (tag1.usage_count || 0) > 0 || (tag2.usage_count || 0) > 0;
+          
+          if (similarity >= 0.6 && similarity < 0.95 && lengthDiff <= 3 && hasUsage) {
+            // Suggest merging the tag with lower usage into the one with higher usage
+            const sourceTag = (tag1.usage_count || 0) <= (tag2.usage_count || 0) ? tag1 : tag2;
+            const targetTag = (tag1.usage_count || 0) > (tag2.usage_count || 0) ? tag1 : tag2;
+            
+            suggestions.push({
+              sourceTag,
+              targetTag,
+              similarity: Math.round(similarity * 100),
+              reason: similarity >= 0.8 ? 'Very similar' : 'Potentially similar'
+            });
+          }
+        }
+      }
+
+      // Sort by similarity score (highest first)
+      suggestions.sort((a, b) => b.similarity - a.similarity);
+
+      setTypoSuggestions(suggestions);
+      setShowTypoResults(true);
+      
+      if (suggestions.length === 0) {
+        toast.success('No potential typos detected! All tags look good.');
+      } else {
+        toast.success(`Found ${suggestions.length} potential typo(s) to review.`);
+      }
+      
+    } catch (error) {
+      console.error('Error scanning for typos:', error);
+      toast.error('Failed to scan for typos');
+    } finally {
+      setTypoScanning(false);
+    }
+  };
+
+  const executeMergeFromTypoScan = async (sourceTag, targetTag) => {
+    const confirmed = window.confirm(
+      `Merge "${sourceTag.name}" into "${targetTag.name}"?\n\n` +
+      `This will:\n` +
+      `• Move all ${sourceTag.usage_count || 0} images from "${sourceTag.name}" to "${targetTag.name}"\n` +
+      `• Delete the "${sourceTag.name}" tag\n` +
+      `• Keep the "${targetTag.name}" tag\n\n` +
+      `Click OK to merge, or Cancel to skip.`
+    );
+    
+    if (!confirmed) return;
+
+    try {
+      const response = await apiCall('/api/tags/merge', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          sourceTagId: sourceTag.id, 
+          targetTagId: targetTag.id 
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to merge tags');
+
+      const result = await response.json();
+      
+      // Update local state
+      setTags(prev => {
+        const filtered = prev.filter(t => t.id !== sourceTag.id);
+        return filtered.map(t => 
+          t.id === targetTag.id 
+            ? { ...t, usage_count: (t.usage_count || 0) + (sourceTag.usage_count || 0) }
+            : t
+        ).sort((a, b) => a.name.localeCompare(b.name));
+      });
+      
+      // Remove this suggestion from the list
+      setTypoSuggestions(prev => 
+        prev.filter(s => s.sourceTag.id !== sourceTag.id && s.targetTag.id !== sourceTag.id)
+      );
+      
+      toast.success(
+        `Successfully merged "${sourceTag.name}" into "${targetTag.name}". ` +
+        `${result.mergedImageCount} images updated.`
+      );
+      
+    } catch (error) {
+      console.error('Error merging tags:', error);
+      toast.error('Failed to merge tags');
+    }
+  };
+
   // Settings state (moved from Settings.js)
   const [settings, setSettings] = useState({
     dropboxToken: '',
@@ -1121,6 +1288,111 @@ const Dashboard = () => {
                       Add Tag
                     </button>
                   </div>
+                </div>
+              )}
+
+              {/* Typo Scan */}
+              {canEdit && (
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h4 className="text-md font-medium text-gray-900">Typo Detection</h4>
+                      <p className="text-sm text-gray-500">Scan for similar tags that might be typos</p>
+                    </div>
+                    <button
+                      onClick={scanForTypos}
+                      disabled={typoScanning || tags.length < 2}
+                      className="px-4 py-2 text-white rounded-md hover:opacity-90 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{backgroundColor: '#BDAE93'}}
+                    >
+                      {typoScanning ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                          Scanning...
+                        </>
+                      ) : (
+                        <>
+                          <Search className="h-4 w-4" />
+                          Scan for Typos
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Typo Results */}
+                  {showTypoResults && (
+                    <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                      {typoSuggestions.length === 0 ? (
+                        <div className="text-center py-4">
+                          <Check className="h-8 w-8 text-green-500 mx-auto mb-2" />
+                          <p className="text-gray-600">No potential typos found!</p>
+                          <p className="text-sm text-gray-500">All your tags look clean.</p>
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="flex items-center justify-between mb-4">
+                            <h5 className="font-medium text-gray-900">
+                              Found {typoSuggestions.length} potential typo(s)
+                            </h5>
+                            <button
+                              onClick={() => setShowTypoResults(false)}
+                              className="text-gray-400 hover:text-gray-600"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                          
+                          <div className="space-y-3">
+                            {typoSuggestions.map((suggestion, index) => (
+                              <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-3 mb-2">
+                                      <span className="text-sm font-medium text-red-600">
+                                        "{suggestion.sourceTag.name}"
+                                      </span>
+                                      <span className="text-gray-400">→</span>
+                                      <span className="text-sm font-medium text-green-600">
+                                        "{suggestion.targetTag.name}"
+                                      </span>
+                                      <span className="text-xs bg-gray-200 px-2 py-1 rounded">
+                                        {suggestion.similarity}% similar
+                                      </span>
+                                    </div>
+                                    <div className="text-xs text-gray-500 space-x-4">
+                                      <span>Source: {suggestion.sourceTag.usage_count || 0} images</span>
+                                      <span>Target: {suggestion.targetTag.usage_count || 0} images</span>
+                                      <span>{suggestion.reason}</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => executeMergeFromTypoScan(suggestion.sourceTag, suggestion.targetTag)}
+                                      className="px-3 py-1 text-white rounded text-sm hover:opacity-90"
+                                      style={{backgroundColor: '#C9D468'}}
+                                      title="Merge tags"
+                                    >
+                                      Merge
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setTypoSuggestions(prev => prev.filter((_, i) => i !== index));
+                                      }}
+                                      className="px-3 py-1 text-white rounded text-sm hover:opacity-90"
+                                      style={{backgroundColor: '#BDAE93'}}
+                                      title="Skip this suggestion"
+                                    >
+                                      Skip
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
