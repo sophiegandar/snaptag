@@ -1194,163 +1194,105 @@ const Dashboard = () => {
                 <h3 className="text-lg font-semibold text-gray-900">Pro Workflow</h3>
               </div>
               <p className="text-gray-600">
-                Advanced tools and automation for professional image management workflows.
+                Scan and analyze images for professional software compatibility and workflow optimization.
               </p>
             </div>
 
-            {/* Batch Operations */}
+            {/* ArchiCAD Compatibility */}
             <div className="bg-white p-6 rounded-lg shadow">
               <div className="flex items-center gap-2 mb-4">
-                <Layers className="h-5 w-5 text-blue-600" />
-                <h3 className="text-lg font-semibold text-gray-900">Batch Operations</h3>
+                <Database className="h-5 w-5 text-blue-600" />
+                <h3 className="text-lg font-semibold text-gray-900">ArchiCAD Suitability Scanner</h3>
               </div>
               
               <div className="space-y-4">
                 <div className="bg-blue-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-blue-900 mb-2">Bulk Tagging</h4>
+                  <h4 className="font-medium text-blue-900 mb-2">Image Compatibility Analysis</h4>
                   <p className="text-blue-800 text-sm mb-3">
-                    Apply tags to multiple images simultaneously based on filename patterns or selections.
+                    Analyze images for optimal use in ArchiCAD workflows and 3D modeling.
                   </p>
                   <div className="text-blue-800 text-sm space-y-1">
-                    <div>• Pattern-based tagging (e.g., all *-precedent-* files)</div>
-                    <div>• Project-specific bulk operations</div>
-                    <div>• Category and type batch assignment</div>
+                    <div>• Resolution and format compatibility check</div>
+                    <div>• Texture mapping suitability assessment</div>
+                    <div>• Material library integration readiness</div>
+                    <div>• Surface detail and seamless tiling analysis</div>
                   </div>
                 </div>
 
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-green-900 mb-2">Folder Synchronization</h4>
-                  <p className="text-green-800 text-sm mb-3">
-                    Automatic organization and synchronization with Dropbox folder structure.
-                  </p>
-                  <div className="text-green-800 text-sm space-y-1">
-                    <div>• Auto-move images based on tags</div>
-                    <div>• Dropbox folder structure maintenance</div>
-                    <div>• Duplicate detection and handling</div>
+                {canEdit && (
+                  <div className="flex gap-3">
+                    <button className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
+                      <Search className="h-4 w-4" />
+                      Scan All Images
+                    </button>
+                    <button className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200">
+                      <RefreshCw className="h-4 w-4" />
+                      Scan Selected Project
+                    </button>
                   </div>
-                </div>
+                )}
               </div>
             </div>
 
-            {/* Automation Rules */}
+            {/* InDesign Compatibility */}
             <div className="bg-white p-6 rounded-lg shadow">
               <div className="flex items-center gap-2 mb-4">
-                <Settings className="h-5 w-5 text-orange-600" />
-                <h3 className="text-lg font-semibold text-gray-900">Automation Rules</h3>
+                <FileText className="h-5 w-5 text-pink-600" />
+                <h3 className="text-lg font-semibold text-gray-900">InDesign Suitability Scanner</h3>
               </div>
               
               <div className="space-y-4">
-                <div className="bg-orange-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-orange-900 mb-2">Auto-Tagging Rules</h4>
-                  <p className="text-orange-800 text-sm mb-3">
-                    Automatically apply tags based on filename patterns and content analysis.
-                  </p>
-                  <div className="text-orange-800 text-sm font-mono bg-orange-100 p-3 rounded space-y-1">
-                    <div>AXXXX-precedent-exteriors.jpg → [precedent, exteriors]</div>
-                    <div>AXXXX-texture-tile.jpg → [texture, tile]</div>
-                    <div>Project images → [project-name, category]</div>
-                  </div>
-                </div>
-
-                <div className="bg-purple-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-purple-900 mb-2">Project Lifecycle Automation</h4>
-                  <p className="text-purple-800 text-sm mb-3">
-                    Automated project status management and folder organization.
-                  </p>
-                  <div className="text-purple-800 text-sm space-y-1">
-                    <div>• Auto-complete projects when tagged with "complete" + "archier"</div>
-                    <div>• Move WIP images to Final folders when status changes</div>
-                    <div>• Create project archives for completed work</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Quality Control */}
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="flex items-center gap-2 mb-4">
-                <Check className="h-5 w-5 text-teal-600" />
-                <h3 className="text-lg font-semibold text-gray-900">Quality Control</h3>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="bg-yellow-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-yellow-900 mb-2">Validation Checks</h4>
-                  <div className="text-yellow-800 text-sm space-y-1">
-                    <div>• Filename format compliance (AXXXX-type-category.jpg)</div>
-                    <div>• Required tag validation</div>
-                    <div>• Duplicate image detection</div>
-                    <div>• Missing category assignments</div>
-                  </div>
-                </div>
-
-                <div className="bg-teal-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-teal-900 mb-2">Data Integrity</h4>
-                  <div className="text-teal-800 text-sm space-y-1">
-                    <div>• Orphaned images (missing project references)</div>
-                    <div>• Inconsistent tagging patterns</div>
-                    <div>• Broken Dropbox synchronization</div>
-                    <div>• Database consistency checks</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Analytics & Reporting */}
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="flex items-center gap-2 mb-4">
-                <Database className="h-5 w-5 text-indigo-600" />
-                <h3 className="text-lg font-semibold text-gray-900">Analytics & Reporting</h3>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-indigo-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-indigo-900 mb-2">Usage Statistics</h4>
-                  <div className="text-indigo-800 text-sm space-y-1">
-                    <div>• Images per project breakdown</div>
-                    <div>• Most used categories and types</div>
-                    <div>• Storage usage by project</div>
-                    <div>• Tagging completion rates</div>
-                  </div>
-                </div>
-
                 <div className="bg-pink-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-pink-900 mb-2">Project Reports</h4>
+                  <h4 className="font-medium text-pink-900 mb-2">Publication Readiness Analysis</h4>
+                  <p className="text-pink-800 text-sm mb-3">
+                    Evaluate images for print and digital publication workflows in InDesign.
+                  </p>
                   <div className="text-pink-800 text-sm space-y-1">
-                    <div>• Project timeline and progress</div>
-                    <div>• Image collection summaries</div>
-                    <div>• Team collaboration metrics</div>
-                    <div>• Export capabilities (PDF, CSV)</div>
+                    <div>• Print resolution standards (300 DPI minimum)</div>
+                    <div>• Color profile and CMYK compatibility</div>
+                    <div>• File format optimization (TIFF, EPS, PSD)</div>
+                    <div>• Aspect ratio and layout suitability</div>
+                  </div>
+                </div>
+
+                {canEdit && (
+                  <div className="flex gap-3">
+                    <button className="flex items-center gap-2 px-4 py-2 bg-pink-500 text-white rounded-md hover:bg-pink-600">
+                      <Search className="h-4 w-4" />
+                      Scan All Images
+                    </button>
+                    <button className="flex items-center gap-2 px-4 py-2 bg-pink-100 text-pink-700 rounded-md hover:bg-pink-200">
+                      <RefreshCw className="h-4 w-4" />
+                      Scan Selected Project
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Scan Results */}
+            <div className="bg-white p-6 rounded-lg shadow border-l-4 border-green-500">
+              <div className="flex items-center gap-2 mb-4">
+                <Check className="h-5 w-5 text-green-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Scan Results</h3>
+              </div>
+              
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-gray-600 text-sm mb-3">
+                  Run a scan to see compatibility results for your images across ArchiCAD and InDesign workflows.
+                </p>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <div className="font-medium text-gray-900">ArchiCAD Ready:</div>
+                    <div className="text-gray-600">No scan results yet</div>
+                  </div>
+                  <div>
+                    <div className="font-medium text-gray-900">InDesign Ready:</div>
+                    <div className="text-gray-600">No scan results yet</div>
                   </div>
                 </div>
               </div>
             </div>
-
-            {/* Advanced Tools */}
-            {canEdit && (
-              <div className="bg-white p-6 rounded-lg shadow border-l-4 border-purple-500">
-                <div className="flex items-center gap-2 mb-4">
-                  <AlertCircle className="h-5 w-5 text-purple-600" />
-                  <h3 className="text-lg font-semibold text-gray-900">Advanced Tools</h3>
-                  <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded">Edit Mode Only</span>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-                    <h4 className="font-medium text-red-900 mb-2">⚠️ Danger Zone</h4>
-                    <div className="text-red-800 text-sm space-y-2">
-                      <div>• Bulk delete operations</div>
-                      <div>• Database cleanup and optimization</div>
-                      <div>• Reset project configurations</div>
-                      <div>• Force Dropbox re-synchronization</div>
-                    </div>
-                    <p className="text-red-700 text-xs mt-3 italic">
-                      These operations cannot be undone. Use with extreme caution.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
 
