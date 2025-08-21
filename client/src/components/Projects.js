@@ -559,8 +559,8 @@ const Projects = () => {
             ) : project.type === 'current' ? (
               <div className="w-full h-full flex items-center justify-center" style={{backgroundColor: '#BDAE93'}}>
                 <div className="text-center">
-                  <FolderOpen className="h-12 w-12 text-white/80 mx-auto mb-2" />
-                  <p className="text-white font-medium">{project.name}</p>
+                  <FolderOpen className="h-12 w-12 text-black/80 mx-auto mb-2" />
+                  <p className="text-black font-medium">{project.name}</p>
                 </div>
               </div>
             ) : thumbnailImage ? (
