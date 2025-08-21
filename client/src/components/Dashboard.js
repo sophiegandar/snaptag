@@ -1278,9 +1278,8 @@ const Dashboard = () => {
             </div>
 
             {/* Dropbox Integration Info */}
-            <div className="bg-white p-6 rounded-lg shadow border-l-4 border-blue-500">
-              <div className="flex items-center gap-2 mb-4">
-                <Droplets className="h-5 w-5 text-blue-600" />
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Dropbox Folder Sync</h3>
               </div>
               
@@ -1311,8 +1310,7 @@ const Dashboard = () => {
           <div className="space-y-6">
             {/* Filename Format Policy */}
             <div className="bg-white p-6 rounded-lg shadow">
-              <div className="flex items-center gap-2 mb-4">
-                <FileText className="h-5 w-5 text-blue-600" />
+              <div className="mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Filename Format</h3>
               </div>
               
@@ -1343,14 +1341,13 @@ const Dashboard = () => {
 
             {/* Tagging Policies */}
             <div className="bg-white p-6 rounded-lg shadow">
-              <div className="flex items-center gap-2 mb-4">
-                <Tags className="h-5 w-5 text-green-600" />
+              <div className="mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Tagging Policies</h3>
               </div>
 
               <div className="space-y-4">
                 {/* Project Images */}
-                <div className="border-l-4 border-blue-500 pl-4">
+                <div className="pl-4">
                   <h4 className="font-medium text-gray-900 mb-2">Project Images</h4>
                   <div className="text-sm text-gray-700 space-y-1">
                     <div><strong>Required Tags:</strong> project name (e.g., "de witt st", "couvreur")</div>
@@ -1361,7 +1358,7 @@ const Dashboard = () => {
                 </div>
 
                 {/* Precedent Images */}
-                <div className="border-l-4 border-purple-500 pl-4">
+                <div className="pl-4">
                   <h4 className="font-medium text-gray-900 mb-2">Precedent Images</h4>
                   <div className="text-sm text-gray-700 space-y-1">
                     <div><strong>Required Tags:</strong> "precedent"</div>
@@ -1372,7 +1369,7 @@ const Dashboard = () => {
                 </div>
 
                 {/* Texture Images */}
-                <div className="border-l-4 border-orange-500 pl-4">
+                <div className="pl-4">
                   <h4 className="font-medium text-gray-900 mb-2">Texture Images</h4>
                   <div className="text-sm text-gray-700 space-y-1">
                     <div><strong>Required Tags:</strong> "texture"</div>
@@ -1386,8 +1383,7 @@ const Dashboard = () => {
 
             {/* Folder Structure Policy */}
             <div className="bg-white p-6 rounded-lg shadow">
-              <div className="flex items-center gap-2 mb-4">
-                <Folder className="h-5 w-5 text-purple-600" />
+              <div className="mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Dropbox Organization</h3>
               </div>
               
@@ -1402,7 +1398,7 @@ const Dashboard = () => {
                   <div className="pl-4">Precedent/ <span className="text-gray-500">(reference images)</span></div>
                   <div className="pl-8">[Category]/ <span className="text-gray-500">(exteriors, interiors, etc.)</span></div>
                   <div className="pl-4">Texture/ <span className="text-gray-500">(material images)</span></div>
-                  <div className="pl-8">[Material Type]/ <span className="text-gray-500">(tile, wood, stone, etc.)</span></div>
+                  <div className="pl-8">[Texture Type]/ <span className="text-gray-500">(tile, wood, stone, etc.)</span></div>
                 </div>
               </div>
             </div>
@@ -1804,8 +1800,7 @@ const Dashboard = () => {
 
             {/* Folder Structure Information */}
             <div className="bg-white p-6 rounded-lg shadow">
-              <div className="flex items-center gap-2 mb-4">
-                <Folder className="h-5 w-5 text-purple-600" />
+              <div className="mb-4">
                 <h3 className="text-lg font-semibold">Folder Structure</h3>
               </div>
               
@@ -1820,7 +1815,7 @@ const Dashboard = () => {
                   <div className="ml-4">Precedent/</div>
                   <div className="ml-8">[Category]/ → exteriors, interiors, etc.</div>
                   <div className="ml-4">Texture/</div>
-                  <div className="ml-8">[Material Type]/ → tile, wood, stone, etc.</div>
+                  <div className="ml-8">[Texture Type]/ → tile, wood, stone, etc.</div>
                 </div>
               </div>
             </div>
