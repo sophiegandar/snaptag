@@ -177,20 +177,34 @@ const Dashboard = () => {
       } else {
         // Default categories with their assigned types (ONLY 3 TYPES: archier, texture, precedent)
         const defaultCategories = [
-          // Precedent categories
+          // Precedent categories (15 total)
           { id: 'exteriors', name: 'Exteriors', description: 'Building exterior views and facades', type: 'precedent' },
           { id: 'interiors', name: 'Interiors', description: 'Interior spaces and rooms', type: 'precedent' },
           { id: 'kitchens', name: 'Kitchens', description: 'Kitchen spaces and design', type: 'precedent' },
           { id: 'bathrooms', name: 'Bathrooms', description: 'Bathroom spaces and fixtures', type: 'precedent' },
           { id: 'stairs', name: 'Stairs', description: 'Staircase design and details', type: 'precedent' },
           { id: 'general', name: 'General', description: 'General or uncategorized images', type: 'precedent' },
-          // Texture categories
+          { id: 'living-rooms', name: 'Living Rooms', description: 'Living room and lounge spaces', type: 'precedent' },
+          { id: 'bedrooms', name: 'Bedrooms', description: 'Bedroom spaces and design', type: 'precedent' },
+          { id: 'dining-rooms', name: 'Dining Rooms', description: 'Dining room spaces', type: 'precedent' },
+          { id: 'offices', name: 'Offices', description: 'Office and workspace design', type: 'precedent' },
+          { id: 'balconies', name: 'Balconies', description: 'Balcony and outdoor spaces', type: 'precedent' },
+          { id: 'courtyards', name: 'Courtyards', description: 'Courtyard and garden spaces', type: 'precedent' },
+          { id: 'facades', name: 'Facades', description: 'Building facade details', type: 'precedent' },
+          { id: 'rooftops', name: 'Rooftops', description: 'Rooftop and terrace spaces', type: 'precedent' },
+          { id: 'entrances', name: 'Entrances', description: 'Entrance and foyer design', type: 'precedent' },
+          
+          // Texture categories (10 total)
           { id: 'tile', name: 'Tile', description: 'Tile materials and patterns', type: 'texture' },
           { id: 'wood', name: 'Wood', description: 'Wood materials and finishes', type: 'texture' },
           { id: 'stone', name: 'Stone', description: 'Stone materials and textures', type: 'texture' },
           { id: 'brick', name: 'Brick', description: 'Brick materials and patterns', type: 'texture' },
           { id: 'metal', name: 'Metal', description: 'Metal materials and finishes', type: 'texture' },
-          { id: 'carpet', name: 'Carpet', description: 'Carpet and soft flooring materials', type: 'texture' }
+          { id: 'carpet', name: 'Carpet', description: 'Carpet and soft flooring materials', type: 'texture' },
+          { id: 'concrete', name: 'Concrete', description: 'Concrete finishes and textures', type: 'texture' },
+          { id: 'glass', name: 'Glass', description: 'Glass materials and treatments', type: 'texture' },
+          { id: 'fabric', name: 'Fabric', description: 'Fabric and textile materials', type: 'texture' },
+          { id: 'paint', name: 'Paint', description: 'Paint finishes and colors', type: 'texture' }
         ];
         setCategories(defaultCategories);
         localStorage.setItem('snaptag-categories', JSON.stringify(defaultCategories));
@@ -837,7 +851,6 @@ const Dashboard = () => {
               <div className="flex justify-between items-center mb-6">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Dropbox Types (Main Folders)</h3>
-                  <p className="text-gray-600">Primary folder structure in Dropbox for organizing different types of images</p>
                 </div>
               </div>
 
@@ -933,7 +946,6 @@ const Dashboard = () => {
               <div className="flex justify-between items-center mb-6">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Categories</h3>
-                  <p className="text-gray-600">Categories assigned to specific types for organizing images</p>
                 </div>
               </div>
 
@@ -982,61 +994,120 @@ const Dashboard = () => {
                     {canEdit && <p className="text-sm">Add your first category above</p>}
                   </div>
                 ) : (
-                  <div className="grid gap-3">
-                    {categories.map((category) => {
-                      const categoryType = types.find(t => t.id === category.type);
-                      return (
-                        <div
-                          key={category.id}
-                          className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
-                        >
-                          {editingCategory === category.id ? (
-                            <EditCategoryFormInline
-                              category={category}
-                              types={types}
-                              onSave={updateCategory}
-                              onCancel={() => setEditingCategory(null)}
-                            />
-                          ) : (
-                            <>
-                              <div className="flex items-center gap-3 flex-1">
-                                <Layers className="h-5 w-5 text-blue-500" />
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <h4 className="font-medium text-gray-900">{category.name}</h4>
-                                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded">
-                                      {categoryType?.name || 'Unknown Type'}
-                                    </span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Precedent Categories Column */}
+                    <div>
+                      <h4 className="text-lg font-medium text-purple-900 mb-4 flex items-center gap-2">
+                        <Layers className="h-5 w-5 text-purple-600" />
+                        Precedent Categories ({categories.filter(c => c.type === 'precedent').length})
+                      </h4>
+                      <div className="space-y-3">
+                        {categories.filter(category => category.type === 'precedent').map((category) => {
+                          const categoryType = types.find(t => t.id === category.type);
+                          return (
+                            <div
+                              key={category.id}
+                              className="flex items-center justify-between p-3 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100"
+                            >
+                              {editingCategory === category.id ? (
+                                <EditCategoryFormInline
+                                  category={category}
+                                  types={types}
+                                  onSave={updateCategory}
+                                  onCancel={() => setEditingCategory(null)}
+                                />
+                              ) : (
+                                <>
+                                  <div className="flex items-center gap-3 flex-1">
+                                    <div>
+                                      <h5 className="font-medium text-gray-900">{category.name}</h5>
+                                      <p className="text-xs text-purple-600 mt-1">
+                                        /SnapTag/Precedent/{category.name}/
+                                      </p>
+                                    </div>
                                   </div>
-                                  <p className="text-sm text-gray-500">{category.description}</p>
-                                  <p className="text-xs text-blue-600 mt-1">
-                                    Path: /SnapTag/{categoryType?.name || 'Unknown'}/{category.name}/
-                                  </p>
-                                </div>
-                              </div>
-                              {canEdit && (
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => setEditingCategory(category.id)}
-                                    className="p-2 text-blue-500 hover:bg-blue-50 rounded-md"
-                                    title="Edit category"
-                                  >
-                                    <Edit3 className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => deleteCategory(category.id)}
-                                    className="p-2 text-red-500 hover:bg-red-50 rounded-md"
-                                    title="Delete category"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </button>
-                                </div>
+                                  {canEdit && (
+                                    <div className="flex gap-1">
+                                      <button
+                                        onClick={() => setEditingCategory(category.id)}
+                                        className="p-1 text-blue-500 hover:bg-blue-50 rounded"
+                                        title="Edit category"
+                                      >
+                                        <Edit3 className="h-3 w-3" />
+                                      </button>
+                                      <button
+                                        onClick={() => deleteCategory(category.id)}
+                                        className="p-1 text-red-500 hover:bg-red-50 rounded"
+                                        title="Delete category"
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </button>
+                                    </div>
+                                  )}
+                                </>
                               )}
-                            </>
-                          )}
-                        </div>
-                      );
-                    })}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Texture Categories Column */}
+                    <div>
+                      <h4 className="text-lg font-medium text-orange-900 mb-4 flex items-center gap-2">
+                        <Layers className="h-5 w-5 text-orange-600" />
+                        Texture Categories ({categories.filter(c => c.type === 'texture').length})
+                      </h4>
+                      <div className="space-y-3">
+                        {categories.filter(category => category.type === 'texture').map((category) => {
+                          const categoryType = types.find(t => t.id === category.type);
+                          return (
+                            <div
+                              key={category.id}
+                              className="flex items-center justify-between p-3 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100"
+                            >
+                              {editingCategory === category.id ? (
+                                <EditCategoryFormInline
+                                  category={category}
+                                  types={types}
+                                  onSave={updateCategory}
+                                  onCancel={() => setEditingCategory(null)}
+                                />
+                              ) : (
+                                <>
+                                  <div className="flex items-center gap-3 flex-1">
+                                    <div>
+                                      <h5 className="font-medium text-gray-900">{category.name}</h5>
+                                      <p className="text-xs text-orange-600 mt-1">
+                                        /SnapTag/Texture/{category.name}/
+                                      </p>
+                                    </div>
+                                  </div>
+                                  {canEdit && (
+                                    <div className="flex gap-1">
+                                      <button
+                                        onClick={() => setEditingCategory(category.id)}
+                                        className="p-1 text-blue-500 hover:bg-blue-50 rounded"
+                                        title="Edit category"
+                                      >
+                                        <Edit3 className="h-3 w-3" />
+                                      </button>
+                                      <button
+                                        onClick={() => deleteCategory(category.id)}
+                                        className="p-1 text-red-500 hover:bg-red-50 rounded"
+                                        title="Delete category"
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </button>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
