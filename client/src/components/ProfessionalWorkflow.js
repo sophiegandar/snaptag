@@ -39,7 +39,7 @@ const ProfessionalWorkflow = () => {
     }
   };
 
-  const analyzeImage = async (imageId, workflow) => {
+  const analyseImage = async (imageId, workflow) => {
     setLoading(true);
     try {
       const endpoint = workflow === 'indesign' ? 
@@ -413,7 +413,7 @@ const ProfessionalWorkflow = () => {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      analyzeImage(image.id, 'indesign');
+                      analyseImage(image.id, 'indesign');
                     }}
                     className="p-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
                     title="Analyse for InDesign"
@@ -423,7 +423,7 @@ const ProfessionalWorkflow = () => {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      analyzeImage(image.id, 'archicad');
+                      analyseImage(image.id, 'archicad');
                     }}
                     className="p-1 bg-green-500 text-white rounded text-xs hover:bg-green-600"
                     title="Analyse for ArchiCAD"

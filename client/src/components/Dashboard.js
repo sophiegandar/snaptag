@@ -450,12 +450,6 @@ const Dashboard = () => {
         let archicadCompatible = true;
         const archicadReasons = [];
         
-        // Check for texture/material content
-        if (!filename.includes('texture') && !filename.includes('material') && !filename.includes('precedent')) {
-          archicadCompatible = false;
-          archicadReasons.push('Not tagged as texture/material/precedent');
-        }
-        
         // Check for low resolution indicators
         if (filename.includes('thumb') || filename.includes('low') || filename.includes('preview')) {
           archicadCompatible = false;
@@ -466,6 +460,12 @@ const Dashboard = () => {
         if (filename.endsWith('.gif') || filename.endsWith('.webp')) {
           archicadCompatible = false;
           archicadReasons.push('Unsupported format for 3D texture mapping');
+        }
+        
+        // Check for very small file sizes that might indicate poor quality
+        if (filename.includes('icon') || filename.includes('favicon')) {
+          archicadCompatible = false;
+          archicadReasons.push('Icon or favicon, not suitable for 3D modeling');
         }
 
         if (archicadCompatible) {
@@ -764,7 +764,7 @@ const Dashboard = () => {
     { id: 'projects', label: 'Projects', description: 'Manage current projects and view automatic complete project creation' },
     { id: 'categories', label: 'Categories', description: 'Manage image categories' },
     { id: 'policies', label: 'Image Policies', description: 'View tagging and categorization rules' },
-    { id: 'workflow', label: 'Pro Workflow', description: 'Advanced workflow tools and automation' },
+    { id: 'workflow', label: 'Pro Workflow', description: '' },
   ];
 
   // Only show settings in edit mode
@@ -772,7 +772,7 @@ const Dashboard = () => {
     sections.push({
       id: 'settings', 
       label: 'Settings', 
-      description: 'Dropbox connection, folder structure and server configuration'
+      description: ''
     });
   }
 
@@ -1497,15 +1497,14 @@ const Dashboard = () => {
                     <RefreshCw className="h-5 w-5 text-purple-600" />
                     <h3 className="text-lg font-semibold text-gray-900">Pro Workflow</h3>
                   </div>
-                  <p className="text-gray-600">
-                    Scan and analyze images for professional software compatibility and workflow optimization.
-                  </p>
+
                 </div>
                 
                 <button
                   onClick={scanImages}
                   disabled={scanning || !canEdit}
-                  className="flex items-center gap-2 px-6 py-3 bg-purple-500 text-white rounded-md hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 px-6 py-3 text-white rounded-md hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{backgroundColor: '#C9D468'}}
                 >
                   {scanning ? (
                     <>
@@ -1521,13 +1520,7 @@ const Dashboard = () => {
                 </button>
               </div>
               
-              {!canEdit && (
-                <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                  <p className="text-sm text-amber-700">
-                    Enable edit mode (ESC + E) to scan images for software compatibility.
-                  </p>
-                </div>
-              )}
+
 
               {scanResults.lastScan && (
                 <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
@@ -1794,28 +1787,6 @@ const Dashboard = () => {
                   <p className="mt-1 text-sm text-gray-500">
                     Root folder where images will be stored in Dropbox
                   </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Folder Structure Information */}
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold">Folder Structure</h3>
-              </div>
-              
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-2">Current Organization:</h4>
-                <div className="text-sm text-gray-700 space-y-1 font-mono">
-                  <div>/SnapTag/</div>
-                  <div className="ml-4">Archier/</div>
-                  <div className="ml-8">[Project Name]/</div>
-                  <div className="ml-12">Final/ → Images tagged "final"</div>
-                  <div className="ml-12">WIP/ → Images tagged "wip"</div>
-                  <div className="ml-4">Precedent/</div>
-                  <div className="ml-8">[Category]/ → exteriors, interiors, etc.</div>
-                  <div className="ml-4">Texture/</div>
-                  <div className="ml-8">[Texture Type]/ → tile, wood, stone, etc.</div>
                 </div>
               </div>
             </div>

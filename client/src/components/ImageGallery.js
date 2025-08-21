@@ -519,7 +519,7 @@ const ImageGallery = () => {
   // Load tag suggestions for untagged images
   const loadTagSuggestions = async () => {
     if (untaggedImages.length === 0) {
-      toast.info('No untagged images to analyze');
+      toast.info('No untagged images to analyse');
       return;
     }
 

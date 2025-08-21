@@ -558,12 +558,12 @@ const Settings = () => {
           <div className="p-4 bg-purple-50 rounded-md">
             <h4 className="font-medium text-purple-900 mb-2">🤖 Smart Tag Suggestions</h4>
             <p className="text-sm text-purple-800 mb-3">
-              Our AI analyzes image sources, filenames, and patterns from your previous tagging to suggest relevant tags for untagged images.
+              Our AI analyses image sources, filenames, and patterns from your previous tagging to suggest relevant tags for untagged images.
             </p>
             <ul className="text-xs text-purple-700 space-y-1">
               <li>• Learns from your existing tagging patterns</li>
               <li>• Recognizes architectural keywords and terms</li>
-              <li>• Analyzes source websites and domains</li>
+              <li>• Analyses source websites and domains</li>
               <li>• Suggests based on filename content</li>
             </ul>
           </div>
