@@ -1176,6 +1176,7 @@ const Dashboard = () => {
       loadCategories();
     } else if (activeSection === 'tags') {
       loadTags();
+      loadCategories();
     }
   }, [activeSection, canEdit]);
 
@@ -1470,6 +1471,271 @@ const Dashboard = () => {
                   )}
                 </div>
               )}
+            </div>
+
+            {/* Types Section */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Dropbox Types (Main Folders)</h3>
+                </div>
+              </div>
+
+              {/* Add New Type - Only show in edit mode */}
+              {canEdit && (
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium text-gray-900 mb-3">Add New Type</h4>
+                  <div className="flex gap-3">
+                    <input
+                      type="text"
+                      value={newTypeName}
+                      onChange={(e) => setNewTypeName(e.target.value)}
+                      placeholder="Enter type name (e.g., 'Materials')"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      onKeyPress={(e) => e.key === 'Enter' && addType()}
+                    />
+                    <button
+                      onClick={addType}
+                      className="flex items-center gap-2 px-4 py-2 text-white rounded-md hover:opacity-90"
+                      style={{backgroundColor: '#C9D468'}}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Type
+                    </button>
+                  </div>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Adding a new type will create a new main folder in the Dropbox structure.
+                  </p>
+                </div>
+              )}
+
+              {/* Types List */}
+              <div>
+                {types.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Folder className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                    <p>No types found</p>
+                    {canEdit && <p className="text-sm">Add your first type above</p>}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {types.map((type) => (
+                      <div
+                        key={type.id}
+                        className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+                      >
+                        {editingType === type.id ? (
+                          <EditTypeFormInline
+                            type={type}
+                            onSave={updateType}
+                            onCancel={() => setEditingType(null)}
+                          />
+                        ) : (
+                          <>
+                            <div className="flex-1 text-center">
+                              <h4 className="font-medium text-gray-900">{type.name}</h4>
+                              <p className="text-sm text-gray-500">{type.description}</p>
+                              <p className="text-xs text-black mt-1">
+                                /SnapTag/{type.name}/
+                              </p>
+                            </div>
+                            {canEdit && (
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => setEditingType(type.id)}
+                                  className="p-2 text-blue-500 hover:bg-blue-50 rounded-md"
+                                  title="Edit type"
+                                >
+                                  <Edit3 className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => deleteType(type.id)}
+                                  className="p-2 text-red-500 hover:bg-red-50 rounded-md"
+                                  title="Delete type"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Categories Section */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Categories</h3>
+                </div>
+              </div>
+
+              {/* Add New Category - Only show in edit mode */}
+              {canEdit && (
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium text-gray-900 mb-3">Add New Category</h4>
+                  <div className="flex gap-3">
+                    <input
+                      type="text"
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      placeholder="Category name (e.g., 'Balconies', 'Glass')"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <select
+                      value={newCategoryType}
+                      onChange={(e) => setNewCategoryType(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">Select Type</option>
+                      {types.map(type => (
+                        <option key={type.id} value={type.id}>{type.name}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={addCategory}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Category
+                    </button>
+                  </div>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Categories must be assigned to a type (Archier, Texture, or Precedent).
+                  </p>
+                </div>
+              )}
+
+              {/* Categories List */}
+              <div>
+                {categories.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Layers className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                    <p>No categories found</p>
+                    {canEdit && <p className="text-sm">Add your first category above</p>}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Precedent Categories Column */}
+                    <div>
+                      <h4 className="text-lg font-medium mb-4 text-black">
+                        Precedent Categories ({categories.filter(c => c.type === 'precedent').length})
+                      </h4>
+                      <div className="space-y-3">
+                        {categories.filter(category => category.type === 'precedent').map((category) => {
+                          const categoryType = types.find(t => t.id === category.type);
+                          return (
+                            <div
+                              key={category.id}
+                              className="flex items-center justify-between p-3 rounded-lg hover:opacity-80"
+                              style={{backgroundColor: '#C9D468', borderColor: '#C9D468'}}
+                            >
+                              {editingCategory === category.id ? (
+                                <EditCategoryFormInline
+                                  category={category}
+                                  types={types}
+                                  onSave={updateCategory}
+                                  onCancel={() => setEditingCategory(null)}
+                                />
+                              ) : (
+                                <>
+                                  <div className="flex items-center gap-3 flex-1">
+                                    <div>
+                                      <h5 className="font-medium text-gray-900">{category.name}</h5>
+                                      <p className="text-xs mt-1 text-black">
+                                        /SnapTag/Precedent/{category.name}/
+                                      </p>
+                                    </div>
+                                  </div>
+                                  {canEdit && (
+                                    <div className="flex gap-1">
+                                      <button
+                                        onClick={() => setEditingCategory(category.id)}
+                                        className="p-1 text-blue-500 hover:bg-blue-50 rounded"
+                                        title="Edit category"
+                                      >
+                                        <Edit3 className="h-3 w-3" />
+                                      </button>
+                                      <button
+                                        onClick={() => deleteCategory(category.id)}
+                                        className="p-1 text-red-500 hover:bg-red-50 rounded"
+                                        title="Delete category"
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </button>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Texture Categories Column */}
+                    <div>
+                      <h4 className="text-lg font-medium mb-4 text-black">
+                        Texture Categories ({categories.filter(c => c.type === 'texture').length})
+                      </h4>
+                      <div className="space-y-3">
+                        {categories.filter(category => category.type === 'texture').map((category) => {
+                          const categoryType = types.find(t => t.id === category.type);
+                          return (
+                            <div
+                              key={category.id}
+                              className="flex items-center justify-between p-3 rounded-lg hover:opacity-80"
+                              style={{backgroundColor: '#BDAE93', borderColor: '#BDAE93'}}
+                            >
+                              {editingCategory === category.id ? (
+                                <EditCategoryFormInline
+                                  category={category}
+                                  types={types}
+                                  onSave={updateCategory}
+                                  onCancel={() => setEditingCategory(null)}
+                                />
+                              ) : (
+                                <>
+                                  <div className="flex items-center gap-3 flex-1">
+                                    <div>
+                                      <h5 className="font-medium text-gray-900">{category.name}</h5>
+                                      <p className="text-xs mt-1 text-black">
+                                        /SnapTag/Texture/{category.name}/
+                                      </p>
+                                    </div>
+                                  </div>
+                                  {canEdit && (
+                                    <div className="flex gap-1">
+                                      <button
+                                        onClick={() => setEditingCategory(category.id)}
+                                        className="p-1 text-blue-500 hover:bg-blue-50 rounded"
+                                        title="Edit category"
+                                      >
+                                        <Edit3 className="h-3 w-3" />
+                                      </button>
+                                      <button
+                                        onClick={() => deleteCategory(category.id)}
+                                        className="p-1 text-red-500 hover:bg-red-50 rounded"
+                                        title="Delete category"
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </button>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -1994,24 +2260,48 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Folder Structure Policy */}
+            {/* Dropbox Organisation & Folder Management */}
             <div className="bg-white p-6 rounded-lg shadow">
               <div className="mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Dropbox Organisation</h3>
               </div>
               
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-3">Automatic Folder Structure:</h4>
-                <div className="text-sm text-gray-700 space-y-2 font-mono">
-                  <div className="pl-0">/SnapTag/</div>
-                  <div className="pl-4">Archier/ <span className="text-gray-500">(team projects)</span></div>
-                  <div className="pl-8">[Project Name]/ <span className="text-gray-500">(e.g., "De Witt St")</span></div>
-                  <div className="pl-12">Final/ <span className="text-gray-500">(images tagged "final")</span></div>
-                  <div className="pl-12">WIP/ <span className="text-gray-500">(images tagged "wip")</span></div>
-                  <div className="pl-4">Precedent/ <span className="text-gray-500">(reference images)</span></div>
-                  <div className="pl-8">[Category]/ <span className="text-gray-500">(exteriors, interiors, etc.)</span></div>
-                  <div className="pl-4">Texture/ <span className="text-gray-500">(material images)</span></div>
-                  <div className="pl-8">[Texture Type]/ <span className="text-gray-500">(tile, wood, stone, etc.)</span></div>
+              <div className="space-y-6">
+                {/* Folder Structure */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-gray-900 mb-3">Automatic Folder Structure:</h4>
+                  <div className="text-sm text-gray-700 space-y-2 font-mono">
+                    <div className="pl-0">/SnapTag/</div>
+                    <div className="pl-4">Archier/ <span className="text-gray-500">(team projects)</span></div>
+                    <div className="pl-8">[Project Name]/ <span className="text-gray-500">(e.g., "De Witt St")</span></div>
+                    <div className="pl-12">Final/ <span className="text-gray-500">(images tagged "final")</span></div>
+                    <div className="pl-12">WIP/ <span className="text-gray-500">(images tagged "wip")</span></div>
+                    <div className="pl-4">Precedent/ <span className="text-gray-500">(reference images)</span></div>
+                    <div className="pl-8">[Category]/ <span className="text-gray-500">(exteriors, interiors, etc.)</span></div>
+                    <div className="pl-4">Texture/ <span className="text-gray-500">(material images)</span></div>
+                    <div className="pl-8">[Texture Type]/ <span className="text-gray-500">(tile, wood, stone, etc.)</span></div>
+                  </div>
+                </div>
+
+                {/* Automatic Folder Creation */}
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-blue-900 mb-2">Automatic Folder Creation</h4>
+                  <p className="text-blue-800 text-sm mb-3">
+                    When you add new types or categories, the corresponding folder structure will be automatically created in Dropbox:
+                  </p>
+                  <div className="text-blue-800 text-sm space-y-2">
+                    <div>• <strong>New Type:</strong> Creates /SnapTag/[TypeName]/ main folder</div>
+                    <div>• <strong>New Category:</strong> Creates subfolders under all existing types</div>
+                    <div>• <strong>Image Upload:</strong> Automatically sorted into correct folders based on tags</div>
+                  </div>
+                  <div className="mt-4 p-3 bg-blue-100 rounded text-blue-900 text-sm">
+                    <strong>Example:</strong> Adding "Glass" category creates:
+                    <div className="mt-1 font-mono text-xs">
+                      /SnapTag/Precedent/Glass/<br/>
+                      /SnapTag/Texture/Glass/<br/>
+                      /SnapTag/Archier/[Project]/Glass/
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
