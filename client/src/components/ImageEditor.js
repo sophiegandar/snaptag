@@ -1,9 +1,15 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { fabric } from 'fabric';
-import { Save, Tag, X, ArrowLeft, Trash2, Edit3, ChevronLeft, ChevronRight, Lightbulb } from 'lucide-react';
+import { Save, Tag, X, ArrowLeft, Trash2, Edit3, ChevronLeft, ChevronRight, Lightbulb, Plus } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useMode } from '../context/ModeContext';
+
+// Utility function to capitalize text for display
+const capitalizeForDisplay = (text) => {
+  if (!text) return text;
+  return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+};
 
 const ImageEditor = () => {
   const { id } = useParams();
@@ -32,11 +38,15 @@ const ImageEditor = () => {
   const [editingTagName, setEditingTagName] = useState(null);
   const [editingTagText, setEditingTagText] = useState('');
   
+  // Project assignments state
+  const [projectAssignments, setProjectAssignments] = useState([]);
+  
   // Navigation state
   const [navigationContext, setNavigationContext] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [originalTags, setOriginalTags] = useState([]);
   const [originalFocusedTags, setOriginalFocusedTags] = useState([]);
+  const [originalProjectAssignments, setOriginalProjectAssignments] = useState([]);
   
   // AI suggestions state
   const [aiSuggestions, setAiSuggestions] = useState([]);
@@ -94,8 +104,9 @@ const ImageEditor = () => {
   useEffect(() => {
     const tagsChanged = JSON.stringify(tags.sort()) !== JSON.stringify(originalTags.sort());
     const focusedTagsChanged = JSON.stringify(focusedTags) !== JSON.stringify(originalFocusedTags);
-    setHasUnsavedChanges(tagsChanged || focusedTagsChanged);
-  }, [tags, focusedTags, originalTags, originalFocusedTags]);
+    const projectAssignmentsChanged = JSON.stringify(projectAssignments) !== JSON.stringify(originalProjectAssignments);
+    setHasUnsavedChanges(tagsChanged || focusedTagsChanged || projectAssignmentsChanged);
+  }, [tags, focusedTags, projectAssignments, originalTags, originalFocusedTags, originalProjectAssignments]);
 
   const navigateToNext = () => {
     if (!navigationContext || !navigationContext.hasNext) return;
@@ -178,6 +189,12 @@ const ImageEditor = () => {
       setTags(imageData.tags || []);
       setFocusedTags(imageData.focused_tags || []);
       setEditableName(imageData.name || '');
+      setProjectAssignments(imageData.project_assignments || []);
+      
+      // Store original values for change tracking
+      setOriginalTags([...(imageData.tags || [])]);
+      setOriginalFocusedTags([...(imageData.focused_tags || [])]);
+      setOriginalProjectAssignments([...(imageData.project_assignments || [])]);
     } catch (error) {
       console.error('Error loading image:', error);
       toast.error('Failed to load image');
@@ -778,6 +795,122 @@ const ImageEditor = () => {
     return foundProjects.map(project => project.charAt(0).toUpperCase() + project.slice(1).toLowerCase()).join(', ');
   };
 
+  // Project assignment helper functions
+  const getCurrentProjects = () => {
+    return [
+      { id: 'de-witt', name: 'De Witt St' },
+      { id: 'couvreur', name: 'Couvreur' }
+    ];
+  };
+
+  const getCompleteProjects = () => {
+    return [
+      { id: 'yandoit', name: 'Yandoit' }
+    ];
+  };
+
+  const getAllProjects = () => {
+    return [...getCurrentProjects(), ...getCompleteProjects()];
+  };
+
+  const getRoomOptions = () => {
+    return [
+      { value: 'living', label: 'Living' },
+      { value: 'dining', label: 'Dining' },
+      { value: 'kitchen', label: 'Kitchen' },
+      { value: 'bathroom', label: 'Bathroom' },
+      { value: 'bedroom', label: 'Bedroom' }
+    ];
+  };
+
+  const getStageOptions = () => {
+    return [
+      { value: 'feasibility', label: 'Feasibility' },
+      { value: 'layout', label: 'Layout' },
+      { value: 'finishes', label: 'Finishes' }
+    ];
+  };
+
+  // Project assignment management functions
+  const addProjectAssignment = () => {
+    if (!canEdit) return;
+    
+    const newAssignment = {
+      id: Date.now(), // temporary ID
+      projectId: '',
+      projectName: '',
+      room: '',
+      stage: ''
+    };
+    
+    setProjectAssignments(prev => [...prev, newAssignment]);
+  };
+
+  const updateProjectAssignment = async (assignmentId, field, value) => {
+    if (!canEdit) return;
+
+    setProjectAssignments(prev => prev.map(assignment => {
+      if (assignment.id === assignmentId) {
+        const updated = { ...assignment, [field]: value };
+        
+        // If updating projectId, also update projectName and auto-add project tag
+        if (field === 'projectId') {
+          const project = getAllProjects().find(p => p.id === value);
+          if (project) {
+            updated.projectName = project.name;
+            
+            // Auto-add project tag (but not room/stage tags)
+            const projectTagMap = {
+              'de-witt': 'de witt st',
+              'couvreur': 'couvreur',
+              'yandoit': 'yandoit'
+            };
+            
+            const projectTag = projectTagMap[value];
+            if (projectTag && !tags.includes(projectTag)) {
+              const newTags = [...tags, projectTag];
+              setTags(newTags);
+              // Auto-save tags
+              updateTagsAndSave(newTags);
+            }
+          }
+        }
+        
+        return updated;
+      }
+      return assignment;
+    }));
+
+    // Auto-save project assignments
+    await saveProjectAssignments();
+  };
+
+  const removeProjectAssignment = async (assignmentId) => {
+    if (!canEdit) return;
+    
+    setProjectAssignments(prev => prev.filter(assignment => assignment.id !== assignmentId));
+    await saveProjectAssignments();
+  };
+
+  const saveProjectAssignments = async () => {
+    try {
+      const response = await fetch(`/api/images/${id}/project-assignments`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectAssignments })
+      });
+
+      if (!response.ok) {
+        toast.error('Failed to save project assignments');
+      } else {
+        toast.success('Project assignments saved');
+      }
+    } catch (error) {
+      console.error('Error saving project assignments:', error);
+      toast.error('Failed to save project assignments');
+    }
+  };
+
   const updateImageType = async (newType) => {
     if (!canEdit) return;
     const oldTypeTags = ['precedent', 'texture', 'photos'];
@@ -853,7 +986,8 @@ const ImageEditor = () => {
         body: JSON.stringify({
           tags,
           focusedTags,
-          name: editableName
+          name: editableName,
+          projectAssignments
         })
       });
 
@@ -865,6 +999,7 @@ const ImageEditor = () => {
       // Update original values to reflect saved state
       setOriginalTags([...tags]);
       setOriginalFocusedTags([...focusedTags]);
+      setOriginalProjectAssignments([...projectAssignments]);
       
       toast.success('Changes saved successfully');
       // Stay on editor page instead of navigating away
@@ -1434,7 +1569,7 @@ const ImageEditor = () => {
                   key={tag}
                   className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm flex items-center gap-1"
                 >
-                  {tag}
+                  {capitalizeForDisplay(tag)}
                     {canEdit && (
                   <button
                     onClick={() => removeGeneralTag(tag)}
@@ -1448,6 +1583,111 @@ const ImageEditor = () => {
               </div>
             </div>
           </div>
+
+          {/* Project Assignments */}
+          {canEdit && (
+            <div className="bg-white p-4 rounded-lg shadow">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold">Project Assignments</h3>
+                <button
+                  onClick={addProjectAssignment}
+                  className="flex items-center gap-2 px-3 py-1 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Project
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                {projectAssignments.map((assignment) => (
+                  <div key={assignment.id} className="p-3 border border-gray-200 rounded-lg bg-gray-50">
+                    <div className="grid grid-cols-1 gap-3">
+                      {/* Project Selection */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Project</label>
+                        <select
+                          value={assignment.projectId}
+                          onChange={(e) => updateProjectAssignment(assignment.id, 'projectId', e.target.value)}
+                          className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">Select Project</option>
+                          <optgroup label="Current Projects">
+                            {getCurrentProjects().map(project => (
+                              <option key={project.id} value={project.id}>{project.name}</option>
+                            ))}
+                          </optgroup>
+                          <optgroup label="Complete Projects">
+                            {getCompleteProjects().map(project => (
+                              <option key={project.id} value={project.id}>{project.name}</option>
+                            ))}
+                          </optgroup>
+                        </select>
+                      </div>
+
+                      {/* Room Selection */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Room</label>
+                        <select
+                          value={assignment.room}
+                          onChange={(e) => updateProjectAssignment(assignment.id, 'room', e.target.value)}
+                          disabled={!assignment.projectId}
+                          className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        >
+                          <option value="">Select Room</option>
+                          {getRoomOptions().map(room => (
+                            <option key={room.value} value={room.value}>{room.label}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Stage Selection */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Stage</label>
+                        <select
+                          value={assignment.stage}
+                          onChange={(e) => updateProjectAssignment(assignment.id, 'stage', e.target.value)}
+                          disabled={!assignment.projectId}
+                          className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        >
+                          <option value="">Select Stage</option>
+                          {getStageOptions().map(stage => (
+                            <option key={stage.value} value={stage.value}>{stage.label}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Remove Button */}
+                      <div className="flex justify-end">
+                        <button
+                          onClick={() => removeProjectAssignment(assignment.id)}
+                          className="flex items-center gap-1 px-2 py-1 text-red-600 hover:text-red-800 text-sm"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Assignment Summary */}
+                    {assignment.projectId && (
+                      <div className="mt-2 text-xs text-gray-600 bg-white p-2 rounded border">
+                        <strong>Assignment:</strong> {assignment.projectName}
+                        {assignment.room && ` → ${assignment.room.charAt(0).toUpperCase() + assignment.room.slice(1)}`}
+                        {assignment.stage && ` (${assignment.stage.charAt(0).toUpperCase() + assignment.stage.slice(1)})`}
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {projectAssignments.length === 0 && (
+                  <div className="text-center py-6 text-gray-500">
+                    <div className="text-sm">No project assignments yet</div>
+                    <div className="text-xs mt-1">Add a project assignment to specify where this image should appear in project views</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Focused Tags */}
           <div className="bg-white p-4 rounded-lg shadow">

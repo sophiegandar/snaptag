@@ -196,6 +196,15 @@ class DatabaseService {
         await this.run(`CREATE INDEX IF NOT EXISTS idx_images_file_hash ON images(file_hash)`);
         console.log('✅ Database schema updated with file_hash column');
       }
+
+      // Check if project_assignments column exists, if not add it
+      const hasProjectAssignments = tableInfo.some(column => column.name === 'project_assignments');
+      
+      if (!hasProjectAssignments) {
+        console.log('📊 Adding project_assignments column to images table...');
+        await this.run(`ALTER TABLE images ADD COLUMN project_assignments TEXT`);
+        console.log('✅ Database schema updated with project_assignments column');
+      }
     } catch (error) {
       console.error('❌ Error migrating database schema:', error);
     }
@@ -457,6 +466,135 @@ class DatabaseService {
     }
   }
 
+  // New method for searching with project assignment filters
+  async searchImagesWithProjectAssignments(searchFilters) {
+    try {
+      const { searchTerm, tags, projectAssignment, sortBy = 'upload_date', sortOrder = 'desc' } = searchFilters;
+      
+      console.log('🔍 DatabaseService.searchImagesWithProjectAssignments called with:', searchFilters);
+      
+      let query = `
+        SELECT DISTINCT i.*, 
+               GROUP_CONCAT(DISTINCT t.name) AS tag_names,
+               COUNT(DISTINCT ft.id) AS focused_tag_count
+        FROM images i
+        LEFT JOIN image_tags it ON i.id = it.image_id
+        LEFT JOIN tags t ON it.tag_id = t.id
+        LEFT JOIN focused_tags ft ON i.id = ft.image_id
+      `;
+
+      const params = [];
+      const conditions = [];
+
+      // Handle traditional tag search (if no project assignment filter)
+      if (tags && tags.length > 0 && !projectAssignment) {
+        console.log('🔍 Traditional tag search for:', tags);
+        
+        // Use the existing tag search logic for regular tag queries
+        return this.searchImages(searchTerm, tags, sortBy, sortOrder);
+      }
+
+      // Handle project assignment search
+      if (projectAssignment) {
+        console.log('🔍 Project assignment search:', projectAssignment);
+        
+        // For project assignment search, we need to check the project_assignments JSON field
+        if (projectAssignment.projectId) {
+          // Filter images that have a project assignment matching the project ID
+          conditions.push(`i.project_assignments LIKE ?`);
+          params.push(`%"projectId":"${projectAssignment.projectId}"%`);
+          
+          // Additional filters for room and stage if specified
+          if (projectAssignment.room) {
+            conditions.push(`i.project_assignments LIKE ?`);
+            params.push(`%"room":"${projectAssignment.room}"%`);
+          }
+          
+          if (projectAssignment.stage) {
+            conditions.push(`i.project_assignments LIKE ?`);
+            params.push(`%"stage":"${projectAssignment.stage}"%`);
+          }
+        }
+      }
+
+      // Handle regular tags (these should be present regardless of project assignment)
+      if (tags && tags.length > 0) {
+        console.log('🔍 Adding tag requirements:', tags);
+        
+        // For project assignment searches, we still need the basic type tags (precedent, texture, etc.)
+        const tagPlaceholders = tags.map(() => '?').join(',');
+        conditions.push(`i.id IN (
+          SELECT image_id FROM (
+            SELECT i2.id as image_id,
+                   SUM(CASE WHEN LOWER(t2.name) IN (${tagPlaceholders}) THEN 1 ELSE 0 END) +
+                   SUM(CASE WHEN LOWER(ft2.tag_name) IN (${tagPlaceholders}) THEN 1 ELSE 0 END) as matching_tags
+            FROM images i2
+            LEFT JOIN image_tags it2 ON i2.id = it2.image_id
+            LEFT JOIN tags t2 ON it2.tag_id = t2.id
+            LEFT JOIN focused_tags ft2 ON i2.id = ft2.image_id
+            GROUP BY i2.id
+            HAVING matching_tags >= ?
+          )
+        )`);
+        
+        // Add tag parameters twice (for regular and focused tags)
+        tags.forEach(tag => params.push(tag.toLowerCase()));
+        tags.forEach(tag => params.push(tag.toLowerCase()));
+        params.push(tags.length); // Required matching count
+      }
+
+      // Apply conditions
+      if (conditions.length > 0) {
+        query += ' WHERE ' + conditions.join(' AND ');
+      }
+
+      // Add ordering
+      const columnMapping = {
+        'upload_date': 'i.upload_date',
+        'name': 'i.name',
+        'file_size': 'i.file_size', 
+        'width': 'i.width',
+        'height': 'i.height',
+        'filename': 'i.filename'
+      };
+      
+      const orderColumn = columnMapping[sortBy] || 'i.upload_date';
+      const orderDirection = sortOrder.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+      
+      query += `
+        GROUP BY i.id
+        ORDER BY ${orderColumn} ${orderDirection}
+      `;
+
+      console.log('🔍 Final query:', query);
+      console.log('🔍 Query params:', params);
+
+      const images = await this.all(query, params);
+      
+      // Process results same as regular search
+      const processedImages = images.map(image => ({
+        ...image,
+        tags: image.tag_names ? image.tag_names.split(',') : [],
+        focused_tags: [], // Will be loaded separately if needed
+        project_assignments: (() => {
+          try {
+            return image.project_assignments ? JSON.parse(image.project_assignments) : [];
+          } catch (e) {
+            console.warn(`Failed to parse project_assignments for image ${image.id}:`, e);
+            return [];
+          }
+        })()
+      }));
+
+      console.log(`✅ Found ${processedImages.length} images with project assignment filters`);
+      return processedImages;
+
+    } catch (error) {
+      console.error('Error searching images with project assignments:', error);
+      throw error;
+    }
+  }
+
   async getImageById(id) {
     try {
       const image = await this.get(`
@@ -471,6 +609,16 @@ class DatabaseService {
       if (image) {
         image.tags = image.tag_names ? image.tag_names.split(',') : [];
         image.focused_tags = await this.getFocusedTags(id);
+        
+        // Parse project assignments from JSON
+        try {
+          image.project_assignments = image.project_assignments 
+            ? JSON.parse(image.project_assignments) 
+            : [];
+        } catch (e) {
+          console.warn(`Failed to parse project_assignments for image ${id}:`, e);
+          image.project_assignments = [];
+        }
       }
 
       return image;
@@ -506,7 +654,7 @@ class DatabaseService {
     );
   }
 
-  async updateImageTags(imageId, tags, focusedTags) {
+  async updateImageTags(imageId, tags, focusedTags, projectAssignments = null) {
     try {
       // Start transaction
       await this.run('BEGIN TRANSACTION');
@@ -523,6 +671,12 @@ class DatabaseService {
       // Add new focused tags
       if (focusedTags && focusedTags.length > 0) {
         await this.saveFocusedTags(imageId, focusedTags);
+      }
+
+      // Update project assignments if provided
+      if (projectAssignments !== null) {
+        const projectAssignmentsJson = JSON.stringify(projectAssignments);
+        await this.run('UPDATE images SET project_assignments = ? WHERE id = ?', [projectAssignmentsJson, imageId]);
       }
 
       // Update timestamp

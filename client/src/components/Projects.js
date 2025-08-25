@@ -5,6 +5,12 @@ import { toast } from 'react-toastify';
 import { apiCall } from '../utils/apiConfig';
 import { useMode } from '../context/ModeContext';
 
+// Utility function to capitalize text for display
+const capitalizeForDisplay = (text) => {
+  if (!text) return text;
+  return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+};
+
 const Projects = () => {
   const { canEdit } = useMode();
   const navigate = useNavigate();
@@ -354,60 +360,47 @@ const Projects = () => {
       // CRITICAL FIX: Use a more precise search approach
       console.log(`🔍 DEBUG: Searching for images with tags: [${searchTags.join(', ')}]`);
       
-      // FIXED: Use exact tag matching for all projects to ensure precise filtering
+      // NEW: Use project assignment search for project-specific queries
       let searchBody;
       
-      if (project.type === 'current' && tab !== 'photos') {
-        // For current projects precedent/texture tabs: require BOTH project tag AND type tag
-        const typeTag = tab === 'precedent' ? 'precedent' : tab === 'texture' ? 'texture' : null;
+      if (project.type === 'current' && (tab === 'precedent' || tab === 'texture')) {
+        // For current projects precedent/texture tabs: use project assignment search
+        console.log(`🔍 Using PROJECT ASSIGNMENT search for ${project.name} ${tab}`);
         
-        if (typeTag) {
-          // Create comprehensive search tags that must ALL be present
-          const requiredTags = [];
-          
-          // Add project name - use the project's actual tag
-          if (project.id === 'de-witt') {
-            requiredTags.push('de witt st'); // Exact match for "de witt st"
-            console.log(`🏷️ Using "de witt st" tag for De Witt St project`);
-          } else {
-            requiredTags.push(project.name.toLowerCase());
-            console.log(`🏷️ Using "${project.name.toLowerCase()}" tag for ${project.name} project`);
+        searchBody = {
+          tags: [tab], // Must have the type tag (precedent/texture)
+          projectAssignment: {
+            projectId: project.id,
+            ...(room && { room }),
+            ...(stage && { stage })
           }
-          
-          // Add type tag (precedent/texture)
-          requiredTags.push(typeTag);
-          
-          // Add stage and room filters if specified
-          if (stage) requiredTags.push(stage);
-          if (room) requiredTags.push(room);
-          
-          searchBody = { tags: requiredTags };
-          console.log(`🔍 EXACT TAG SEARCH: ALL required tags: [${requiredTags.join(', ')}]`);
+        };
+        
+        console.log(`🔍 PROJECT ASSIGNMENT SEARCH:`, searchBody);
+      } else if (project.type === 'current' && tab === 'photos') {
+        // Photos tab - still use traditional tag search for current projects
+        const requiredTags = [];
+        
+        if (project.id === 'de-witt') {
+          requiredTags.push('de witt st');
         } else {
-          // Photos tab - require project tag + "complete" tag + optional final/wip
-          const requiredTags = [];
-          
-          if (project.id === 'de-witt') {
-            requiredTags.push('de witt st');
-          } else {
-            requiredTags.push(project.name.toLowerCase());
-          }
-          
-          // Photos tab must be tagged "complete"
-          requiredTags.push('complete');
-          
-          // Add Final/WIP filter if selected
-          if (photosFilter === 'final') {
-            requiredTags.push('final');
-          } else if (photosFilter === 'wip') {
-            requiredTags.push('wip');
-          }
-          
-          searchBody = { tags: requiredTags };
-          console.log(`🔍 PHOTOS SEARCH (current project): ALL required tags: [${requiredTags.join(', ')}]`);
+          requiredTags.push(project.name.toLowerCase());
         }
+        
+        // Photos tab must be tagged "complete"
+        requiredTags.push('complete');
+        
+        // Add Final/WIP filter if selected
+        if (photosFilter === 'final') {
+          requiredTags.push('final');
+        } else if (photosFilter === 'wip') {
+          requiredTags.push('wip');
+        }
+        
+        searchBody = { tags: requiredTags };
+        console.log(`🔍 PHOTOS SEARCH (current project): ALL required tags: [${requiredTags.join(', ')}]`);
       } else {
-        // Complete projects use exact tag matching (this works fine)
+        // Complete projects and fallback cases use exact tag matching
         searchBody = { tags: searchTags };
         console.log(`🔍 TAG SEARCH: exact tags: [${searchTags.join(', ')}]`);
       }
@@ -933,7 +926,7 @@ const Projects = () => {
                           </div>
                           {getAllTags().length > 0 && (
                             <div className="text-xs text-white/80">
-                              Tags: {getAllTags().join(', ')}
+                              Tags: {getAllTags().map(tag => capitalizeForDisplay(tag)).join(', ')}
                             </div>
                           )}
                         </div>

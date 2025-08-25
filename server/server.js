@@ -1368,13 +1368,13 @@ app.put('/api/images/:id/tags', async (req, res) => {
   try {
     console.log('🔧 DEBUG: Tag update endpoint called');
     const { id } = req.params;
-    const { tags, focusedTags, title, name, description } = req.body;
+    const { tags, focusedTags, title, name, description, projectAssignments } = req.body;
 
-    console.log(`🏷️ Updating tags for image ${id}:`, { tags, focusedTags });
+    console.log(`🏷️ Updating tags for image ${id}:`, { tags, focusedTags, projectAssignments });
     console.log('🔧 DEBUG: About to update database tags');
 
-    // Update database first (tags and metadata)
-    await databaseService.updateImageTags(id, tags, focusedTags);
+    // Update database first (tags, metadata, and project assignments)
+    await databaseService.updateImageTags(id, tags, focusedTags, projectAssignments);
     
     // Update metadata fields if provided
     if (title !== undefined || name !== undefined || description !== undefined) {
@@ -1879,14 +1879,20 @@ app.post('/api/batch/apply-tags', async (req, res) => {
 app.post('/api/images/search', async (req, res) => {
   try {
     const searchFilters = req.body;
-    const { searchTerm, tags, sources, dateRange, sortBy, sortOrder } = searchFilters;
+    const { searchTerm, tags, sources, dateRange, sortBy, sortOrder, projectAssignment } = searchFilters;
     
     console.log('🔍 Searching images with filters:', searchFilters);
-    console.log('🔍 Search parameters:', { searchTerm, tags, sources, dateRange, sortBy, sortOrder });
+    console.log('🔍 Search parameters:', { searchTerm, tags, sources, dateRange, sortBy, sortOrder, projectAssignment });
     
-    // Use existing search functionality but with POST body filters including sorting
-    console.log('📊 Calling searchImages with:', { searchTerm, tags, sortBy, sortOrder });
-    const images = await databaseService.searchImages(searchTerm, tags, sortBy, sortOrder);
+    // Use new search method if project assignment filter is provided
+    let images;
+    if (projectAssignment) {
+      console.log('📊 Calling searchImagesWithProjectAssignments with:', searchFilters);
+      images = await databaseService.searchImagesWithProjectAssignments(searchFilters);
+    } else {
+      console.log('📊 Calling searchImages with:', { searchTerm, tags, sortBy, sortOrder });
+      images = await databaseService.searchImages(searchTerm, tags, sortBy, sortOrder);
+    }
     console.log('📊 Raw search results:', images.length, 'images found');
     
     // Debug: Log first image details

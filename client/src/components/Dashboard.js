@@ -4,6 +4,12 @@ import { useMode } from '../context/ModeContext';
 import { toast } from 'react-toastify';
 import { apiCall } from '../utils/apiConfig';
 
+// Utility function to capitalize text for display
+const capitalizeForDisplay = (text) => {
+  if (!text) return text;
+  return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+};
+
 // Inline editing components
 
 const EditProjectFormInline = ({ project, onSave, onCancel }) => {
@@ -251,15 +257,12 @@ const Dashboard = () => {
   // Stages state
   const [stages, setStages] = useState([]);
   const [newStageName, setNewStageName] = useState('');
-  const [newStageDescription, setNewStageDescription] = useState('');
   const [editingStage, setEditingStage] = useState(null);
   const [stagesLoading, setStagesLoading] = useState(false);
 
   // Rooms state
   const [rooms, setRooms] = useState([]);
   const [newRoomName, setNewRoomName] = useState('');
-  const [newRoomDescription, setNewRoomDescription] = useState('');
-  const [newRoomCategory, setNewRoomCategory] = useState('');
   const [editingRoom, setEditingRoom] = useState(null);
   const [roomsLoading, setRoomsLoading] = useState(false);
 
@@ -569,7 +572,7 @@ const Dashboard = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name: newStageName.trim(), description: newStageDescription.trim() }),
+        body: JSON.stringify({ name: newStageName.trim() }),
       });
 
       if (response.status === 409) {
@@ -582,7 +585,6 @@ const Dashboard = () => {
       const newStage = await response.json();
       setStages(prev => [...prev, newStage].sort((a, b) => a.name.localeCompare(b.name)));
       setNewStageName('');
-      setNewStageDescription('');
       toast.success('Stage added successfully');
     } catch (error) {
       console.error('Error adding stage:', error);
@@ -696,9 +698,7 @@ const Dashboard = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          name: newRoomName.trim(), 
-          description: newRoomDescription.trim(),
-          category: newRoomCategory.trim()
+          name: newRoomName.trim()
         }),
       });
 
@@ -712,8 +712,6 @@ const Dashboard = () => {
       const newRoom = await response.json();
       setRooms(prev => [...prev, newRoom].sort((a, b) => a.name.localeCompare(b.name)));
       setNewRoomName('');
-      setNewRoomDescription('');
-      setNewRoomCategory('');
       toast.success('Room added successfully');
     } catch (error) {
       console.error('Error adding room:', error);
@@ -953,7 +951,7 @@ const Dashboard = () => {
     if (!tag) return;
 
     const confirmed = window.confirm(
-      `Are you sure you want to delete the tag "${tag.name}"? This will remove it from all ${tag.usage_count || 0} images that use it.`
+      `Are you sure you want to delete the tag "${capitalizeForDisplay(tag.name)}"? This will remove it from all ${tag.usage_count || 0} images that use it.`
     );
     
     if (!confirmed) return;
@@ -1519,7 +1517,7 @@ const Dashboard = () => {
                             <div className="flex items-center justify-between">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2">
-                                  <span className="font-medium text-black">{tag.name}</span>
+                                  <span className="font-medium text-black">{capitalizeForDisplay(tag.name)}</span>
                                   <span className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded">
                                     {tag.usage_count || 0} uses
                                   </span>
@@ -1576,33 +1574,23 @@ const Dashboard = () => {
               {canEdit && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                   <h4 className="font-medium text-gray-900 mb-3">Add New Stage</h4>
-                  <div className="space-y-3">
-                    <div className="flex gap-3">
-                      <input
-                        type="text"
-                        value={newStageName}
-                        onChange={(e) => setNewStageName(e.target.value)}
-                        placeholder="Stage name (e.g., 'Feasibility', 'Layout')"
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                        onKeyPress={(e) => e.key === 'Enter' && addStage()}
-                      />
-                      <button
-                        onClick={addStage}
-                        className="flex items-center gap-2 px-4 py-2 text-white rounded-md hover:opacity-90"
-                        style={{backgroundColor: '#C9D468'}}
-                      >
-                        <Plus className="h-4 w-4" />
-                        Add Stage
-                      </button>
-                    </div>
+                  <div className="flex gap-3">
                     <input
                       type="text"
-                      value={newStageDescription}
-                      onChange={(e) => setNewStageDescription(e.target.value)}
-                      placeholder="Description (optional)"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      value={newStageName}
+                      onChange={(e) => setNewStageName(e.target.value)}
+                      placeholder="Stage name (e.g., 'Feasibility', 'Layout')"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                       onKeyPress={(e) => e.key === 'Enter' && addStage()}
                     />
+                    <button
+                      onClick={addStage}
+                      className="flex items-center gap-2 px-4 py-2 text-white rounded-md hover:opacity-90"
+                      style={{backgroundColor: '#C9D468'}}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Stage
+                    </button>
                   </div>
                 </div>
               )}
@@ -1697,43 +1685,23 @@ const Dashboard = () => {
               {canEdit && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                   <h4 className="font-medium text-gray-900 mb-3">Add New Room Type</h4>
-                  <div className="space-y-3">
-                    <div className="flex gap-3">
-                      <input
-                        type="text"
-                        value={newRoomName}
-                        onChange={(e) => setNewRoomName(e.target.value)}
-                        placeholder="Room name (e.g., 'Living', 'Kitchen')"
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                        onKeyPress={(e) => e.key === 'Enter' && addRoom()}
-                      />
-                      <button
-                        onClick={addRoom}
-                        className="flex items-center gap-2 px-4 py-2 text-white rounded-md hover:opacity-90"
-                        style={{backgroundColor: '#C9D468'}}
-                      >
-                        <Plus className="h-4 w-4" />
-                        Add Room
-                      </button>
-                    </div>
-                    <div className="flex gap-3">
-                      <input
-                        type="text"
-                        value={newRoomDescription}
-                        onChange={(e) => setNewRoomDescription(e.target.value)}
-                        placeholder="Description (optional)"
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                        onKeyPress={(e) => e.key === 'Enter' && addRoom()}
-                      />
-                      <input
-                        type="text"
-                        value={newRoomCategory}
-                        onChange={(e) => setNewRoomCategory(e.target.value)}
-                        placeholder="Category (optional)"
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                        onKeyPress={(e) => e.key === 'Enter' && addRoom()}
-                      />
-                    </div>
+                  <div className="flex gap-3">
+                    <input
+                      type="text"
+                      value={newRoomName}
+                      onChange={(e) => setNewRoomName(e.target.value)}
+                      placeholder="Room name (e.g., 'Living', 'Kitchen')"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      onKeyPress={(e) => e.key === 'Enter' && addRoom()}
+                    />
+                    <button
+                      onClick={addRoom}
+                      className="flex items-center gap-2 px-4 py-2 text-white rounded-md hover:opacity-90"
+                      style={{backgroundColor: '#C9D468'}}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Room
+                    </button>
                   </div>
                 </div>
               )}
