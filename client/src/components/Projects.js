@@ -27,6 +27,12 @@ const Projects = () => {
   const [roomFilter, setRoomFilter] = useState('');
   const [forceRefresh, setForceRefresh] = useState(0);
   const [isInitializing, setIsInitializing] = useState(false);
+  
+  // Dynamic stages and rooms data
+  const [stages, setStages] = useState([]);
+  const [rooms, setRooms] = useState([]);
+  const [stagesLoading, setStagesLoading] = useState(true);
+  const [roomsLoading, setRoomsLoading] = useState(true);
 
   // Helper function to get valid tabs for a project type
   const getValidTabs = (project) => {
@@ -189,7 +195,37 @@ const Projects = () => {
 
   useEffect(() => {
     loadProjects();
+    loadStagesAndRooms();
   }, []);
+
+  const loadStagesAndRooms = async () => {
+    try {
+      // Load stages and rooms in parallel
+      const [stagesResponse, roomsResponse] = await Promise.all([
+        apiCall('/api/stages'),
+        apiCall('/api/rooms')
+      ]);
+
+      if (stagesResponse.ok) {
+        const stagesData = await stagesResponse.json();
+        setStages(stagesData);
+      } else {
+        console.error('Failed to load stages');
+      }
+
+      if (roomsResponse.ok) {
+        const roomsData = await roomsResponse.json();
+        setRooms(roomsData);
+      } else {
+        console.error('Failed to load rooms');
+      }
+    } catch (error) {
+      console.error('Error loading stages and rooms:', error);
+    } finally {
+      setStagesLoading(false);
+      setRoomsLoading(false);
+    }
+  };
 
   useEffect(() => {
     // Only handle URL routing after projects are loaded and not during initialization
@@ -745,9 +781,15 @@ const Projects = () => {
                 className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 w-36"
               >
                 <option value="">All Stages</option>
-                <option value="feasibility">Feasibility</option>
-                <option value="layout">Layout</option>
-                <option value="finishes">Finishes</option>
+                {stagesLoading ? (
+                  <option disabled>Loading...</option>
+                ) : (
+                  stages.map(stage => (
+                    <option key={stage.id} value={stage.name}>
+                      {stage.name.charAt(0).toUpperCase() + stage.name.slice(1)}
+                    </option>
+                  ))
+                )}
               </select>
             </div>
 
@@ -762,11 +804,15 @@ const Projects = () => {
                 className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 w-36"
               >
                 <option value="">All Rooms</option>
-                <option value="living">Living</option>
-                <option value="dining">Dining</option>
-                <option value="kitchen">Kitchen</option>
-                <option value="bathroom">Bathroom</option>
-                <option value="bedroom">Bedroom</option>
+                {roomsLoading ? (
+                  <option disabled>Loading...</option>
+                ) : (
+                  rooms.map(room => (
+                    <option key={room.id} value={room.name}>
+                      {room.name.charAt(0).toUpperCase() + room.name.slice(1)}
+                    </option>
+                  ))
+                )}
               </select>
             </div>
 

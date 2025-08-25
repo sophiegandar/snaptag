@@ -5,108 +5,6 @@ import { toast } from 'react-toastify';
 import { apiCall } from '../utils/apiConfig';
 
 // Inline editing components
-const EditCategoryFormInline = ({ category, onSave, onCancel, types }) => {
-  const [name, setName] = useState(category.name);
-  const [description, setDescription] = useState(category.description);
-  const [type, setType] = useState(category.type || '');
-
-  const handleSave = () => {
-    if (name.trim() && type) {
-      onSave(category.id, name, description, type);
-    }
-  };
-
-  return (
-    <div className="flex-1 space-y-3">
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-          placeholder="Category name"
-        />
-        <input
-          type="text"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-          placeholder="Description"
-        />
-        <select
-          value={type}
-          onChange={(e) => setType(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-        >
-          <option value="">Select Type</option>
-          {types.map(t => (
-            <option key={t.id} value={t.id}>{t.name}</option>
-          ))}
-        </select>
-      </div>
-      <div className="flex gap-2">
-        <button
-          onClick={handleSave}
-          className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
-        >
-          <Check className="h-3 w-3" />
-        </button>
-        <button
-          onClick={onCancel}
-          className="px-3 py-1 bg-gray-500 text-white rounded text-sm hover:bg-gray-600"
-        >
-          <X className="h-3 w-3" />
-        </button>
-      </div>
-    </div>
-  );
-};
-
-const EditTypeFormInline = ({ type, onSave, onCancel }) => {
-  const [name, setName] = useState(type.name);
-  const [description, setDescription] = useState(type.description);
-
-  const handleSave = () => {
-    if (name.trim()) {
-      onSave(type.id, name, description);
-    }
-  };
-
-  return (
-    <div className="flex-1 space-y-3">
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-          placeholder="Type name"
-        />
-        <input
-          type="text"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-          placeholder="Description"
-        />
-      </div>
-      <div className="flex gap-2">
-        <button
-          onClick={handleSave}
-          className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
-        >
-          <Check className="h-3 w-3" />
-        </button>
-        <button
-          onClick={onCancel}
-          className="px-3 py-1 bg-gray-500 text-white rounded text-sm hover:bg-gray-600"
-        >
-          <X className="h-3 w-3" />
-        </button>
-      </div>
-    </div>
-  );
-};
 
 const EditProjectFormInline = ({ project, onSave, onCancel }) => {
   const [name, setName] = useState(project.name);
@@ -197,6 +95,139 @@ const EditTagFormInline = ({ tag, onSave, onCancel }) => {
   );
 };
 
+const EditStageFormInline = ({ stage, onSave, onCancel }) => {
+  const [name, setName] = useState(stage.name);
+  const [description, setDescription] = useState(stage.description || '');
+
+  const handleSave = () => {
+    if (name.trim()) {
+      onSave(stage.id, name, description);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSave();
+    } else if (e.key === 'Escape') {
+      onCancel();
+    }
+  };
+
+  return (
+    <div className="flex-1 space-y-3">
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyPress={handleKeyPress}
+          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          placeholder="Stage name"
+          autoFocus
+        />
+      </div>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          onKeyPress={handleKeyPress}
+          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          placeholder="Description (optional)"
+        />
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={handleSave}
+          className="px-3 py-1 text-white rounded text-sm hover:opacity-90"
+          style={{backgroundColor: '#C9D468'}}
+        >
+          <Check className="h-3 w-3" />
+        </button>
+        <button
+          onClick={onCancel}
+          className="px-3 py-1 text-white rounded text-sm hover:opacity-90"
+          style={{backgroundColor: '#BDAE93'}}
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const EditRoomFormInline = ({ room, onSave, onCancel }) => {
+  const [name, setName] = useState(room.name);
+  const [description, setDescription] = useState(room.description || '');
+  const [category, setCategory] = useState(room.category || '');
+
+  const handleSave = () => {
+    if (name.trim()) {
+      onSave(room.id, name, description, category);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSave();
+    } else if (e.key === 'Escape') {
+      onCancel();
+    }
+  };
+
+  return (
+    <div className="flex-1 space-y-3">
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyPress={handleKeyPress}
+          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          placeholder="Room name"
+          autoFocus
+        />
+      </div>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          onKeyPress={handleKeyPress}
+          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          placeholder="Description (optional)"
+        />
+      </div>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          onKeyPress={handleKeyPress}
+          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          placeholder="Category (optional)"
+        />
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={handleSave}
+          className="px-3 py-1 text-white rounded text-sm hover:opacity-90"
+          style={{backgroundColor: '#C9D468'}}
+        >
+          <Check className="h-3 w-3" />
+        </button>
+        <button
+          onClick={onCancel}
+          className="px-3 py-1 text-white rounded text-sm hover:opacity-90"
+          style={{backgroundColor: '#BDAE93'}}
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const Dashboard = () => {
   const { canEdit } = useMode();
   const [activeSection, setActiveSection] = useState('tags');
@@ -206,14 +237,7 @@ const Dashboard = () => {
   const [completeProjects, setCompleteProjects] = useState([]);
   const [newProjectName, setNewProjectName] = useState('');
 
-  // Categories state
-  const [categories, setCategories] = useState([]);
-  const [types, setTypes] = useState([]);
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [newCategoryType, setNewCategoryType] = useState('');
-  const [newTypeName, setNewTypeName] = useState('');
-  const [editingCategory, setEditingCategory] = useState(null);
-  const [editingType, setEditingType] = useState(null);
+
 
   // Project editing state
   const [editingProject, setEditingProject] = useState(null);
@@ -223,6 +247,21 @@ const Dashboard = () => {
   const [newTagName, setNewTagName] = useState('');
   const [editingTag, setEditingTag] = useState(null);
   const [tagsLoading, setTagsLoading] = useState(false);
+
+  // Stages state
+  const [stages, setStages] = useState([]);
+  const [newStageName, setNewStageName] = useState('');
+  const [newStageDescription, setNewStageDescription] = useState('');
+  const [editingStage, setEditingStage] = useState(null);
+  const [stagesLoading, setStagesLoading] = useState(false);
+
+  // Rooms state
+  const [rooms, setRooms] = useState([]);
+  const [newRoomName, setNewRoomName] = useState('');
+  const [newRoomDescription, setNewRoomDescription] = useState('');
+  const [newRoomCategory, setNewRoomCategory] = useState('');
+  const [editingRoom, setEditingRoom] = useState(null);
+  const [roomsLoading, setRoomsLoading] = useState(false);
 
   // Typo scan state
   const [typoScanning, setTypoScanning] = useState(false);
@@ -267,217 +306,7 @@ const Dashboard = () => {
     setCompleteProjects(defaultCompleteProjects);
   };
 
-  // Categories functions
-  const loadCategories = () => {
-    try {
-      // Force reset categories to ensure correct Dropbox folder structure categories
-      localStorage.removeItem('snaptag-categories');
-      localStorage.removeItem('snaptag-types');
-      
-      const storedCategories = localStorage.getItem('snaptag-categories');
-      const storedTypes = localStorage.getItem('snaptag-types');
-      
-      if (storedCategories) {
-        const parsed = JSON.parse(storedCategories);
-        setCategories(Array.isArray(parsed) ? parsed : []);
-      } else {
-        // Default categories with their assigned types (ONLY 3 TYPES: archier, texture, precedent)
-        const defaultCategories = [
-          // Precedent categories (15 total)
-          { id: 'art', name: 'Art', description: 'Artwork and artistic references', type: 'precedent' },
-          { id: 'bathrooms', name: 'Bathrooms', description: 'Bathroom spaces and fixtures', type: 'precedent' },
-          { id: 'details', name: 'Details', description: 'Architectural details and elements', type: 'precedent' },
-          { id: 'doors', name: 'Doors', description: 'Door designs and hardware', type: 'precedent' },
-          { id: 'exteriors', name: 'Exteriors', description: 'Building exterior views and facades', type: 'precedent' },
-          { id: 'furniture', name: 'Furniture', description: 'Furniture design and arrangements', type: 'precedent' },
-          { id: 'general', name: 'General', description: 'General or uncategorized images', type: 'precedent' },
-          { id: 'interiors', name: 'Interiors', description: 'Interior spaces and rooms', type: 'precedent' },
-          { id: 'joinery', name: 'Joinery', description: 'Custom joinery and built-in furniture', type: 'precedent' },
-          { id: 'kitchens', name: 'Kitchens', description: 'Kitchen spaces and design', type: 'precedent' },
-          { id: 'landscape', name: 'Landscape', description: 'Landscape and garden design', type: 'precedent' },
-          { id: 'lighting', name: 'Lighting', description: 'Lighting design and fixtures', type: 'precedent' },
-          { id: 'spatial', name: 'Spatial', description: 'Spatial arrangements and layouts', type: 'precedent' },
-          { id: 'stairs', name: 'Stairs', description: 'Staircase design and details', type: 'precedent' },
-          { id: 'structure', name: 'Structure', description: 'Structural elements and systems', type: 'precedent' },
-          
-          // Texture categories (10 total)
-          { id: 'brick', name: 'Brick', description: 'Brick materials and patterns', type: 'texture' },
-          { id: 'carpet', name: 'Carpet', description: 'Carpet and soft flooring materials', type: 'texture' },
-          { id: 'concrete', name: 'Concrete', description: 'Concrete finishes and textures', type: 'texture' },
-          { id: 'fabric', name: 'Fabric', description: 'Fabric and textile materials', type: 'texture' },
-          { id: 'general', name: 'General', description: 'General texture materials', type: 'texture' },
-          { id: 'landscape', name: 'Landscape', description: 'Landscape materials and textures', type: 'texture' },
-          { id: 'metal', name: 'Metal', description: 'Metal materials and finishes', type: 'texture' },
-          { id: 'stone', name: 'Stone', description: 'Stone materials and textures', type: 'texture' },
-          { id: 'tile', name: 'Tile', description: 'Tile materials and patterns', type: 'texture' },
-          { id: 'wood', name: 'Wood', description: 'Wood materials and finishes', type: 'texture' }
-        ];
-        setCategories(defaultCategories);
-        localStorage.setItem('snaptag-categories', JSON.stringify(defaultCategories));
-      }
 
-      if (storedTypes) {
-        const parsed = JSON.parse(storedTypes);
-        setTypes(Array.isArray(parsed) ? parsed : []);
-      } else {
-        // Default types (main folder structure)
-        const defaultTypes = [
-          { id: 'archier', name: 'Archier', description: 'Team project images organised by project name' },
-          { id: 'texture', name: 'Texture', description: 'Material samples organised by material type' },
-          { id: 'precedent', name: 'Precedent', description: 'Reference images organised by category' }
-        ];
-        setTypes(defaultTypes);
-        localStorage.setItem('snaptag-types', JSON.stringify(defaultTypes));
-      }
-    } catch (error) {
-      console.error('Error loading categories/types:', error);
-      setCategories([]);
-      setTypes([]);
-    }
-  };
-
-  const addCategory = () => {
-    if (!newCategoryName.trim()) {
-      toast.error('Please enter a category name');
-      return;
-    }
-
-    if (!newCategoryType) {
-      toast.error('Please select a type for this category');
-      return;
-    }
-
-    if (!canEdit) {
-      toast.error('Category creation is only available in edit mode');
-      return;
-    }
-
-    const id = newCategoryName.toLowerCase().replace(/\s+/g, '-');
-    const existing = categories.find(c => c.id === id);
-    
-    if (existing) {
-      toast.error('A category with this name already exists');
-      return;
-    }
-
-    const newCategory = {
-      id,
-      name: newCategoryName.trim(),
-      description: `${newCategoryName.trim()} category`,
-      type: newCategoryType
-    };
-
-    const updatedCategories = [...categories, newCategory];
-    setCategories(updatedCategories);
-    localStorage.setItem('snaptag-categories', JSON.stringify(updatedCategories));
-    setNewCategoryName('');
-    setNewCategoryType('');
-    toast.success(`Category "${newCategory.name}" added to ${newCategoryType} type`);
-  };
-
-  const addType = () => {
-    if (!newTypeName.trim()) {
-      toast.error('Please enter a type name');
-      return;
-    }
-
-    if (!canEdit) {
-      toast.error('Type creation is only available in edit mode');
-      return;
-    }
-
-    const id = newTypeName.toLowerCase().replace(/\s+/g, '-');
-    const existing = types.find(t => t.id === id);
-    
-    if (existing) {
-      toast.error('A type with this name already exists');
-      return;
-    }
-
-    const newType = {
-      id,
-      name: newTypeName.trim(),
-      description: `${newTypeName.trim()} type`
-    };
-
-    const updatedTypes = [...types, newType];
-    setTypes(updatedTypes);
-    localStorage.setItem('snaptag-types', JSON.stringify(updatedTypes));
-    setNewTypeName('');
-    toast.success(`Type "${newType.name}" added successfully`);
-  };
-
-  const updateCategory = (categoryId, newName, newDescription, newType) => {
-    if (!canEdit) {
-      toast.error('Category editing is only available in edit mode');
-      return;
-    }
-
-    const updatedCategories = categories.map(cat => 
-      cat.id === categoryId 
-        ? { ...cat, name: newName.trim(), description: newDescription.trim(), type: newType }
-        : cat
-    );
-    
-    setCategories(updatedCategories);
-    localStorage.setItem('snaptag-categories', JSON.stringify(updatedCategories));
-    setEditingCategory(null);
-    toast.success('Category updated successfully');
-  };
-
-  const updateType = (typeId, newName, newDescription) => {
-    if (!canEdit) {
-      toast.error('Type editing is only available in edit mode');
-      return;
-    }
-
-    const updatedTypes = types.map(type => 
-      type.id === typeId 
-        ? { ...type, name: newName.trim(), description: newDescription.trim() }
-        : type
-    );
-    
-    setTypes(updatedTypes);
-    localStorage.setItem('snaptag-types', JSON.stringify(updatedTypes));
-    setEditingType(null);
-    toast.success('Type updated successfully');
-  };
-
-  const deleteCategory = (categoryId) => {
-    if (!canEdit) {
-      toast.error('Category deletion is only available in edit mode');
-      return;
-    }
-
-    const category = categories.find(c => c.id === categoryId);
-    if (!window.confirm(`Are you sure you want to delete the "${category?.name}" category? This action cannot be undone.`)) {
-      return;
-    }
-
-    const updatedCategories = categories.filter(c => c.id !== categoryId);
-    setCategories(updatedCategories);
-    localStorage.setItem('snaptag-categories', JSON.stringify(updatedCategories));
-    
-    toast.success(`Category "${category?.name}" deleted successfully`);
-  };
-
-  const deleteType = (typeId) => {
-    if (!canEdit) {
-      toast.error('Type deletion is only available in edit mode');
-      return;
-    }
-
-    const type = types.find(t => t.id === typeId);
-    if (!window.confirm(`Are you sure you want to delete the "${type?.name}" type? This action cannot be undone and will affect all categories using this type.`)) {
-      return;
-    }
-
-    const updatedTypes = types.filter(t => t.id !== typeId);
-    setTypes(updatedTypes);
-    localStorage.setItem('snaptag-types', JSON.stringify(updatedTypes));
-    
-    toast.success(`Type "${type?.name}" deleted successfully`);
-  };
 
   // Pro Workflow functions
   const scanImages = async () => {
@@ -703,6 +532,267 @@ const Dashboard = () => {
       toast.error('Failed to load tags');
     } finally {
       setTagsLoading(false);
+    }
+  };
+
+  // Stages functions
+  const loadStages = async () => {
+    try {
+      setStagesLoading(true);
+      const response = await apiCall('/api/stages');
+      if (!response.ok) throw new Error('Failed to load stages');
+      
+      const data = await response.json();
+      setStages(data);
+    } catch (error) {
+      console.error('Error loading stages:', error);
+      toast.error('Failed to load stages');
+    } finally {
+      setStagesLoading(false);
+    }
+  };
+
+  const addStage = async () => {
+    if (!newStageName.trim()) {
+      toast.error('Please enter a stage name');
+      return;
+    }
+
+    if (!canEdit) {
+      toast.error('Stage creation is only available in edit mode');
+      return;
+    }
+
+    try {
+      const response = await apiCall('/api/stages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: newStageName.trim(), description: newStageDescription.trim() }),
+      });
+
+      if (response.status === 409) {
+        toast.error('A stage with this name already exists');
+        return;
+      }
+
+      if (!response.ok) throw new Error('Failed to create stage');
+
+      const newStage = await response.json();
+      setStages(prev => [...prev, newStage].sort((a, b) => a.name.localeCompare(b.name)));
+      setNewStageName('');
+      setNewStageDescription('');
+      toast.success('Stage added successfully');
+    } catch (error) {
+      console.error('Error adding stage:', error);
+      toast.error('Failed to add stage');
+    }
+  };
+
+  const updateStage = async (stageId, newName, newDescription) => {
+    if (!canEdit) {
+      toast.error('Stage editing is only available in edit mode');
+      return;
+    }
+
+    if (!newName.trim()) {
+      toast.error('Stage name cannot be empty');
+      return;
+    }
+
+    try {
+      const response = await apiCall(`/api/stages/${stageId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: newName.trim(), description: newDescription.trim() }),
+      });
+
+      if (response.status === 409) {
+        toast.error('A stage with this name already exists');
+        return;
+      }
+
+      if (!response.ok) throw new Error('Failed to update stage');
+
+      const updatedStage = await response.json();
+      setStages(prev => 
+        prev.map(stage => 
+          stage.id === stageId ? updatedStage : stage
+        ).sort((a, b) => a.name.localeCompare(b.name))
+      );
+      setEditingStage(null);
+      toast.success('Stage updated successfully');
+    } catch (error) {
+      console.error('Error updating stage:', error);
+      toast.error('Failed to update stage');
+    }
+  };
+
+  const deleteStage = async (stageId) => {
+    if (!canEdit) {
+      toast.error('Stage deletion is only available in edit mode');
+      return;
+    }
+
+    const stage = stages.find(s => s.id === stageId);
+    if (!stage) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete the stage "${stage.name}"?`
+    );
+    
+    if (!confirmed) return;
+
+    try {
+      const response = await apiCall(`/api/stages/${stageId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) throw new Error('Failed to delete stage');
+
+      setStages(prev => prev.filter(s => s.id !== stageId));
+      toast.success('Stage deleted successfully');
+    } catch (error) {
+      console.error('Error deleting stage:', error);
+      toast.error('Failed to delete stage');
+    }
+  };
+
+  // Rooms functions
+  const loadRooms = async () => {
+    try {
+      setRoomsLoading(true);
+      const response = await apiCall('/api/rooms');
+      if (!response.ok) throw new Error('Failed to load rooms');
+      
+      const data = await response.json();
+      setRooms(data);
+    } catch (error) {
+      console.error('Error loading rooms:', error);
+      toast.error('Failed to load rooms');
+    } finally {
+      setRoomsLoading(false);
+    }
+  };
+
+  const addRoom = async () => {
+    if (!newRoomName.trim()) {
+      toast.error('Please enter a room name');
+      return;
+    }
+
+    if (!canEdit) {
+      toast.error('Room creation is only available in edit mode');
+      return;
+    }
+
+    try {
+      const response = await apiCall('/api/rooms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          name: newRoomName.trim(), 
+          description: newRoomDescription.trim(),
+          category: newRoomCategory.trim()
+        }),
+      });
+
+      if (response.status === 409) {
+        toast.error('A room with this name already exists');
+        return;
+      }
+
+      if (!response.ok) throw new Error('Failed to create room');
+
+      const newRoom = await response.json();
+      setRooms(prev => [...prev, newRoom].sort((a, b) => a.name.localeCompare(b.name)));
+      setNewRoomName('');
+      setNewRoomDescription('');
+      setNewRoomCategory('');
+      toast.success('Room added successfully');
+    } catch (error) {
+      console.error('Error adding room:', error);
+      toast.error('Failed to add room');
+    }
+  };
+
+  const updateRoom = async (roomId, newName, newDescription, newCategory) => {
+    if (!canEdit) {
+      toast.error('Room editing is only available in edit mode');
+      return;
+    }
+
+    if (!newName.trim()) {
+      toast.error('Room name cannot be empty');
+      return;
+    }
+
+    try {
+      const response = await apiCall(`/api/rooms/${roomId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          name: newName.trim(), 
+          description: newDescription.trim(),
+          category: newCategory.trim()
+        }),
+      });
+
+      if (response.status === 409) {
+        toast.error('A room with this name already exists');
+        return;
+      }
+
+      if (!response.ok) throw new Error('Failed to update room');
+
+      const updatedRoom = await response.json();
+      setRooms(prev => 
+        prev.map(room => 
+          room.id === roomId ? updatedRoom : room
+        ).sort((a, b) => a.name.localeCompare(b.name))
+      );
+      setEditingRoom(null);
+      toast.success('Room updated successfully');
+    } catch (error) {
+      console.error('Error updating room:', error);
+      toast.error('Failed to update room');
+    }
+  };
+
+  const deleteRoom = async (roomId) => {
+    if (!canEdit) {
+      toast.error('Room deletion is only available in edit mode');
+      return;
+    }
+
+    const room = rooms.find(r => r.id === roomId);
+    if (!room) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete the room "${room.name}"?`
+    );
+    
+    if (!confirmed) return;
+
+    try {
+      const response = await apiCall(`/api/rooms/${roomId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) throw new Error('Failed to delete room');
+
+      setRooms(prev => prev.filter(r => r.id !== roomId));
+      toast.success('Room deleted successfully');
+    } catch (error) {
+      console.error('Error deleting room:', error);
+      toast.error('Failed to delete room');
     }
   };
 
@@ -1172,18 +1262,16 @@ const Dashboard = () => {
     } else if (activeSection === 'projects') {
       loadCurrentProjects();
       loadCompleteProjects();
-    } else if (activeSection === 'categories') {
-      loadCategories();
     } else if (activeSection === 'tags') {
       loadTags();
-      loadCategories();
+      loadStages();
+      loadRooms();
     }
   }, [activeSection, canEdit]);
 
   const sections = [
     { id: 'tags', label: 'Tags Database', description: '' },
     { id: 'projects', label: 'Projects', description: '' },
-    { id: 'categories', label: 'Categories', description: '' },
     { id: 'policies', label: 'Image Policies', description: '' },
     { id: 'workflow', label: 'Pro Workflow', description: '' },
   ];
@@ -1737,6 +1825,261 @@ const Dashboard = () => {
                 )}
               </div>
             </div>
+
+            {/* Stages Section */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Project Stages</h3>
+                  <p className="text-sm text-gray-500">Manage project workflow stages for filtering</p>
+                </div>
+              </div>
+
+              {/* Add New Stage - Only show in edit mode */}
+              {canEdit && (
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium text-gray-900 mb-3">Add New Stage</h4>
+                  <div className="space-y-3">
+                    <div className="flex gap-3">
+                      <input
+                        type="text"
+                        value={newStageName}
+                        onChange={(e) => setNewStageName(e.target.value)}
+                        placeholder="Stage name (e.g., 'Feasibility', 'Layout')"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        onKeyPress={(e) => e.key === 'Enter' && addStage()}
+                      />
+                      <button
+                        onClick={addStage}
+                        className="flex items-center gap-2 px-4 py-2 text-white rounded-md hover:opacity-90"
+                        style={{backgroundColor: '#C9D468'}}
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add Stage
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={newStageDescription}
+                      onChange={(e) => setNewStageDescription(e.target.value)}
+                      placeholder="Description (optional)"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      onKeyPress={(e) => e.key === 'Enter' && addStage()}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Stages List */}
+              {stagesLoading ? (
+                <div className="text-center py-8">
+                  <RefreshCw className="h-8 w-8 text-gray-400 mx-auto mb-4 animate-spin" />
+                  <p className="text-gray-600">Loading stages...</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-500 mb-4">
+                    Total stages: {stages.length}
+                  </p>
+                  
+                  {stages.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Box className="h-8 w-8 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600">No stages found</p>
+                      {canEdit && <p className="text-sm text-gray-400">Add your first stage above</p>}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {stages.map((stage) => (
+                        <div key={stage.id} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                          {editingStage === stage.id ? (
+                            <EditStageFormInline 
+                              stage={stage}
+                              onSave={updateStage}
+                              onCancel={() => setEditingStage(null)}
+                            />
+                          ) : (
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-black">{stage.name}</span>
+                                  <span className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded">
+                                    {stage.usage_count || 0} uses
+                                  </span>
+                                </div>
+                                {stage.description && (
+                                  <p className="text-xs text-gray-500 mt-1">{stage.description}</p>
+                                )}
+                                {stage.created_at && (
+                                  <p className="text-xs text-gray-400 mt-1">
+                                    Created: {new Date(stage.created_at).toLocaleDateString()}
+                                  </p>
+                                )}
+                              </div>
+                              
+                              {canEdit && (
+                                <div className="flex gap-2 ml-3">
+                                  <button
+                                    onClick={() => setEditingStage(stage.id)}
+                                    className="p-1 text-white rounded hover:opacity-90"
+                                    style={{backgroundColor: '#C9D468'}}
+                                    title="Edit stage"
+                                  >
+                                    <Edit3 className="h-3 w-3" />
+                                  </button>
+                                  <button
+                                    onClick={() => deleteStage(stage.id)}
+                                    className="p-1 text-white rounded hover:opacity-90"
+                                    style={{backgroundColor: '#BDAE93'}}
+                                    title="Delete stage"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Rooms Section */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Room Types</h3>
+                  <p className="text-sm text-gray-500">Manage room categories for filtering</p>
+                </div>
+              </div>
+
+              {/* Add New Room - Only show in edit mode */}
+              {canEdit && (
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium text-gray-900 mb-3">Add New Room Type</h4>
+                  <div className="space-y-3">
+                    <div className="flex gap-3">
+                      <input
+                        type="text"
+                        value={newRoomName}
+                        onChange={(e) => setNewRoomName(e.target.value)}
+                        placeholder="Room name (e.g., 'Living', 'Kitchen')"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        onKeyPress={(e) => e.key === 'Enter' && addRoom()}
+                      />
+                      <button
+                        onClick={addRoom}
+                        className="flex items-center gap-2 px-4 py-2 text-white rounded-md hover:opacity-90"
+                        style={{backgroundColor: '#C9D468'}}
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add Room
+                      </button>
+                    </div>
+                    <div className="flex gap-3">
+                      <input
+                        type="text"
+                        value={newRoomDescription}
+                        onChange={(e) => setNewRoomDescription(e.target.value)}
+                        placeholder="Description (optional)"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        onKeyPress={(e) => e.key === 'Enter' && addRoom()}
+                      />
+                      <input
+                        type="text"
+                        value={newRoomCategory}
+                        onChange={(e) => setNewRoomCategory(e.target.value)}
+                        placeholder="Category (optional)"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        onKeyPress={(e) => e.key === 'Enter' && addRoom()}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Rooms List */}
+              {roomsLoading ? (
+                <div className="text-center py-8">
+                  <RefreshCw className="h-8 w-8 text-gray-400 mx-auto mb-4 animate-spin" />
+                  <p className="text-gray-600">Loading rooms...</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-500 mb-4">
+                    Total rooms: {rooms.length}
+                  </p>
+                  
+                  {rooms.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Box className="h-8 w-8 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600">No rooms found</p>
+                      {canEdit && <p className="text-sm text-gray-400">Add your first room above</p>}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {rooms.map((room) => (
+                        <div key={room.id} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                          {editingRoom === room.id ? (
+                            <EditRoomFormInline 
+                              room={room}
+                              onSave={updateRoom}
+                              onCancel={() => setEditingRoom(null)}
+                            />
+                          ) : (
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-black">{room.name}</span>
+                                  <span className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded">
+                                    {room.usage_count || 0} uses
+                                  </span>
+                                </div>
+                                {room.description && (
+                                  <p className="text-xs text-gray-500 mt-1">{room.description}</p>
+                                )}
+                                {room.category && (
+                                  <p className="text-xs text-gray-500 mt-1">Category: {room.category}</p>
+                                )}
+                                {room.created_at && (
+                                  <p className="text-xs text-gray-400 mt-1">
+                                    Created: {new Date(room.created_at).toLocaleDateString()}
+                                  </p>
+                                )}
+                              </div>
+                              
+                              {canEdit && (
+                                <div className="flex gap-2 ml-3">
+                                  <button
+                                    onClick={() => setEditingRoom(room.id)}
+                                    className="p-1 text-white rounded hover:opacity-90"
+                                    style={{backgroundColor: '#C9D468'}}
+                                    title="Edit room"
+                                  >
+                                    <Edit3 className="h-3 w-3" />
+                                  </button>
+                                  <button
+                                    onClick={() => deleteRoom(room.id)}
+                                    className="p-1 text-white rounded hover:opacity-90"
+                                    style={{backgroundColor: '#BDAE93'}}
+                                    title="Delete room"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -1889,301 +2232,7 @@ const Dashboard = () => {
           </div>
         )}
 
-        {activeSection === 'categories' && (
-          <div className="space-y-6">
-            {/* Types Section */}
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Dropbox Types (Main Folders)</h3>
-                </div>
-              </div>
 
-              {/* Add New Type - Only show in edit mode */}
-              {canEdit && (
-                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium text-gray-900 mb-3">Add New Type</h4>
-                  <div className="flex gap-3">
-                    <input
-                      type="text"
-                      value={newTypeName}
-                      onChange={(e) => setNewTypeName(e.target.value)}
-                      placeholder="Enter type name (e.g., 'Materials')"
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                      onKeyPress={(e) => e.key === 'Enter' && addType()}
-                    />
-                    <button
-                      onClick={addType}
-                      className="flex items-center gap-2 px-4 py-2 text-white rounded-md hover:opacity-90"
-                      style={{backgroundColor: '#C9D468'}}
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add Type
-                    </button>
-                  </div>
-                  <p className="text-sm text-gray-500 mt-2">
-                    Adding a new type will create a new main folder in the Dropbox structure.
-                  </p>
-                </div>
-              )}
-
-              {/* Types List */}
-              <div>
-                {types.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <Folder className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                    <p>No types found</p>
-                    {canEdit && <p className="text-sm">Add your first type above</p>}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {types.map((type) => (
-                      <div
-                        key={type.id}
-                        className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
-                      >
-                        {editingType === type.id ? (
-                          <EditTypeFormInline
-                            type={type}
-                            onSave={updateType}
-                            onCancel={() => setEditingType(null)}
-                          />
-                        ) : (
-                          <>
-                            <div className="flex-1 text-center">
-                              <h4 className="font-medium text-gray-900">{type.name}</h4>
-                              <p className="text-sm text-gray-500">{type.description}</p>
-                              <p className="text-xs text-black mt-1">
-                                /SnapTag/{type.name}/
-                              </p>
-                            </div>
-                            {canEdit && (
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => setEditingType(type.id)}
-                                  className="p-2 text-blue-500 hover:bg-blue-50 rounded-md"
-                                  title="Edit type"
-                                >
-                                  <Edit3 className="h-4 w-4" />
-                                </button>
-                                <button
-                                  onClick={() => deleteType(type.id)}
-                                  className="p-2 text-red-500 hover:bg-red-50 rounded-md"
-                                  title="Delete type"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Categories Section */}
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Categories</h3>
-                </div>
-              </div>
-
-              {/* Add New Category - Only show in edit mode */}
-              {canEdit && (
-                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium text-gray-900 mb-3">Add New Category</h4>
-                  <div className="flex gap-3">
-                    <input
-                      type="text"
-                      value={newCategoryName}
-                      onChange={(e) => setNewCategoryName(e.target.value)}
-                      placeholder="Category name (e.g., 'Balconies', 'Glass')"
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    />
-                    <select
-                      value={newCategoryType}
-                      onChange={(e) => setNewCategoryType(e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Select Type</option>
-                      {types.map(type => (
-                        <option key={type.id} value={type.id}>{type.name}</option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={addCategory}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add Category
-                    </button>
-                  </div>
-                  <p className="text-sm text-gray-500 mt-2">
-                    Categories must be assigned to a type (Archier, Texture, or Precedent).
-                  </p>
-                </div>
-              )}
-
-              {/* Categories List */}
-              <div>
-                {categories.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <Layers className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                    <p>No categories found</p>
-                    {canEdit && <p className="text-sm">Add your first category above</p>}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Precedent Categories Column */}
-                    <div>
-                      <h4 className="text-lg font-medium mb-4 text-black">
-                        Precedent Categories ({categories.filter(c => c.type === 'precedent').length})
-                      </h4>
-                      <div className="space-y-3">
-                        {categories.filter(category => category.type === 'precedent').map((category) => {
-                          const categoryType = types.find(t => t.id === category.type);
-                          return (
-                            <div
-                              key={category.id}
-                              className="flex items-center justify-between p-3 rounded-lg hover:opacity-80"
-                              style={{backgroundColor: '#C9D468', borderColor: '#C9D468'}}
-                            >
-                              {editingCategory === category.id ? (
-                                <EditCategoryFormInline
-                                  category={category}
-                                  types={types}
-                                  onSave={updateCategory}
-                                  onCancel={() => setEditingCategory(null)}
-                                />
-                              ) : (
-                                <>
-                                  <div className="flex items-center gap-3 flex-1">
-                                    <div>
-                                      <h5 className="font-medium text-gray-900">{category.name}</h5>
-                                      <p className="text-xs mt-1 text-black">
-                                        /SnapTag/Precedent/{category.name}/
-                                      </p>
-                                    </div>
-                                  </div>
-                                  {canEdit && (
-                                    <div className="flex gap-1">
-                                      <button
-                                        onClick={() => setEditingCategory(category.id)}
-                                        className="p-1 text-blue-500 hover:bg-blue-50 rounded"
-                                        title="Edit category"
-                                      >
-                                        <Edit3 className="h-3 w-3" />
-                                      </button>
-                                      <button
-                                        onClick={() => deleteCategory(category.id)}
-                                        className="p-1 text-red-500 hover:bg-red-50 rounded"
-                                        title="Delete category"
-                                      >
-                                        <Trash2 className="h-3 w-3" />
-                                      </button>
-                                    </div>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Texture Categories Column */}
-                    <div>
-                      <h4 className="text-lg font-medium mb-4 text-black">
-                        Texture Categories ({categories.filter(c => c.type === 'texture').length})
-                      </h4>
-                      <div className="space-y-3">
-                        {categories.filter(category => category.type === 'texture').map((category) => {
-                          const categoryType = types.find(t => t.id === category.type);
-                          return (
-                            <div
-                              key={category.id}
-                              className="flex items-center justify-between p-3 rounded-lg hover:opacity-80"
-                              style={{backgroundColor: '#BDAE93', borderColor: '#BDAE93'}}
-                            >
-                              {editingCategory === category.id ? (
-                                <EditCategoryFormInline
-                                  category={category}
-                                  types={types}
-                                  onSave={updateCategory}
-                                  onCancel={() => setEditingCategory(null)}
-                                />
-                              ) : (
-                                <>
-                                  <div className="flex items-center gap-3 flex-1">
-                                    <div>
-                                      <h5 className="font-medium text-gray-900">{category.name}</h5>
-                                      <p className="text-xs mt-1 text-black">
-                                        /SnapTag/Texture/{category.name}/
-                                      </p>
-                                    </div>
-                                  </div>
-                                  {canEdit && (
-                                    <div className="flex gap-1">
-                                      <button
-                                        onClick={() => setEditingCategory(category.id)}
-                                        className="p-1 text-blue-500 hover:bg-blue-50 rounded"
-                                        title="Edit category"
-                                      >
-                                        <Edit3 className="h-3 w-3" />
-                                      </button>
-                                      <button
-                                        onClick={() => deleteCategory(category.id)}
-                                        className="p-1 text-red-500 hover:bg-red-50 rounded"
-                                        title="Delete category"
-                                      >
-                                        <Trash2 className="h-3 w-3" />
-                                      </button>
-                                    </div>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Dropbox Integration Info */}
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Dropbox Folder Sync</h3>
-              </div>
-              
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h4 className="font-medium text-blue-900 mb-2">Automatic Folder Creation</h4>
-                <p className="text-blue-800 text-sm mb-3">
-                  When you add new types or categories, the corresponding folder structure will be automatically created in Dropbox:
-                </p>
-                <div className="text-blue-800 text-sm space-y-2">
-                  <div>• <strong>New Type:</strong> Creates /SnapTag/[TypeName]/ main folder</div>
-                  <div>• <strong>New Category:</strong> Creates subfolders under all existing types</div>
-                  <div>• <strong>Image Upload:</strong> Automatically sorted into correct folders based on tags</div>
-                </div>
-                <div className="mt-4 p-3 bg-blue-100 rounded text-blue-900 text-sm">
-                  <strong>Example:</strong> Adding "Glass" category creates:
-                  <div className="mt-1 font-mono text-xs">
-                    /SnapTag/Precedent/Glass/<br/>
-                    /SnapTag/Texture/Glass/<br/>
-                    /SnapTag/Archier/[Project]/Glass/
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {activeSection === 'policies' && (
           <div className="space-y-6">

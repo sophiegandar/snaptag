@@ -80,6 +80,31 @@ class DatabaseService {
       )
     `);
 
+    // Stages table
+    await this.run(`
+      CREATE TABLE IF NOT EXISTS stages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE NOT NULL,
+        description TEXT,
+        order_index INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        usage_count INTEGER DEFAULT 0
+      )
+    `);
+
+    // Rooms table
+    await this.run(`
+      CREATE TABLE IF NOT EXISTS rooms (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE NOT NULL,
+        description TEXT,
+        category TEXT,
+        order_index INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        usage_count INTEGER DEFAULT 0
+      )
+    `);
+
     // Focused tags table (for click-to-tag functionality)
     await this.run(`
       CREATE TABLE IF NOT EXISTS focused_tags (
@@ -106,6 +131,57 @@ class DatabaseService {
     await this.run('CREATE INDEX IF NOT EXISTS idx_focused_tags_image ON focused_tags(image_id)');
 
     console.log('Database tables created successfully');
+    
+    // Initialize default stages and rooms if they don't exist
+    await this.initializeDefaultStagesAndRooms();
+  }
+
+  async initializeDefaultStagesAndRooms() {
+    try {
+      // Check if stages table is empty
+      const stageCount = await this.get('SELECT COUNT(*) as count FROM stages');
+      if (stageCount.count === 0) {
+        console.log('🔧 Initializing default stages...');
+        const defaultStages = [
+          { name: 'feasibility', description: 'Initial project evaluation and planning', order_index: 1 },
+          { name: 'layout', description: 'Space planning and layout design', order_index: 2 },
+          { name: 'finishes', description: 'Material and finish selection', order_index: 3 }
+        ];
+
+        for (const stage of defaultStages) {
+          await this.run(`
+            INSERT INTO stages (name, description, order_index)
+            VALUES (?, ?, ?)
+          `, [stage.name, stage.description, stage.order_index]);
+        }
+        console.log(`✅ Added ${defaultStages.length} default stages`);
+      }
+
+      // Check if rooms table is empty
+      const roomCount = await this.get('SELECT COUNT(*) as count FROM rooms');
+      if (roomCount.count === 0) {
+        console.log('🔧 Initializing default rooms...');
+        const defaultRooms = [
+          { name: 'living', description: 'Living room spaces', category: 'common', order_index: 1 },
+          { name: 'dining', description: 'Dining areas', category: 'common', order_index: 2 },
+          { name: 'kitchen', description: 'Kitchen spaces', category: 'service', order_index: 3 },
+          { name: 'bathroom', description: 'Bathroom and powder rooms', category: 'service', order_index: 4 },
+          { name: 'bedroom', description: 'Bedroom spaces', category: 'private', order_index: 5 },
+          { name: 'office', description: 'Office and study spaces', category: 'work', order_index: 6 },
+          { name: 'outdoor', description: 'Outdoor and landscape areas', category: 'exterior', order_index: 7 }
+        ];
+
+        for (const room of defaultRooms) {
+          await this.run(`
+            INSERT INTO rooms (name, description, category, order_index)
+            VALUES (?, ?, ?, ?)
+          `, [room.name, room.description, room.category, room.order_index]);
+        }
+        console.log(`✅ Added ${defaultRooms.length} default rooms`);
+      }
+    } catch (error) {
+      console.error('❌ Error initializing default stages and rooms:', error);
+    }
   }
 
   async migrateDatabaseSchema() {
@@ -734,6 +810,106 @@ class DatabaseService {
       SET file_hash = ?
       WHERE id = ?
     `, [fileHash, imageId]);
+  }
+
+  // Stages management methods
+  async getAllStages() {
+    return await this.all(`
+      SELECT s.*, 
+             COUNT(t.id) as usage_count 
+      FROM stages s
+      LEFT JOIN tags t ON t.name = s.name
+      LEFT JOIN image_tags it ON t.id = it.tag_id
+      GROUP BY s.id
+      ORDER BY s.order_index, s.name
+    `);
+  }
+
+  async createStage(name, description = '', orderIndex = 0) {
+    try {
+      const result = await this.run(`
+        INSERT INTO stages (name, description, order_index)
+        VALUES (?, ?, ?)
+      `, [name.toLowerCase().trim(), description, orderIndex]);
+      
+      return { id: result.lastID, name: name.toLowerCase().trim(), description, order_index: orderIndex };
+    } catch (error) {
+      if (error.code === 'SQLITE_CONSTRAINT') {
+        throw new Error('A stage with this name already exists');
+      }
+      throw error;
+    }
+  }
+
+  async updateStage(id, name, description = '', orderIndex = 0) {
+    try {
+      await this.run(`
+        UPDATE stages 
+        SET name = ?, description = ?, order_index = ?
+        WHERE id = ?
+      `, [name.toLowerCase().trim(), description, orderIndex, id]);
+      
+      return { id, name: name.toLowerCase().trim(), description, order_index: orderIndex };
+    } catch (error) {
+      if (error.code === 'SQLITE_CONSTRAINT') {
+        throw new Error('A stage with this name already exists');
+      }
+      throw error;
+    }
+  }
+
+  async deleteStage(id) {
+    await this.run('DELETE FROM stages WHERE id = ?', [id]);
+  }
+
+  // Rooms management methods
+  async getAllRooms() {
+    return await this.all(`
+      SELECT r.*, 
+             COUNT(t.id) as usage_count 
+      FROM rooms r
+      LEFT JOIN tags t ON t.name = r.name
+      LEFT JOIN image_tags it ON t.id = it.tag_id
+      GROUP BY r.id
+      ORDER BY r.order_index, r.name
+    `);
+  }
+
+  async createRoom(name, description = '', category = '', orderIndex = 0) {
+    try {
+      const result = await this.run(`
+        INSERT INTO rooms (name, description, category, order_index)
+        VALUES (?, ?, ?, ?)
+      `, [name.toLowerCase().trim(), description, category, orderIndex]);
+      
+      return { id: result.lastID, name: name.toLowerCase().trim(), description, category, order_index: orderIndex };
+    } catch (error) {
+      if (error.code === 'SQLITE_CONSTRAINT') {
+        throw new Error('A room with this name already exists');
+      }
+      throw error;
+    }
+  }
+
+  async updateRoom(id, name, description = '', category = '', orderIndex = 0) {
+    try {
+      await this.run(`
+        UPDATE rooms 
+        SET name = ?, description = ?, category = ?, order_index = ?
+        WHERE id = ?
+      `, [name.toLowerCase().trim(), description, category, orderIndex, id]);
+      
+      return { id, name: name.toLowerCase().trim(), description, category, order_index: orderIndex };
+    } catch (error) {
+      if (error.code === 'SQLITE_CONSTRAINT') {
+        throw new Error('A room with this name already exists');
+      }
+      throw error;
+    }
+  }
+
+  async deleteRoom(id) {
+    await this.run('DELETE FROM rooms WHERE id = ?', [id]);
   }
 
   close() {
