@@ -3304,21 +3304,8 @@ async function startServer() {
     console.log('DROPBOX_FOLDER:', process.env.DROPBOX_FOLDER || '❌ Missing');
     console.log('NODE_ENV:', process.env.NODE_ENV || 'development');
     
-    // Initialize database with PostgreSQL fallback to SQLite
-    try {
-      await databaseService.init();
-      console.log('✅ PostgreSQL database connected and initialized');
-    } catch (pgError) {
-      console.error('❌ PostgreSQL connection failed, falling back to SQLite:', pgError.message);
-      console.log('🔄 Switching to SQLite fallback...');
-      
-      // Switch to SQLite fallback
-      const sqliteService = require('./services/databaseService');
-      Object.setPrototypeOf(databaseService, Object.getPrototypeOf(sqliteService));
-      Object.assign(databaseService, sqliteService);
-      await databaseService.init();
-      console.log('✅ SQLite database initialized (fallback mode)');
-    }
+    // Initialize PostgreSQL database
+    await databaseService.init();
 
 app.listen(PORT, () => {
   console.log(`SnapTag server running on port ${PORT}`);
