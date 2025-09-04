@@ -56,9 +56,16 @@ class PostgresService {
           height INTEGER,
           mime_type VARCHAR(100),
           file_hash VARCHAR(64),
+          project_assignments TEXT,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
+      `);
+
+      // Add project_assignments column if it doesn't exist (migration)
+      await client.query(`
+        ALTER TABLE images 
+        ADD COLUMN IF NOT EXISTS project_assignments TEXT
       `);
 
       // Tags table
@@ -437,6 +444,18 @@ class PostgresService {
         console.log(`🗃️ PostgreSQL: Image data - filename: ${image.filename}, path: ${image.dropbox_path}`);
         image.tags = image.tag_names ? image.tag_names.split(',') : [];
         
+        // Parse project assignments
+        if (image.project_assignments) {
+          try {
+            image.project_assignments = JSON.parse(image.project_assignments);
+          } catch (e) {
+            console.warn('Failed to parse project_assignments:', e);
+            image.project_assignments = [];
+          }
+        } else {
+          image.project_assignments = [];
+        }
+        
         console.log(`🗃️ PostgreSQL: Getting focused tags for image ${id}`);
         image.focused_tags = await this.getFocusedTags(id);
         console.log(`🗃️ PostgreSQL: Found ${image.focused_tags.length} focused tags`);
@@ -497,7 +516,7 @@ class PostgresService {
     };
   }
 
-  async updateImageTags(imageId, tags, focusedTags) {
+  async updateImageTags(imageId, tags, focusedTags, projectAssignments = null) {
     const client = await this.pool.connect();
     
     try {
@@ -515,6 +534,15 @@ class PostgresService {
       // Add new focused tags
       if (focusedTags && focusedTags.length > 0) {
         await this.saveFocusedTags(imageId, focusedTags, client);
+      }
+
+      // Update project assignments if provided
+      if (projectAssignments !== null) {
+        const projectAssignmentsJson = JSON.stringify(projectAssignments);
+        await client.query(
+          'UPDATE images SET project_assignments = $1 WHERE id = $2',
+          [projectAssignmentsJson, imageId]
+        );
       }
 
       await client.query('COMMIT');
