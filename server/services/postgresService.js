@@ -560,6 +560,73 @@ class PostgresService {
     `, [fileHash]);
   }
 
+  // Stages and Rooms Management
+  async getAllStages() {
+    const result = await this.query(`
+      SELECT id, name, description, order_index, created_at, COALESCE(usage_count, 0) as usage_count
+      FROM stages 
+      ORDER BY order_index ASC, name ASC
+    `);
+    return result.rows;
+  }
+
+  async createStage(name, description = '', orderIndex = 0) {
+    const result = await this.query(`
+      INSERT INTO stages (name, description, order_index, usage_count) 
+      VALUES ($1, $2, $3, 0) 
+      RETURNING *
+    `, [name, description, orderIndex]);
+    return result.rows[0];
+  }
+
+  async updateStage(id, name, description = '', orderIndex = 0) {
+    const result = await this.query(`
+      UPDATE stages 
+      SET name = $1, description = $2, order_index = $3 
+      WHERE id = $4 
+      RETURNING *
+    `, [name, description, orderIndex, id]);
+    return result.rows[0];
+  }
+
+  async deleteStage(id) {
+    const result = await this.query('DELETE FROM stages WHERE id = $1 RETURNING *', [id]);
+    return result.rows[0];
+  }
+
+  async getAllRooms() {
+    const result = await this.query(`
+      SELECT id, name, description, category, order_index, created_at, COALESCE(usage_count, 0) as usage_count
+      FROM rooms 
+      ORDER BY order_index ASC, name ASC
+    `);
+    return result.rows;
+  }
+
+  async createRoom(name, description = '', category = '', orderIndex = 0) {
+    const result = await this.query(`
+      INSERT INTO rooms (name, description, category, order_index, usage_count) 
+      VALUES ($1, $2, $3, $4, 0) 
+      RETURNING *
+    `, [name, description, category, orderIndex]);
+    return result.rows[0];
+  }
+
+  async updateRoom(id, name, description = '', category = '', orderIndex = 0) {
+    const result = await this.query(`
+      UPDATE rooms 
+      SET name = $1, description = $2, category = $3, order_index = $4 
+      WHERE id = $5 
+      RETURNING *
+    `, [name, description, category, orderIndex, id]);
+    return result.rows[0];
+  }
+
+  async deleteRoom(id) {
+    const result = await this.query('DELETE FROM rooms WHERE id = $1 RETURNING *', [id]);
+    return result.rows[0];
+  }
+
   async close() {
     if (this.pool) {
       await this.pool.end();
