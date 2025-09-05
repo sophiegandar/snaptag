@@ -40,13 +40,18 @@ const ImageEditor = () => {
   
   // Project assignments state
   const [projectAssignments, setProjectAssignments] = useState([]);
+  const [originalProjectAssignments, setOriginalProjectAssignments] = useState([]);
+  
+  // Available projects, rooms, stages for dropdowns
+  const [availableProjects] = useState(['yandoit', 'couvreur', 'de witt st', 'archier']);
+  const [availableRooms, setAvailableRooms] = useState([]);
+  const [availableStages, setAvailableStages] = useState([]);
   
   // Navigation state
   const [navigationContext, setNavigationContext] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [originalTags, setOriginalTags] = useState([]);
   const [originalFocusedTags, setOriginalFocusedTags] = useState([]);
-  const [originalProjectAssignments, setOriginalProjectAssignments] = useState([]);
   
   // AI suggestions state
   const [aiSuggestions, setAiSuggestions] = useState([]);
@@ -57,8 +62,30 @@ const ImageEditor = () => {
     if (id) {
       loadImage();
       loadNavigationContext();
+      loadRoomsAndStages();
     }
   }, [id]);
+
+  const loadRoomsAndStages = async () => {
+    try {
+      const [roomsResponse, stagesResponse] = await Promise.all([
+        fetch('/api/rooms'),
+        fetch('/api/stages')
+      ]);
+
+      if (roomsResponse.ok) {
+        const rooms = await roomsResponse.json();
+        setAvailableRooms(rooms);
+      }
+
+      if (stagesResponse.ok) {
+        const stages = await stagesResponse.json();
+        setAvailableStages(stages);
+      }
+    } catch (error) {
+      console.error('Error loading rooms and stages:', error);
+    }
+  };
 
   const loadNavigationContext = useCallback(async () => {
     try {
