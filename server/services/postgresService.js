@@ -682,9 +682,39 @@ class PostgresService {
       
       // Filter by project assignments if specified
       if (projectAssignment) {
+        const { projectId, room, stage } = projectAssignment;
+        
+        // Convert projectId to actual project name for matching
+        let projectName = projectId;
+        if (projectId === 'de-witt') {
+          projectName = 'de witt st';
+        } else if (projectId === 'light-house') {
+          projectName = 'light house';
+        }
+        
+        // Build a more flexible search for project assignments
+        let assignmentConditions = [];
+        
+        // Must contain the project name
         paramCount++;
-        query += ` AND i.project_assignments::text LIKE $${paramCount}`;
-        params.push(`%${JSON.stringify(projectAssignment).slice(1, -1)}%`);
+        assignmentConditions.push(`i.project_assignments::text ILIKE $${paramCount}`);
+        params.push(`%"project":"${projectName}"%`);
+        
+        // If room is specified, must also contain that room
+        if (room) {
+          paramCount++;
+          assignmentConditions.push(`i.project_assignments::text ILIKE $${paramCount}`);
+          params.push(`%"room":"${room}"%`);
+        }
+        
+        // If stage is specified, must also contain that stage  
+        if (stage) {
+          paramCount++;
+          assignmentConditions.push(`i.project_assignments::text ILIKE $${paramCount}`);
+          params.push(`%"stage":"${stage}"%`);
+        }
+        
+        query += ` AND (${assignmentConditions.join(' AND ')})`;
       }
       
       // Filter by tags if specified
