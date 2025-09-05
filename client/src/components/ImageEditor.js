@@ -1516,35 +1516,7 @@ const ImageEditor = () => {
                 </div>
               )}
 
-              {/* Design (current/in-progress projects) */}
-              {getDesign() && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Design</label>
-                  <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-900">
-                    {getDesign()}
-                  </div>
-                </div>
-              )}
-
-              {/* Stage */}
-              {getStageTag() && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Stage</label>
-                  <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-900">
-                    {getStageTag().charAt(0).toUpperCase() + getStageTag().slice(1)}
-                  </div>
-                </div>
-              )}
-
-              {/* Room */}
-              {getRoomTag() && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Room</label>
-                  <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-900">
-                    {getRoomTag().charAt(0).toUpperCase() + getRoomTag().slice(1)}
-                  </div>
-                </div>
-              )}
+              {/* Old Design/Stage/Room fields removed - now use Project Assignments section below */}
 
               {/* Additional Tags Input */}
               {canEdit && (
