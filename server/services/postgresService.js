@@ -658,6 +658,7 @@ class PostgresService {
   // Project assignments search method
   async searchImagesWithProjectAssignments(searchFilters) {
     try {
+      console.log('🔍 searchImagesWithProjectAssignments called with:', searchFilters);
       const { projectAssignment, tags, searchTerm } = searchFilters;
       
       let query = `
@@ -747,7 +748,11 @@ class PostgresService {
         ORDER BY i.upload_date DESC
       `;
       
+      console.log('🔍 Final query:', query);
+      console.log('🔍 Query params:', params);
+      
       const result = await this.query(query, params);
+      console.log('🔍 Query result count:', result.rows.length);
       const images = result.rows.map(row => ({
         ...row,
         tags: row.tags ? row.tags.split(',').filter(tag => tag.trim()) : [],
