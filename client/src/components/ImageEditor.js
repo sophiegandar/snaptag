@@ -908,34 +908,14 @@ const ImageEditor = () => {
       return assignment;
     }));
 
-    // Auto-save project assignments
-    await saveProjectAssignments();
+    // Project assignment added - user needs to save manually
   };
 
-  const removeProjectAssignment = async (assignmentId) => {
+  const removeProjectAssignment = (assignmentId) => {
     if (!canEdit) return;
     
     setProjectAssignments(prev => prev.filter(assignment => assignment.id !== assignmentId));
-    await saveProjectAssignments();
-  };
-
-  const saveProjectAssignments = async () => {
-    try {
-      const response = await fetch(`/api/images/${id}/project-assignments`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectAssignments })
-      });
-
-      if (!response.ok) {
-        toast.error('Failed to save project assignments');
-      } else {
-        toast.success('Project assignments saved');
-      }
-    } catch (error) {
-      console.error('Error saving project assignments:', error);
-      toast.error('Failed to save project assignments');
-    }
+    // Removed auto-save - user needs to click "Save Changes" button
   };
 
   const updateImageType = async (newType) => {
