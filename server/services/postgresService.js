@@ -655,6 +655,83 @@ class PostgresService {
     return result.rows[0];
   }
 
+  // Project assignments search method
+  async searchImagesWithProjectAssignments(searchFilters) {
+    try {
+      const { projectAssignment, tags, searchTerm } = searchFilters;
+      
+      let query = `
+        SELECT DISTINCT i.*, 
+               COALESCE(string_agg(DISTINCT t.name, ',' ORDER BY t.name), '') as tags,
+               COALESCE(json_agg(DISTINCT jsonb_build_object(
+                 'tag_name', ft.tag_name,
+                 'x_coordinate', ft.x_coordinate,
+                 'y_coordinate', ft.y_coordinate,
+                 'width', ft.width,
+                 'height', ft.height
+               )) FILTER (WHERE ft.tag_name IS NOT NULL), '[]'::json) as focused_tags
+        FROM images i
+        LEFT JOIN image_tags it ON i.id = it.image_id
+        LEFT JOIN tags t ON it.tag_id = t.id
+        LEFT JOIN focused_tags ft ON i.id = ft.image_id
+        WHERE 1=1
+      `;
+      
+      const params = [];
+      let paramCount = 0;
+      
+      // Filter by project assignments if specified
+      if (projectAssignment) {
+        paramCount++;
+        query += ` AND i.project_assignments::text LIKE $${paramCount}`;
+        params.push(`%${JSON.stringify(projectAssignment).slice(1, -1)}%`);
+      }
+      
+      // Filter by tags if specified
+      if (tags && tags.length > 0) {
+        const tagConditions = tags.map(() => {
+          paramCount++;
+          return `t.name = $${paramCount}`;
+        });
+        query += ` AND (${tagConditions.join(' OR ')})`;
+        params.push(...tags);
+      }
+      
+      // Filter by search term if specified
+      if (searchTerm) {
+        paramCount++;
+        query += ` AND (
+          i.filename ILIKE $${paramCount} OR 
+          i.original_name ILIKE $${paramCount} OR 
+          i.title ILIKE $${paramCount} OR 
+          i.description ILIKE $${paramCount}
+        )`;
+        params.push(`%${searchTerm}%`);
+      }
+      
+      query += `
+        GROUP BY i.id, i.filename, i.original_name, i.dropbox_path, i.dropbox_id, 
+                 i.title, i.description, i.upload_date, i.file_size, i.source_url,
+                 i.width, i.height, i.mime_type, i.file_hash, i.project_assignments,
+                 i.created_at, i.updated_at
+        ORDER BY i.upload_date DESC
+      `;
+      
+      const result = await this.query(query, params);
+      const images = result.rows.map(row => ({
+        ...row,
+        tags: row.tags ? row.tags.split(',').filter(tag => tag.trim()) : [],
+        focused_tags: row.focused_tags || [],
+        project_assignments: row.project_assignments ? JSON.parse(row.project_assignments) : []
+      }));
+      
+      return images;
+    } catch (error) {
+      console.error('Error in searchImagesWithProjectAssignments:', error);
+      throw error;
+    }
+  }
+
   async close() {
     if (this.pool) {
       await this.pool.end();
