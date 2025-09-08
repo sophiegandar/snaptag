@@ -3068,6 +3068,180 @@ app.use((error, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
+// Stages API endpoints - MUST BE BEFORE CATCH-ALL ROUTE
+app.get('/api/stages', async (req, res) => {
+  try {
+    console.log('🔍 Fetching all stages...');
+    const stages = await databaseService.getAllStages();
+    console.log(`✅ Found ${stages.length} stages`);
+    res.json(stages);
+  } catch (error) {
+    console.error('❌ Error fetching stages:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch stages',
+      details: error.message,
+      stack: error.stack 
+    });
+  }
+});
+
+app.post('/api/stages', async (req, res) => {
+  try {
+    const { name, description, orderIndex } = req.body;
+    
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Stage name is required' });
+    }
+    
+    console.log(`🏗️ Creating stage: ${name}`);
+    const stage = await databaseService.createStage(name, description, orderIndex || 0);
+    console.log(`✅ Created stage: ${stage.name}`);
+    res.status(201).json(stage);
+  } catch (error) {
+    console.error('❌ Error creating stage:', error);
+    if (error.message.includes('already exists')) {
+      res.status(409).json({ error: error.message });
+    } else {
+      res.status(500).json({ 
+        error: 'Failed to create stage',
+        details: error.message,
+        stack: error.stack 
+      });
+    }
+  }
+});
+
+app.put('/api/stages/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, description, orderIndex } = req.body;
+    
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Stage name is required' });
+    }
+    
+    console.log(`🔧 Updating stage ${id}: ${name}`);
+    const stage = await databaseService.updateStage(id, name, description, orderIndex || 0);
+    console.log(`✅ Updated stage: ${stage.name}`);
+    res.json(stage);
+  } catch (error) {
+    console.error('❌ Error updating stage:', error);
+    if (error.message.includes('already exists')) {
+      res.status(409).json({ error: error.message });
+    } else {
+      res.status(500).json({ 
+        error: 'Failed to update stage',
+        details: error.message,
+        stack: error.stack 
+      });
+    }
+  }
+});
+
+app.delete('/api/stages/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(`🗑️ Deleting stage ${id}`);
+    await databaseService.deleteStage(id);
+    console.log(`✅ Deleted stage ${id}`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ Error deleting stage:', error);
+    res.status(500).json({ 
+      error: 'Failed to delete stage',
+      details: error.message,
+      stack: error.stack 
+    });
+  }
+});
+
+// Rooms API endpoints - MUST BE BEFORE CATCH-ALL ROUTE
+app.get('/api/rooms', async (req, res) => {
+  try {
+    console.log('🔍 Fetching all rooms...');
+    const rooms = await databaseService.getAllRooms();
+    console.log(`✅ Found ${rooms.length} rooms`);
+    res.json(rooms);
+  } catch (error) {
+    console.error('❌ Error fetching rooms:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch rooms',
+      details: error.message,
+      stack: error.stack 
+    });
+  }
+});
+
+app.post('/api/rooms', async (req, res) => {
+  try {
+    const { name, description, category, orderIndex } = req.body;
+    
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Room name is required' });
+    }
+    
+    console.log(`🏠 Creating room: ${name}`);
+    const room = await databaseService.createRoom(name, description, category, orderIndex || 0);
+    console.log(`✅ Created room: ${room.name}`);
+    res.status(201).json(room);
+  } catch (error) {
+    console.error('❌ Error creating room:', error);
+    if (error.message.includes('already exists')) {
+      res.status(409).json({ error: error.message });
+    } else {
+      res.status(500).json({ 
+        error: 'Failed to create room',
+        details: error.message,
+        stack: error.stack 
+      });
+    }
+  }
+});
+
+app.put('/api/rooms/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, description, category, orderIndex } = req.body;
+    
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Room name is required' });
+    }
+    
+    console.log(`🔧 Updating room ${id}: ${name}`);
+    const room = await databaseService.updateRoom(id, name, description, category, orderIndex || 0);
+    console.log(`✅ Updated room: ${room.name}`);
+    res.json(room);
+  } catch (error) {
+    console.error('❌ Error updating room:', error);
+    if (error.message.includes('already exists')) {
+      res.status(409).json({ error: error.message });
+    } else {
+      res.status(500).json({ 
+        error: 'Failed to update room',
+        details: error.message,
+        stack: error.stack 
+      });
+    }
+  }
+});
+
+app.delete('/api/rooms/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(`🗑️ Deleting room ${id}`);
+    await databaseService.deleteRoom(id);
+    console.log(`✅ Deleted room ${id}`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ Error deleting room:', error);
+    res.status(500).json({ 
+      error: 'Failed to delete room',
+      details: error.message,
+      stack: error.stack 
+    });
+  }
+});
+
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../client/build')));
@@ -3782,171 +3956,7 @@ app.put('/api/tags/:tagId/rename', async (req, res) => {
   }
 });
 
-// Stages API endpoints
-app.get('/api/stages', async (req, res) => {
-  try {
-    console.log('🔍 Fetching all stages...');
-    const stages = await databaseService.getAllStages();
-    console.log(`✅ Found ${stages.length} stages`);
-    res.json(stages);
-  } catch (error) {
-    console.error('❌ Error fetching stages:', error);
-    res.status(500).json({ 
-      error: 'Failed to fetch stages',
-      details: error.message 
-    });
-  }
-});
-
-app.post('/api/stages', async (req, res) => {
-  try {
-    const { name, description, orderIndex } = req.body;
-    
-    if (!name || !name.trim()) {
-      return res.status(400).json({ error: 'Stage name is required' });
-    }
-    
-    console.log(`🏗️ Creating stage: ${name}`);
-    const stage = await databaseService.createStage(name, description, orderIndex || 0);
-    console.log(`✅ Created stage: ${stage.name}`);
-    res.status(201).json(stage);
-  } catch (error) {
-    console.error('❌ Error creating stage:', error);
-    if (error.message.includes('already exists')) {
-      res.status(409).json({ error: error.message });
-    } else {
-      res.status(500).json({ 
-        error: 'Failed to create stage',
-        details: error.message 
-      });
-    }
-  }
-});
-
-app.put('/api/stages/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { name, description, orderIndex } = req.body;
-    
-    if (!name || !name.trim()) {
-      return res.status(400).json({ error: 'Stage name is required' });
-    }
-    
-    console.log(`🔧 Updating stage ${id}: ${name}`);
-    const stage = await databaseService.updateStage(id, name, description, orderIndex || 0);
-    console.log(`✅ Updated stage: ${stage.name}`);
-    res.json(stage);
-  } catch (error) {
-    console.error('❌ Error updating stage:', error);
-    if (error.message.includes('already exists')) {
-      res.status(409).json({ error: error.message });
-    } else {
-      res.status(500).json({ 
-        error: 'Failed to update stage',
-        details: error.message 
-      });
-    }
-  }
-});
-
-app.delete('/api/stages/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    console.log(`🗑️ Deleting stage ${id}`);
-    await databaseService.deleteStage(id);
-    console.log(`✅ Deleted stage ${id}`);
-    res.json({ success: true });
-  } catch (error) {
-    console.error('❌ Error deleting stage:', error);
-    res.status(500).json({ 
-      error: 'Failed to delete stage',
-      details: error.message 
-    });
-  }
-});
-
-// Rooms API endpoints
-app.get('/api/rooms', async (req, res) => {
-  try {
-    console.log('🔍 Fetching all rooms...');
-    const rooms = await databaseService.getAllRooms();
-    console.log(`✅ Found ${rooms.length} rooms`);
-    res.json(rooms);
-  } catch (error) {
-    console.error('❌ Error fetching rooms:', error);
-    res.status(500).json({ 
-      error: 'Failed to fetch rooms',
-      details: error.message 
-    });
-  }
-});
-
-app.post('/api/rooms', async (req, res) => {
-  try {
-    const { name, description, category, orderIndex } = req.body;
-    
-    if (!name || !name.trim()) {
-      return res.status(400).json({ error: 'Room name is required' });
-    }
-    
-    console.log(`🏠 Creating room: ${name}`);
-    const room = await databaseService.createRoom(name, description, category, orderIndex || 0);
-    console.log(`✅ Created room: ${room.name}`);
-    res.status(201).json(room);
-  } catch (error) {
-    console.error('❌ Error creating room:', error);
-    if (error.message.includes('already exists')) {
-      res.status(409).json({ error: error.message });
-    } else {
-      res.status(500).json({ 
-        error: 'Failed to create room',
-        details: error.message 
-      });
-    }
-  }
-});
-
-app.put('/api/rooms/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { name, description, category, orderIndex } = req.body;
-    
-    if (!name || !name.trim()) {
-      return res.status(400).json({ error: 'Room name is required' });
-    }
-    
-    console.log(`🔧 Updating room ${id}: ${name}`);
-    const room = await databaseService.updateRoom(id, name, description, category, orderIndex || 0);
-    console.log(`✅ Updated room: ${room.name}`);
-    res.json(room);
-  } catch (error) {
-    console.error('❌ Error updating room:', error);
-    if (error.message.includes('already exists')) {
-      res.status(409).json({ error: error.message });
-    } else {
-      res.status(500).json({ 
-        error: 'Failed to update room',
-        details: error.message 
-      });
-    }
-  }
-});
-
-app.delete('/api/rooms/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    console.log(`🗑️ Deleting room ${id}`);
-    await databaseService.deleteRoom(id);
-    console.log(`✅ Deleted room ${id}`);
-    res.json({ success: true });
-  } catch (error) {
-    console.error('❌ Error deleting room:', error);
-    res.status(500).json({ 
-      error: 'Failed to delete room',
-      details: error.message 
-    });
-  }
-});
+// Note: Stages and Rooms API endpoints moved above catch-all route
 
 // Fix Dropbox paths and filenames after manual folder rename
 app.post('/api/admin/fix-dropbox-paths', async (req, res) => {
