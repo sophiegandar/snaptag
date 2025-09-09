@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Grid, List, Trash2, Edit, RefreshCw, AlertTriangle, Tag, Plus, CheckCircle, Download, Lightbulb, Check, X, ChevronDown, SortAsc, SortDesc } from 'lucide-react';
+import { Search, Filter, Grid, List, Trash2, Edit, RefreshCw, AlertTriangle, Tag, Plus, CheckCircle, Download, Lightbulb, Check, X, ChevronDown, SortAsc, SortDesc, FolderPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useMode } from '../context/ModeContext';
@@ -33,6 +33,17 @@ const ImageGallery = () => {
   const [isTagsDropdownOpen, setIsTagsDropdownOpen] = useState(false);
   const [availableTags, setAvailableTags] = useState([]);
   
+  // Bulk project assignment state
+  const [showBulkProjectAssignment, setShowBulkProjectAssignment] = useState(false);
+  const [bulkProjectAssignment, setBulkProjectAssignment] = useState({
+    project: '',
+    room: '',
+    stage: ''
+  });
+  const [availableProjects, setAvailableProjects] = useState([]);
+  const [availableRooms, setAvailableRooms] = useState([]);
+  const [availableStages, setAvailableStages] = useState([]);
+  
   // Sort dropdown state
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
   const [sortOptions] = useState([
@@ -51,6 +62,7 @@ const ImageGallery = () => {
     loadImages();
     loadUntaggedImages();
     loadAvailableTags();
+    loadProjectsRoomsStages();
     
     // Set up polling for real-time updates every 5 minutes (reduced frequency)
     const pollInterval = setInterval(() => {
@@ -176,6 +188,26 @@ const ImageGallery = () => {
       setAvailableTags(tags.map(tag => tag.name || tag));
     } catch (error) {
       console.error('Error loading tags:', error);
+    }
+  };
+
+  const loadProjectsRoomsStages = async () => {
+    try {
+      const [projectsRes, roomsRes, stagesRes] = await Promise.all([
+        apiCall('/api/projects'),
+        apiCall('/api/rooms'),
+        apiCall('/api/stages')
+      ]);
+      
+      const projects = await projectsRes.json();
+      const rooms = await roomsRes.json();
+      const stages = await stagesRes.json();
+      
+      setAvailableProjects(projects);
+      setAvailableRooms(rooms);
+      setAvailableStages(stages);
+    } catch (error) {
+      console.error('Error loading projects/rooms/stages:', error);
     }
   };
 
@@ -461,6 +493,61 @@ const ImageGallery = () => {
     } catch (error) {
       console.error('Error applying gallery quick tags:', error);
       toast.error('Failed to apply tags');
+    } finally {
+      setUpdatingTags(false);
+    }
+  };
+
+  const applyBulkProjectAssignment = async () => {
+    if (selectedGalleryImages.length === 0) {
+      toast.error('Please select at least one image');
+      return;
+    }
+
+    if (!bulkProjectAssignment.project || !bulkProjectAssignment.room || !bulkProjectAssignment.stage) {
+      toast.error('Please select project, room, and stage');
+      return;
+    }
+
+    try {
+      setUpdatingTags(true);
+      
+      // Apply project assignment to each selected image
+      const promises = selectedGalleryImages.map(async (imageId) => {
+        const response = await fetch(`/api/images/${imageId}/tags`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            projectAssignments: [{
+              id: Date.now() + Math.random(), // Simple unique ID
+              project: bulkProjectAssignment.project,
+              room: bulkProjectAssignment.room,
+              stage: bulkProjectAssignment.stage
+            }]
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to update image ${imageId}`);
+        }
+        
+        return response.json();
+      });
+      
+      await Promise.all(promises);
+      
+      toast.success(`Applied project assignment to ${selectedGalleryImages.length} image(s)`);
+      
+      // Reset form but keep selection
+      setBulkProjectAssignment({ project: '', room: '', stage: '' });
+      setShowBulkProjectAssignment(false);
+      
+      // Refresh images to reflect changes
+      loadImages(currentFilters);
+      
+    } catch (error) {
+      console.error('Error applying bulk project assignment:', error);
+      toast.error('Failed to apply project assignment');
     } finally {
       setUpdatingTags(false);
     }
@@ -1267,6 +1354,14 @@ const ImageGallery = () => {
                       <Download className="h-4 w-4 mr-2" />
                       Download ZIP
                     </button>
+                    <button
+                      onClick={() => setShowBulkProjectAssignment(true)}
+                      disabled={loading}
+                      className="bg-purple-700 text-white px-3 py-2 rounded-md hover:bg-purple-800 disabled:opacity-50 flex items-center border border-purple-600 text-sm"
+                    >
+                      <FolderPlus className="h-4 w-4 mr-2" />
+                      Assign Project
+                    </button>
                   </div>
                   <div className="flex items-center space-x-2">
                     <button
@@ -1328,6 +1423,89 @@ const ImageGallery = () => {
         </div>
           )}
         </>
+      )}
+
+      {/* Bulk Project Assignment Modal */}
+      {showBulkProjectAssignment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              Assign Project to {selectedGalleryImages.length} images
+            </h3>
+            
+            <div className="space-y-4">
+              {/* Project Dropdown */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Project</label>
+                <select
+                  value={bulkProjectAssignment.project}
+                  onChange={(e) => setBulkProjectAssignment(prev => ({ ...prev, project: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select Project...</option>
+                  {availableProjects.map(project => (
+                    <option key={project.id} value={project.name}>
+                      {project.name.charAt(0).toUpperCase() + project.name.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Room Dropdown */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Room</label>
+                <select
+                  value={bulkProjectAssignment.room}
+                  onChange={(e) => setBulkProjectAssignment(prev => ({ ...prev, room: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select Room...</option>
+                  {availableRooms.map(room => (
+                    <option key={room.id} value={room.name}>
+                      {room.name.charAt(0).toUpperCase() + room.name.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Stage Dropdown */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Stage</label>
+                <select
+                  value={bulkProjectAssignment.stage}
+                  onChange={(e) => setBulkProjectAssignment(prev => ({ ...prev, stage: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select Stage...</option>
+                  {availableStages.map(stage => (
+                    <option key={stage.id} value={stage.name}>
+                      {stage.name.charAt(0).toUpperCase() + stage.name.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowBulkProjectAssignment(false);
+                  setBulkProjectAssignment({ project: '', room: '', stage: '' });
+                }}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={applyBulkProjectAssignment}
+                disabled={!bulkProjectAssignment.project || !bulkProjectAssignment.room || !bulkProjectAssignment.stage || updatingTags}
+                className="px-4 py-2 bg-purple-700 text-white rounded-md hover:bg-purple-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {updatingTags ? 'Applying...' : 'Apply Assignment'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
