@@ -1123,14 +1123,15 @@ const ImageEditor = () => {
         <button
           onClick={saveChanges}
               disabled={!hasUnsavedChanges}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors font-medium ${
                 hasUnsavedChanges 
-                  ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                  ? 'bg-blue-500 text-white hover:bg-blue-600 shadow-lg' 
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
+              style={{ minWidth: '140px' }}
         >
           <Save className="h-4 w-4" />
-          Save Changes
+          {hasUnsavedChanges ? 'Save Changes' : 'No Changes'}
         </button>
           )}
         </div>
