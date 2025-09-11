@@ -714,7 +714,7 @@ class PostgresService {
         
         // Must contain the project (using simple string search)
         paramCount++;
-        assignmentConditions.push(`i.project_assignments ILIKE $${paramCount}`);
+        assignmentConditions.push(`COALESCE(i.project_assignments, '') ILIKE $${paramCount}`);
         const searchPattern = `%"projectId":"${projectId}"%`;
         params.push(searchPattern);
         
@@ -723,14 +723,14 @@ class PostgresService {
         // If room is specified, must also contain that room
         if (room) {
           paramCount++;
-          assignmentConditions.push(`i.project_assignments ILIKE $${paramCount}`);
+          assignmentConditions.push(`COALESCE(i.project_assignments, '') ILIKE $${paramCount}`);
           params.push(`%"room":"${room}"%`);
         }
         
         // If stage is specified, must also contain that stage  
         if (stage) {
           paramCount++;
-          assignmentConditions.push(`i.project_assignments ILIKE $${paramCount}`);
+          assignmentConditions.push(`COALESCE(i.project_assignments, '') ILIKE $${paramCount}`);
           params.push(`%"stage":"${stage}"%`);
         }
         
