@@ -670,7 +670,7 @@ class PostgresService {
                  'y_coordinate', ft.y_coordinate,
                  'width', ft.width,
                  'height', ft.height
-               )) FILTER (WHERE ft.tag_name IS NOT NULL), '[]'::json) as focused_tags
+               )) FILTER (WHERE ft.tag_name IS NOT NULL), '[]') as focused_tags
         FROM images i
         LEFT JOIN image_tags it ON i.id = it.image_id
         LEFT JOIN tags t ON it.tag_id = t.id
