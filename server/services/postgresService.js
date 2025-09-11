@@ -658,7 +658,7 @@ class PostgresService {
   // Project assignments search method
   async searchImagesWithProjectAssignments(searchFilters) {
     try {
-      console.log('🔍 searchImagesWithProjectAssignments called with:', searchFilters);
+      console.log('🔍 searchImagesWithProjectAssignments called with:', JSON.stringify(searchFilters, null, 2));
       const { projectAssignment, tags, searchTerm } = searchFilters;
       
       let query = `
@@ -683,6 +683,7 @@ class PostgresService {
       
       // Filter by project assignments if specified
       if (projectAssignment) {
+        console.log('🔍 Processing project assignment filter:', projectAssignment);
         const { projectId, room, stage } = projectAssignment;
         
         // Convert projectId to actual project name for matching
@@ -692,6 +693,21 @@ class PostgresService {
         } else if (projectId === 'light-house') {
           projectName = 'light house';
         }
+        console.log(`🔍 Mapped projectId "${projectId}" to projectName "${projectName}"`);
+        
+        // First, check if there are any images with project_assignments at all
+        const testQuery = `SELECT COUNT(*) as total, 
+                                  COUNT(CASE WHEN project_assignments IS NOT NULL AND project_assignments != '' THEN 1 END) as with_assignments
+                           FROM images`;
+        const testResult = await this.query(testQuery);
+        console.log(`📊 Database stats: ${testResult.rows[0].total} total images, ${testResult.rows[0].with_assignments} with project assignments`);
+        
+        // Sample some project assignments to see the data structure
+        const sampleQuery = `SELECT id, filename, project_assignments FROM images 
+                             WHERE project_assignments IS NOT NULL AND project_assignments != '' 
+                             LIMIT 3`;
+        const sampleResult = await this.query(sampleQuery);
+        console.log(`📊 Sample project assignments:`, sampleResult.rows);
         
         // Build a more flexible search for project assignments
         let assignmentConditions = [];
@@ -762,7 +778,12 @@ class PostgresService {
       
       return images;
     } catch (error) {
-      console.error('Error in searchImagesWithProjectAssignments:', error);
+      console.error('❌ Error in searchImagesWithProjectAssignments:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        stack: error.stack,
+        searchFilters: JSON.stringify(searchFilters, null, 2)
+      });
       throw error;
     }
   }
