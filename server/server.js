@@ -22,6 +22,11 @@ const folderPathService = new FolderPathService();
 const tagSuggestionService = new TagSuggestionService(databaseService);
 const duplicateDetectionService = new DuplicateDetectionService(databaseService, dropboxService);
 
+// Debug: Log deployment info
+console.log('🚀 Server starting with PostgresService');
+console.log('🚀 Version: 1.0.1-coalesce-fix');
+console.log('🚀 Has searchImagesWithProjectAssignments:', typeof databaseService.searchImagesWithProjectAssignments === 'function');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
