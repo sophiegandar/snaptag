@@ -1897,12 +1897,18 @@ app.post('/api/images/search', async (req, res) => {
     console.log('🚀 [TEMP FIX] Using regular search method for all requests');
     console.log('📊 Search parameters:', { searchTerm, tags, sortBy, sortOrder, projectAssignment });
     
-    images = await databaseService.searchImages(searchTerm, tags, sortBy, sortOrder);
+    // If we have both tags and project assignment, search by tags first
+    if (projectAssignment && tags && tags.length > 0) {
+      console.log('🔍 [TEMP FIX] Searching by tags first, then filtering by project assignments');
+      images = await databaseService.searchImages(searchTerm, tags, sortBy, sortOrder);
+    } else {
+      images = await databaseService.searchImages(searchTerm, tags, sortBy, sortOrder);
+    }
     
     // If project assignment filter is provided, filter results client-side
     if (projectAssignment && images) {
       console.log('🔍 [TEMP FIX] Filtering results for project assignment:', projectAssignment);
-      const { projectId, room, stage, type } = projectAssignment;
+      const { projectId, room, stage } = projectAssignment;
       
       const filteredImages = images.filter(image => {
         if (!image.project_assignments) return false;
