@@ -1902,7 +1902,7 @@ app.post('/api/images/search', async (req, res) => {
     // If project assignment filter is provided, filter results client-side
     if (projectAssignment && images) {
       console.log('🔍 [TEMP FIX] Filtering results for project assignment:', projectAssignment);
-      const { projectId, room, stage } = projectAssignment;
+      const { projectId, room, stage, type } = projectAssignment;
       
       const filteredImages = images.filter(image => {
         if (!image.project_assignments) return false;

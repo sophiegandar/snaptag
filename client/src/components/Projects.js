@@ -368,7 +368,7 @@ const Projects = () => {
         console.log(`🔍 Using PROJECT ASSIGNMENT search for ${project.name} ${tab}`);
         
         searchBody = {
-          tags: [tab], // Must have the type tag (precedent/texture)
+          tags: [], // No specific tags required - we'll filter by project assignments only
           projectAssignment: {
             projectId: project.id,
             ...(room && { room }),
