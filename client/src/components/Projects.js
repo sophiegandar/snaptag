@@ -442,8 +442,8 @@ const Projects = () => {
           });
         }
         
-        // Store images with project, tab, stage, and room key
-        const key = `${project.id}-${tab}-${stage}-${room}`;
+        // Store images with project, tab, stage, room, and photos filter key
+        const key = `${project.id}-${tab}-${stage}-${room}-${photosFilter}`;
         
         // Clear any old cache entries for this project before setting new ones
         setProjectImages(prev => {
