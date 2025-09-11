@@ -1877,6 +1877,8 @@ app.post('/api/batch/apply-tags', async (req, res) => {
 
 // Search images with filters (POST endpoint for frontend)
 app.post('/api/images/search', async (req, res) => {
+  console.log('🚀 [ENDPOINT HIT] /api/images/search endpoint called');
+  console.log('🚀 [ENDPOINT HIT] req.body:', req.body);
   try {
     const searchFilters = req.body;
     const { searchTerm, tags, sources, dateRange, sortBy, sortOrder, projectAssignment } = searchFilters;
