@@ -1892,25 +1892,37 @@ app.post('/api/images/search', async (req, res) => {
     console.log('🔍 [SEARCH START] Searching images with filters:', searchFilters);
     console.log('🔍 [SEARCH START] Search parameters:', { searchTerm, tags, sources, dateRange, sortBy, sortOrder, projectAssignment });
     
-    // Use new search method if project assignment filter is provided
+    // TEMPORARY: Use regular search for all requests due to PostgreSQL JSON issues
     let images;
-    if (projectAssignment) {
-      console.log('📊 Calling searchImagesWithProjectAssignments with:', searchFilters);
-      console.log('📊 Database service type:', databaseService.constructor.name);
-      console.log('📊 Available methods:', Object.getOwnPropertyNames(databaseService.__proto__));
+    console.log('🚀 [TEMP FIX] Using regular search method for all requests');
+    console.log('📊 Search parameters:', { searchTerm, tags, sortBy, sortOrder, projectAssignment });
+    
+    images = await databaseService.searchImages(searchTerm, tags, sortBy, sortOrder);
+    
+    // If project assignment filter is provided, filter results client-side
+    if (projectAssignment && images) {
+      console.log('🔍 [TEMP FIX] Filtering results for project assignment:', projectAssignment);
+      const { projectId, room, stage } = projectAssignment;
       
-      // Check if method exists
-      if (typeof databaseService.searchImagesWithProjectAssignments !== 'function') {
-        console.error('❌ searchImagesWithProjectAssignments method not found! Falling back to regular search.');
-        console.error('❌ Will search using tags instead:', tags);
-        // Fallback to regular search with tags
-        images = await databaseService.searchImages(searchTerm, tags, sortBy, sortOrder);
-      } else {
-        images = await databaseService.searchImagesWithProjectAssignments(searchFilters);
-      }
-    } else {
-      console.log('📊 Calling searchImages with:', { searchTerm, tags, sortBy, sortOrder });
-      images = await databaseService.searchImages(searchTerm, tags, sortBy, sortOrder);
+      const filteredImages = images.filter(image => {
+        if (!image.project_assignments) return false;
+        
+        try {
+          const assignments = JSON.parse(image.project_assignments);
+          return assignments.some(assignment => {
+            const matchesProject = assignment.projectId === projectId;
+            const matchesRoom = !room || assignment.room === room;
+            const matchesStage = !stage || assignment.stage === stage;
+            return matchesProject && matchesRoom && matchesStage;
+          });
+        } catch (e) {
+          console.warn('Failed to parse project_assignments for image:', image.id);
+          return false;
+        }
+      });
+      
+      console.log(`🔍 [TEMP FIX] Filtered ${images.length} → ${filteredImages.length} images`);
+      images = filteredImages;
     }
     console.log('📊 Raw search results:', images.length, 'images found');
     
