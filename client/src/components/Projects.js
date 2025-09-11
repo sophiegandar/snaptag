@@ -377,6 +377,7 @@ const Projects = () => {
         };
         
         console.log(`🔍 PROJECT ASSIGNMENT SEARCH:`, searchBody);
+        console.log(`🔍 DETAILED REQUEST:`, JSON.stringify(searchBody, null, 2));
       } else if (project.type === 'current' && tab === 'photos') {
         // Photos tab - still use traditional tag search for current projects
         const requiredTags = [];
@@ -405,11 +406,14 @@ const Projects = () => {
         console.log(`🔍 TAG SEARCH: exact tags: [${searchTags.join(', ')}]`);
       }
       
+      console.log(`🌐 MAKING API CALL to /api/images/search with:`, JSON.stringify(searchBody, null, 2));
       const response = await apiCall('/api/images/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(searchBody)
       });
+      console.log(`🌐 API RESPONSE STATUS:`, response.status);
+      console.log(`🌐 API RESPONSE OK:`, response.ok);
       
       if (response.ok) {
         const images = await response.json();
