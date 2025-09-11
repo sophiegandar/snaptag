@@ -1888,6 +1888,15 @@ app.post('/api/images/search', async (req, res) => {
     let images;
     if (projectAssignment) {
       console.log('📊 Calling searchImagesWithProjectAssignments with:', searchFilters);
+      console.log('📊 Database service type:', databaseService.constructor.name);
+      console.log('📊 Available methods:', Object.getOwnPropertyNames(databaseService.__proto__));
+      
+      // Check if method exists
+      if (typeof databaseService.searchImagesWithProjectAssignments !== 'function') {
+        console.error('❌ searchImagesWithProjectAssignments method not found!');
+        throw new Error('Project assignment search method not available');
+      }
+      
       images = await databaseService.searchImagesWithProjectAssignments(searchFilters);
     } else {
       console.log('📊 Calling searchImages with:', { searchTerm, tags, sortBy, sortOrder });
