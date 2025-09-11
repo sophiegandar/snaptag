@@ -712,29 +712,25 @@ class PostgresService {
         // Build a more flexible search for project assignments
         let assignmentConditions = [];
         
-        // Must contain the project (search both projectId and projectName)
+        // Must contain the project (using string search on text-cast JSON)
         paramCount++;
-        const projectIdPattern = `%"projectId":"${projectId}"%`;
-        assignmentConditions.push(`(i.project_assignments::text ILIKE $${paramCount} OR i.project_assignments::text ILIKE $${paramCount + 1})`);
-        params.push(projectIdPattern);
+        assignmentConditions.push(`COALESCE(i.project_assignments, '') ILIKE $${paramCount}`);
+        const searchPattern = `%"projectId":"${projectId}"%`;
+        params.push(searchPattern);
         
-        paramCount++;
-        const projectNamePattern = `%"projectName":"${projectName}"%`;
-        params.push(projectNamePattern);
-        
-        console.log(`🔍 Searching for project assignment containing: ${projectIdPattern} OR ${projectNamePattern}`);
+        console.log(`🔍 Searching for project assignment containing: ${searchPattern}`);
         
         // If room is specified, must also contain that room
         if (room) {
           paramCount++;
-          assignmentConditions.push(`i.project_assignments::text ILIKE $${paramCount}`);
+          assignmentConditions.push(`COALESCE(i.project_assignments, '') ILIKE $${paramCount}`);
           params.push(`%"room":"${room}"%`);
         }
         
         // If stage is specified, must also contain that stage  
         if (stage) {
           paramCount++;
-          assignmentConditions.push(`i.project_assignments::text ILIKE $${paramCount}`);
+          assignmentConditions.push(`COALESCE(i.project_assignments, '') ILIKE $${paramCount}`);
           params.push(`%"stage":"${stage}"%`);
         }
         
