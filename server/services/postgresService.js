@@ -712,10 +712,17 @@ class PostgresService {
         // Build a more flexible search for project assignments
         let assignmentConditions = [];
         
-        // Must contain the project name
+        // Must contain the project (search both projectId and projectName)
         paramCount++;
-        assignmentConditions.push(`i.project_assignments::text ILIKE $${paramCount}`);
-        params.push(`%"project":"${projectName}"%`);
+        const projectIdPattern = `%"projectId":"${projectId}"%`;
+        assignmentConditions.push(`(i.project_assignments::text ILIKE $${paramCount} OR i.project_assignments::text ILIKE $${paramCount + 1})`);
+        params.push(projectIdPattern);
+        
+        paramCount++;
+        const projectNamePattern = `%"projectName":"${projectName}"%`;
+        params.push(projectNamePattern);
+        
+        console.log(`🔍 Searching for project assignment containing: ${projectIdPattern} OR ${projectNamePattern}`);
         
         // If room is specified, must also contain that room
         if (room) {
