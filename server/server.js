@@ -1881,8 +1881,8 @@ app.post('/api/images/search', async (req, res) => {
     const searchFilters = req.body;
     const { searchTerm, tags, sources, dateRange, sortBy, sortOrder, projectAssignment } = searchFilters;
     
-    console.log('🔍 Searching images with filters:', searchFilters);
-    console.log('🔍 Search parameters:', { searchTerm, tags, sources, dateRange, sortBy, sortOrder, projectAssignment });
+    console.log('🔍 [SEARCH START] Searching images with filters:', searchFilters);
+    console.log('🔍 [SEARCH START] Search parameters:', { searchTerm, tags, sources, dateRange, sortBy, sortOrder, projectAssignment });
     
     // Use new search method if project assignment filter is provided
     let images;
@@ -1893,11 +1893,13 @@ app.post('/api/images/search', async (req, res) => {
       
       // Check if method exists
       if (typeof databaseService.searchImagesWithProjectAssignments !== 'function') {
-        console.error('❌ searchImagesWithProjectAssignments method not found!');
-        throw new Error('Project assignment search method not available');
+        console.error('❌ searchImagesWithProjectAssignments method not found! Falling back to regular search.');
+        console.error('❌ Will search using tags instead:', tags);
+        // Fallback to regular search with tags
+        images = await databaseService.searchImages(searchTerm, tags, sortBy, sortOrder);
+      } else {
+        images = await databaseService.searchImagesWithProjectAssignments(searchFilters);
       }
-      
-      images = await databaseService.searchImagesWithProjectAssignments(searchFilters);
     } else {
       console.log('📊 Calling searchImages with:', { searchTerm, tags, sortBy, sortOrder });
       images = await databaseService.searchImages(searchTerm, tags, sortBy, sortOrder);
