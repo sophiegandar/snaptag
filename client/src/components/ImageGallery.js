@@ -59,7 +59,8 @@ const ImageGallery = () => {
   });
 
   useEffect(() => {
-    loadImages();
+    // Load images with default sort parameters
+    loadImages(currentSort);
     loadUntaggedImages();
     loadAvailableTags();
     loadProjectsRoomsStages();
@@ -99,9 +100,9 @@ const ImageGallery = () => {
       setLoading(true);
       // Auto-dismiss AI suggestions when loading new images
       setImageSuggestions({});
-      setCurrentFilters(searchFilters);
       
       console.log('🔍 Loading images with filters:', searchFilters);
+      console.log('📊 Current sort state:', currentSort);
       
       // Use search endpoint when there are filters OR sorting parameters
       const hasFilters = searchFilters.searchTerm || 
@@ -140,6 +141,8 @@ const ImageGallery = () => {
       console.log('🔍 URL Debug - Received data:', urlStats.slice(0, 5));
       
       setImages(data);
+      // Update filters only after successful load
+      setCurrentFilters(searchFilters);
     } catch (error) {
       console.error('❌ Error loading images:', error);
       
@@ -159,11 +162,14 @@ const ImageGallery = () => {
   };
 
   const handleSortChange = (newSort) => {
+    console.log('🔄 Sort change requested:', newSort);
+    console.log('🔄 Current filters before change:', currentFilters);
     setCurrentSort(newSort);
     const updatedFilters = {
       ...currentFilters,
       ...newSort
     };
+    console.log('🔄 Updated filters for API call:', updatedFilters);
     setCurrentFilters(updatedFilters);
     loadImages(updatedFilters);
   };
