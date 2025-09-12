@@ -874,7 +874,7 @@ const Projects = () => {
               </p>
             </div>
           ) : currentImages.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-center">
             {currentImages.map((image, index) => {
               // Helper functions for image metadata display
               const getImageType = () => {
@@ -904,36 +904,34 @@ const Projects = () => {
               return (
                 <div 
                   key={`${image.id}-${activeProjectTab}-${index}-${forceRefresh}`} 
-                  className="relative group cursor-pointer"
+                  className="relative group cursor-pointer transition-all duration-200 w-full max-w-full"
                   onClick={() => navigate(`/image/${image.id}`, { state: { from: 'projects' } })}
                 >
-                  <div className="bg-white overflow-hidden shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 aspect-square">
-                    <div className="relative w-full h-full overflow-hidden">
-                      <img
-                        src={image.url || '/api/placeholder-image.jpg'}
-                        alt={image.filename}
-                        loading="lazy"
-                        className="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
-                        onError={(e) => {
-                          e.target.src = '/api/placeholder-image.jpg';
-                        }}
-                      />
-                      
-                      {/* Hover Overlay with Properties */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end">
-                        <div className="p-4 text-white">
-                          <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{color: '#C9D468'}}>
-                            {getImageType()}
-                          </div>
-                          <div className="text-sm font-medium text-white/90 mb-2">
-                            Category: {getImageCategory()}
-                          </div>
-                          {getAllTags().length > 0 && (
-                            <div className="text-xs text-white/80">
-                              Tags: {getAllTags().map(tag => capitalizeForDisplay(tag)).join(', ')}
-                            </div>
-                          )}
+                  <div className="relative aspect-square bg-gray-100 overflow-hidden w-full max-w-full">
+                    <img
+                      src={image.url || '/api/placeholder-image.jpg'}
+                      alt={image.filename}
+                      loading="lazy"
+                      className="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
+                      onError={(e) => {
+                        e.target.src = '/api/placeholder-image.jpg';
+                      }}
+                    />
+                    
+                    {/* Hover Overlay with Properties */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end">
+                      <div className="p-4 text-white">
+                        <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{color: '#C9D468'}}>
+                          {getImageType()}
                         </div>
+                        <div className="text-sm font-medium text-white/90 mb-2">
+                          Category: {getImageCategory()}
+                        </div>
+                        {getAllTags().length > 0 && (
+                          <div className="text-xs text-white/80">
+                            Tags: {getAllTags().map(tag => capitalizeForDisplay(tag)).join(', ')}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
