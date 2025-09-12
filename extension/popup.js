@@ -113,16 +113,37 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
       showLoading(true);
       
+      // Validate page access first
+      const validation = await validatePageAccess();
+      if (!validation.valid) {
+        showStatus(validation.reason, 'error');
+        showLoading(false);
+        return;
+      }
+      
       // Get current tab
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       
-      // Inject script to find images
-      const [result] = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        function: findImagesOnPage
-      });
-      
-      pageImages = result.result || [];
+      // Try script injection first
+      let pageImages = [];
+      try {
+        const [result] = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          function: findImagesOnPage
+        });
+        pageImages = result.result || [];
+      } catch (injectionError) {
+        console.log('Script injection failed, trying content script fallback...', injectionError);
+        
+        // Fallback to content script messaging
+        try {
+          const response = await chrome.tabs.sendMessage(tab.id, { action: 'getPageImages' });
+          pageImages = response.images || [];
+        } catch (messageError) {
+          console.error('Content script fallback also failed:', messageError);
+          throw injectionError; // Re-throw original error
+        }
+      }
       
       if (pageImages.length === 0) {
         showStatus('No suitable images found on this page', 'error');
@@ -136,7 +157,16 @@ document.addEventListener('DOMContentLoaded', function() {
       
     } catch (error) {
       console.error('Error finding images:', error);
-      showStatus('Error scanning page for images', 'error');
+      console.error('Error details:', error.message, error.stack);
+      
+      // More specific error messages
+      if (error.message && error.message.includes('Cannot access')) {
+        showStatus('Cannot access this page. Try refreshing or use a different page.', 'error');
+      } else if (error.message && error.message.includes('scripting')) {
+        showStatus('Script injection failed. This page may not allow extensions.', 'error');
+      } else {
+        showStatus(`Error scanning page: ${error.message || 'Unknown error'}`, 'error');
+      }
       showLoading(false);
     }
   }
@@ -147,14 +177,32 @@ document.addEventListener('DOMContentLoaded', function() {
       scanPageBtn.disabled = true;
       scanPageBtn.textContent = 'Scanning...';
       
+      // Validate page access first
+      const validation = await validatePageAccess();
+      if (!validation.valid) {
+        showStatus(validation.reason, 'error');
+        scanPageBtn.textContent = 'Scan Page';
+        saveAllImagesBtn.disabled = false;
+        scanPageBtn.disabled = false;
+        return;
+      }
+      
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       
-      const [result] = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        function: findImagesOnPage
-      });
-      
-      pageImages = result.result || [];
+      // Try script injection first
+      try {
+        const [result] = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          function: findImagesOnPage
+        });
+        pageImages = result.result || [];
+      } catch (injectionError) {
+        console.log('Script injection failed, trying content script fallback...', injectionError);
+        
+        // Fallback to content script messaging  
+        const response = await chrome.tabs.sendMessage(tab.id, { action: 'getPageImages' });
+        pageImages = response.images || [];
+      }
       
       scanPageBtn.textContent = `Found ${pageImages.length} images`;
       
@@ -166,7 +214,16 @@ document.addEventListener('DOMContentLoaded', function() {
       
     } catch (error) {
       console.error('Error scanning page:', error);
-      showStatus('Error scanning page', 'error');
+      console.error('Error details:', error.message, error.stack);
+      
+      if (error.message && error.message.includes('Cannot access')) {
+        showStatus('Cannot access this page. Try refreshing or use a different page.', 'error');
+      } else if (error.message && error.message.includes('scripting')) {
+        showStatus('Script injection failed. This page may not allow extensions.', 'error');
+      } else {
+        showStatus(`Error scanning page: ${error.message || 'Unknown error'}`, 'error');
+      }
+      
       scanPageBtn.textContent = 'Scan Page';
       saveAllImagesBtn.disabled = false;
       scanPageBtn.disabled = false;
@@ -404,6 +461,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
   
 });
+
+// Function to check if current page is accessible
+async function validatePageAccess() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    
+    // Check if it's a restricted page
+    if (tab.url.startsWith('chrome://') || 
+        tab.url.startsWith('chrome-extension://') ||
+        tab.url.startsWith('moz-extension://') ||
+        tab.url.startsWith('edge://') ||
+        tab.url === 'about:blank') {
+      return { valid: false, reason: 'Cannot access browser internal pages' };
+    }
+    
+    return { valid: true };
+  } catch (error) {
+    return { valid: false, reason: 'Cannot access current tab' };
+  }
+}
 
 // Function to be injected into page to find images
 function findImagesOnPage() {
