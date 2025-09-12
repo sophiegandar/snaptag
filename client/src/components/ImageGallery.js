@@ -48,10 +48,7 @@ const ImageGallery = () => {
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
   const [sortOptions] = useState([
     { value: 'upload_date', label: 'Upload Date' },
-    { value: 'name', label: 'Name' },
-    { value: 'file_size', label: 'File Size' },
-    { value: 'width', label: 'Width' },
-    { value: 'height', label: 'Height' }
+    { value: 'file_size', label: 'File Size' }
   ]);
   const [currentSort, setCurrentSort] = useState({
     sortBy: 'upload_date',
