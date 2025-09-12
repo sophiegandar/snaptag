@@ -1177,7 +1177,16 @@ const ImageGallery = () => {
       <div className="flex justify-between items-center">
         <div className="text-sm text-gray-600">
           {images.length} image{images.length !== 1 ? 's' : ''} found
-          {Object.keys(currentFilters).length > 0 && (
+          {(() => {
+            // Check if there are actual search filters (excluding sort parameters)
+            const actualFilters = Object.keys(currentFilters).filter(key => 
+              key !== 'sortBy' && key !== 'sortOrder'
+            );
+            return actualFilters.length > 0 || currentFilters.searchTerm || 
+                   (currentFilters.tags && currentFilters.tags.length > 0) ||
+                   (currentFilters.sources && currentFilters.sources.length > 0) ||
+                   currentFilters.dateRange;
+          })() && (
             <span className="ml-2 text-blue-600">
               (filtered)
             </span>
