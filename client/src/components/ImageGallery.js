@@ -145,7 +145,7 @@ const ImageGallery = () => {
       
       if (placeholderCount > data.length * 0.5) { // If more than 50% are placeholders
         console.log('🔧 ATTEMPTING CLIENT-SIDE URL FIX: Too many placeholders detected');
-        for (let i = 0; i < Math.min(data.length, 10); i++) { // Try first 10 images
+        for (let i = 0; i < Math.min(data.length, 50); i++) { // Try first 50 images
           const img = data[i];
           if (img.url && img.url.includes('placeholder')) {
             try {
