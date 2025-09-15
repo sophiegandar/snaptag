@@ -121,7 +121,7 @@ const ImageGallery = () => {
       });
       } else {
         console.log('📡 Using regular endpoint (no filters or sorting)');
-        response = await apiCall('/api/images?limit=50'); // Default pagination
+        response = await apiCall(`/api/images?limit=50&t=${Date.now()}`); // Default pagination with cache busting
       }
       
       if (!response.ok) {
