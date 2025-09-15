@@ -1120,7 +1120,7 @@ app.get('/api/images', async (req, res) => {
     console.log(`🔗 Generating temporary URLs for ${images.length} images...`);
     
     // Performance optimization: if too many images, use placeholders to prevent timeout
-    if (images.length > 200) {
+    if (images.length > 500) {
       console.log(`⚡ Too many images (${images.length}), using placeholders to prevent timeout`);
       for (const image of images) {
         image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`;
