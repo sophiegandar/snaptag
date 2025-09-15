@@ -133,10 +133,23 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
 // Handle messages from content script and popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('📨 Message received:', request.action);
   if (request.action === 'saveImage') {
+    console.log('💾 saveImage action - request:', request);
+    console.log('💾 saveImage action - sender:', sender);
+    console.log('💾 saveImage action - sender.tab:', sender.tab);
+    
     handleImageSave(request.imageUrl, sender.tab, request.metadata)
-      .then(result => sendResponse({ success: true, result }))
-      .catch(error => sendResponse({ success: false, error: error.message }));
+      .then(result => {
+        console.log('✅ handleImageSave success:', result);
+        sendResponse({ success: true, result });
+      })
+      .catch(error => {
+        console.error('❌ handleImageSave error:', error);
+        console.error('❌ Error message:', error.message);
+        console.error('❌ Error stack:', error.stack);
+        sendResponse({ success: false, error: error.message });
+      });
     return true; // Keep message channel open for async response
   }
   
@@ -182,7 +195,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // Handle image saving
 async function handleImageSave(imageUrl, tab, metadata = {}) {
-  console.log('🚀 handleImageSave called with:', { imageUrl, tabUrl: tab.url, metadata });
+  console.log('🚀 handleImageSave called with:', { imageUrl, tabUrl: tab?.url, metadata });
+  console.log('🔍 DEBUG: imageUrl type:', typeof imageUrl);
+  console.log('🔍 DEBUG: tab object:', tab);
+  console.log('🔍 DEBUG: metadata object:', metadata);
   
   try {
     const settings = await getSettings();
@@ -190,11 +206,15 @@ async function handleImageSave(imageUrl, tab, metadata = {}) {
     console.log('⚙️ Using server URL:', serverUrl);
 
     // Get additional metadata from tab
+    console.log('🔍 DEBUG: Building imageMetadata...');
+    console.log('🔍 DEBUG: tab?.url:', tab?.url);
+    console.log('🔍 DEBUG: tab?.title:', tab?.title);
+    
     const imageMetadata = {
       imageUrl: imageUrl,
-      sourceUrl: tab.url,
-      title: metadata.title || `Image from ${new URL(tab.url).hostname}`,
-      description: metadata.description || `Saved from ${tab.title}`,
+      sourceUrl: tab?.url,
+      title: metadata.title || `Image from ${new URL(tab?.url || 'https://unknown.com').hostname}`,
+      description: metadata.description || `Saved from ${tab?.title || 'Unknown page'}`,
       tags: metadata.tags || settings.defaultTags || [],
       focusedTags: metadata.focusedTags || []
     };
