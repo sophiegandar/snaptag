@@ -75,6 +75,10 @@ document.addEventListener('DOMContentLoaded', function() {
     cancelSaveBtn.addEventListener('click', closeModal);
     saveSelectedImagesBtn.addEventListener('click', saveSelectedImages);
     
+    // Image selection controls
+    document.getElementById('selectAllImages').addEventListener('click', selectAllImages);
+    document.getElementById('deselectAllImages').addEventListener('click', deselectAllImages);
+    
     // Close modal on backdrop click
     imageModal.addEventListener('click', (e) => {
       if (e.target === imageModal) {
@@ -254,6 +258,9 @@ document.addEventListener('DOMContentLoaded', function() {
       imageGrid.appendChild(imageItem);
     });
     
+    // Initialize selection UI
+    updateSelectionUI();
+    
     imageModal.classList.remove('hidden');
   }
 
@@ -268,9 +275,41 @@ document.addEventListener('DOMContentLoaded', function() {
       element.classList.add('selected');
     }
     
-    // Update save button text
+    updateSelectionUI();
+  }
+
+  function selectAllImages() {
+    selectedImages = [...Array(pageImages.length).keys()]; // Select all indices
+    
+    // Update UI for all image items
+    const imageItems = imageGrid.querySelectorAll('.image-item');
+    imageItems.forEach(item => item.classList.add('selected'));
+    
+    updateSelectionUI();
+  }
+
+  function deselectAllImages() {
+    selectedImages = [];
+    
+    // Update UI for all image items
+    const imageItems = imageGrid.querySelectorAll('.image-item');
+    imageItems.forEach(item => item.classList.remove('selected'));
+    
+    updateSelectionUI();
+  }
+
+  function updateSelectionUI() {
     const count = selectedImages.length;
+    const total = pageImages.length;
+    
+    // Update save button text
     saveSelectedImagesBtn.textContent = count > 0 ? `Save ${count} Selected` : 'Save Selected';
+    
+    // Update selection count
+    const selectionCount = document.getElementById('selectionCount');
+    if (selectionCount) {
+      selectionCount.textContent = `${count} of ${total} images selected`;
+    }
   }
 
   function closeModal() {
