@@ -2985,9 +2985,46 @@ async function processAndUploadImage({ filePath, originalName, tags, name, focus
   const uploadResult = await dropboxService.uploadFile(processedImagePath, dropboxPath);
   console.log('✅ Uploaded to Dropbox:', uploadResult.id);
 
-  console.log('💾 Saving to database...');
-  // Save to database
-  const imageData = {
+  let imageId;
+  try {
+    console.log('💾 Saving to database...');
+    // Save to database
+    const imageData = {
+      filename,
+      original_name: originalName,
+      dropbox_path: dropboxPath,
+      tags,
+      name,
+      focused_tags: focusedTags,
+      upload_date: new Date().toISOString(),
+      file_size: uploadResult.size,
+      dropbox_id: uploadResult.id,
+      file_hash: fileHash
+    };
+
+    imageId = await databaseService.saveImage(imageData);
+    console.log('✅ Saved to database with ID:', imageId);
+  } catch (databaseError) {
+    console.error('❌ Database save failed after Dropbox upload:', databaseError);
+    
+    // Clean up orphaned file from Dropbox
+    try {
+      console.log('🧹 Cleaning up orphaned file from Dropbox:', dropboxPath);
+      await dropboxService.deleteFile(dropboxPath);
+      console.log('✅ Cleaned up orphaned file successfully');
+    } catch (cleanupError) {
+      console.error('❌ Failed to cleanup orphaned file:', cleanupError);
+      // Log but don't throw - the main error is more important
+    }
+    
+    // Re-throw the original database error
+    throw new Error(`Database save failed: ${databaseError.message}`);
+  }
+
+  console.log('🔗 Getting temporary link...');
+  
+  // Reconstruct imageData for return (since it was scoped inside try block)
+  const finalImageData = {
     filename,
     original_name: originalName,
     dropbox_path: dropboxPath,
@@ -2999,14 +3036,10 @@ async function processAndUploadImage({ filePath, originalName, tags, name, focus
     dropbox_id: uploadResult.id,
     file_hash: fileHash
   };
-
-  const imageId = await databaseService.saveImage(imageData);
-  console.log('✅ Saved to database with ID:', imageId);
-
-  console.log('🔗 Getting temporary link...');
+  
   return {
     id: imageId,
-    ...imageData,
+    ...finalImageData,
     url: await dropboxService.getTemporaryLink(dropboxPath)
   };
 }

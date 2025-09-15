@@ -341,11 +341,30 @@ class FolderPathService {
       // Use atomic increment with PostgreSQL to prevent race conditions
       // This will increment a counter in the database atomically
       try {
-        // First, ensure the sequence counter exists
+        // First, ensure the sequence counter exists and is properly initialized
         await databaseService.query(`
           INSERT INTO image_sequence (id, last_sequence)
           VALUES (1, 0)
           ON CONFLICT (id) DO NOTHING
+        `);
+        
+        // Initialize sequence counter to current max if it's still at 0
+        await databaseService.query(`
+          UPDATE image_sequence 
+          SET last_sequence = GREATEST(last_sequence, COALESCE((
+            SELECT CASE 
+              WHEN filename ~ '^[A-Z]{2}(\\d{4})-' THEN 
+                (regexp_match(filename, '^[A-Z]{2}(\\d{4})-'))[1]::integer
+              WHEN filename ~ '^[A-Z](\\d{4})-' THEN 
+                (regexp_match(filename, '^[A-Z](\\d{4})-'))[1]::integer
+              ELSE 0
+            END
+            FROM images 
+            WHERE filename ~ '^[A-Z]{1,2}\\d{4}-'
+            ORDER BY filename DESC 
+            LIMIT 1
+          ), 0))
+          WHERE id = 1 AND last_sequence = 0
         `);
         
         // Atomically increment and return the new sequence number
