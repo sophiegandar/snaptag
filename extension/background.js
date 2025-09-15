@@ -211,14 +211,26 @@ async function handleImageSave(imageUrl, tab, metadata = {}) {
     });
 
     console.log('📥 Response status:', response.status);
+    console.log('📥 Response ok:', response.ok);
+    console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()));
     
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('❌ Server error:', errorData);
-      throw new Error(errorData.error || 'Failed to save image');
+      console.log('❌ Response not ok, reading error...');
+      try {
+        const errorData = await response.json();
+        console.error('❌ Server error data:', errorData);
+        throw new Error(errorData.error || 'Failed to save image');
+      } catch (parseError) {
+        console.error('❌ Failed to parse error response:', parseError);
+        const errorText = await response.text();
+        console.error('❌ Raw error response:', errorText);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
     }
 
+    console.log('✅ Response ok, parsing JSON...');
     const result = await response.json();
+    console.log('📊 Parsed result:', result);
     
     if (result.duplicate) {
       console.log('♻️ Duplicate image found:', result.filename);
