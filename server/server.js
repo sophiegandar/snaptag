@@ -1120,7 +1120,7 @@ app.get('/api/images', async (req, res) => {
     console.log(`🔗 Generating temporary URLs for ${images.length} images...`);
     
     // Performance optimization: if too many images, use placeholders to prevent timeout
-    if (images.length > 100) {
+    if (images.length > 200) {
       console.log(`⚡ Too many images (${images.length}), using placeholders to prevent timeout`);
       for (const image of images) {
         image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`;
@@ -1130,7 +1130,15 @@ app.get('/api/images', async (req, res) => {
       console.log(`🚀 Generating ${images.length} URLs in parallel...`);
       const urlPromises = images.map(async (image) => {
         try {
-          const url = await dropboxService.getTemporaryLink(image.dropbox_path);
+          // Add timeout to prevent hanging
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('URL generation timeout')), 5000)
+          );
+          
+          const url = await Promise.race([
+            dropboxService.getTemporaryLink(image.dropbox_path),
+            timeoutPromise
+          ]);
           return { image, url, success: true };
         } catch (error) {
           console.error(`❌ Failed to generate URL for ${image.filename}:`, error.message);
