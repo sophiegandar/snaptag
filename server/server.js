@@ -1119,11 +1119,11 @@ app.get('/api/images', async (req, res) => {
     // Generate temporary Dropbox URLs for each image (with performance optimization)
     console.log(`🔗 [FORCE DEPLOY v3] Generating temporary URLs for ${images.length} images...`);
     
-    // PRODUCTION URL GENERATION: Optimized for 10K+ images
-    const MAX_CONCURRENT = 20; // Dropbox API rate limit friendly
-    const TIMEOUT_MS = 3000; // Faster timeout for better UX
+    // TEMPORARY FIX: Force real URLs for debugging the 9 new images
+    const MAX_CONCURRENT = 25; // Increased for better throughput
+    const TIMEOUT_MS = 5000; // Longer timeout for reliability
     
-    console.log(`🚀 PRODUCTION MODE: Generating ${images.length} URLs (max ${MAX_CONCURRENT} concurrent)...`);
+    console.log(`🔧 DEBUG MODE: Generating ${images.length} URLs to see the 9 new images...`);
     
     // Process images in batches to avoid overwhelming Dropbox API
     const batches = [];
@@ -1418,25 +1418,24 @@ async function processSaveRequest(req, res, requestId, startTime) {
       return res.status(400).json({ error: 'Image URL is required' });
     }
 
-    // Check for duplicate by URL first (fastest check)
+    // Check for duplicate by URL (database check only - Dropbox duplicates will be handled by filename collision)
     console.log(`🔍 [${requestId}] Checking for duplicate by URL:`, imageUrl);
     const existingByUrl = await databaseService.checkDuplicateByUrl(imageUrl);
     
     if (existingByUrl) {
-      console.log(`♻️ [${requestId}] DUPLICATE DETECTED - skipping save:`, existingByUrl.filename);
-      console.log('♻️ Duplicate found by URL:', existingByUrl.filename);
-      console.log('🔍 Duplicate object:', existingByUrl);
-      console.log('🔍 dropbox_path:', existingByUrl.dropbox_path);
+      console.log(`♻️ [${requestId}] DUPLICATE DETECTED in database - skipping save:`, existingByUrl.filename);
       
       try {
         const temporaryUrl = await dropboxService.getTemporaryLink(existingByUrl.dropbox_path);
-        console.log('✅ Generated temporary URL for duplicate');
         
         return res.json({
-          ...existingByUrl,
-          duplicate: true,
-          message: 'Image already exists',
-          url: temporaryUrl
+          success: true,
+          result: {
+            ...existingByUrl,
+            duplicate: true,
+            message: 'Image already exists in database',
+            url: temporaryUrl
+          }
         });
       } catch (error) {
         console.error('❌ Error generating URL for duplicate:', error);
