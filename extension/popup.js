@@ -278,24 +278,27 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     try {
-      showLoading(true);
-      closeModal();
-      
+      // Save selected images and form data BEFORE closing modal
+      const imagesToSave = [...selectedImages]; // Copy the array
       const title = modalTitle.value.trim();
       const description = modalDescription.value.trim();
       const tags = modalTags.value.split(',').map(tag => tag.trim()).filter(Boolean);
       
       console.log('📝 Metadata:', { title, description, tags });
+      console.log('📋 Images to save (before modal close):', imagesToSave);
+      
+      showLoading(true);
+      closeModal(); // Now safe to close modal
       
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       console.log('🌐 Current tab:', tab.url);
       
       let savedCount = 0;
-      const totalCount = selectedImages.length;
+      const totalCount = imagesToSave.length;
       console.log(`📊 Processing ${totalCount} images`);
-      console.log('📋 Selected image indices:', selectedImages);
+      console.log('📋 Selected image indices:', imagesToSave);
       
-      for (const imageIndex of selectedImages) {
+      for (const imageIndex of imagesToSave) {
         const image = pageImages[imageIndex];
         console.log(`📷 Processing image ${imageIndex}:`, image);
         
