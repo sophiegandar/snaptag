@@ -1373,7 +1373,10 @@ app.post('/api/images/save-from-url', async (req, res) => {
     });
 
     console.log('✅ Image saved successfully:', result.filename);
-    res.json(result);
+    res.json({
+      success: true,
+      result: result
+    });
   } catch (error) {
     console.error('❌ Error saving image from URL:', error);
     console.error('❌ Full error details:', error.message, error.stack);

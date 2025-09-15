@@ -338,8 +338,34 @@ class FolderPathService {
    */
   async getNextSequenceNumber(databaseService) {
     try {
-      // Get the highest current sequence number from existing filenames (PostgreSQL compatible)
-      // Look for AA-XXXX format (preferred) and fallback to legacy A-XXXX format
+      // Use atomic increment with PostgreSQL to prevent race conditions
+      // This will increment a counter in the database atomically
+      try {
+        // First, ensure the sequence counter exists
+        await databaseService.query(`
+          INSERT INTO image_sequence (id, last_sequence)
+          VALUES (1, 0)
+          ON CONFLICT (id) DO NOTHING
+        `);
+        
+        // Atomically increment and return the new sequence number
+        const result = await databaseService.query(`
+          UPDATE image_sequence 
+          SET last_sequence = last_sequence + 1 
+          WHERE id = 1 
+          RETURNING last_sequence
+        `);
+        
+        if (result.rows && result.rows.length > 0) {
+          const nextSequence = result.rows[0].last_sequence;
+          console.log('🔢 Generated atomic sequence number:', nextSequence);
+          return nextSequence;
+        }
+      } catch (sequenceError) {
+        console.warn('⚠️ Sequence table not available, falling back to filename-based detection:', sequenceError.message);
+      }
+      
+      // Fallback to original filename-based logic if sequence table doesn't exist
       const result = await databaseService.query(`
         SELECT filename 
         FROM images 

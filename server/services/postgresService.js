@@ -104,6 +104,40 @@ class PostgresService {
         )
       `);
 
+      // Stages table
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS stages (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(255) UNIQUE NOT NULL,
+          description TEXT,
+          order_index INTEGER DEFAULT 0,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          usage_count INTEGER DEFAULT 0
+        )
+      `);
+
+      // Rooms table
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS rooms (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(255) UNIQUE NOT NULL,
+          description TEXT,
+          category VARCHAR(255),
+          order_index INTEGER DEFAULT 0,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          usage_count INTEGER DEFAULT 0
+        )
+      `);
+
+      // Image sequence counter table (for atomic sequence number generation)
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS image_sequence (
+          id INTEGER PRIMARY KEY DEFAULT 1,
+          last_sequence INTEGER NOT NULL DEFAULT 0,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
       // Create indexes
       await client.query('CREATE INDEX IF NOT EXISTS idx_images_dropbox_path ON images(dropbox_path)');
       await client.query('CREATE INDEX IF NOT EXISTS idx_images_file_hash ON images(file_hash)');
