@@ -3003,6 +3003,8 @@ app.post('/api/images/:id/apply-suggestions', async (req, res) => {
 // Helper functions
 async function processAndUploadImage({ filePath, originalName, tags, name, focusedTags }) {
   console.log('🏷️ Adding metadata to image...');
+  console.log('🔍 PROCESS: Received tags:', tags);
+  console.log('🔍 PROCESS: Tags type:', typeof tags, 'Array?:', Array.isArray(tags));
   
   // Check file size before processing
   const statsBefore = await fs.stat(filePath);
@@ -3048,7 +3050,9 @@ async function processAndUploadImage({ filePath, originalName, tags, name, focus
   const sequenceNumber = await folderPathService.getNextSequenceNumber(databaseService);
   console.log(`🔢 Generated sequence number: ${sequenceNumber}`);
   
+  console.log('🔍 PROCESS: About to generate filename with tags:', tags);
   const filename = folderPathService.generateTagBasedFilename(tags, ext, sequenceNumber);
+  console.log('🔍 PROCESS: Generated filename:', filename);
   
   // Combine folder path and filename
   const dropboxPath = path.posix.join(folderPath, filename);

@@ -194,11 +194,14 @@ class FolderPathService {
    */
   generateTagBasedFilename(tags = [], originalExtension = '.jpg', sequenceNumber = null) {
     console.log('🏷️ Generating tag-based filename for tags:', tags);
+    console.log('🔍 Tags type:', typeof tags, 'Array?:', Array.isArray(tags));
     
     // Normalize tags for processing
     const normalizedTags = tags
       .map(tag => tag.toLowerCase().trim())
       .filter(tag => tag.length > 0);
+    
+    console.log('🔍 Normalized tags:', normalizedTags);
     
     // Helper function to clean tag for filename
     const cleanTag = (tag) => {
@@ -213,6 +216,7 @@ class FolderPathService {
     
     if (normalizedTags.includes('archier')) {
       // TYPE: Archier
+      console.log('✅ Found "archier" tag - using Archier type');
       filenameStructure = 'archier';
       
       // CATEGORY: Find project name (must match the list in generateFolderPath)
@@ -245,8 +249,10 @@ class FolderPathService {
       ];
       
       let categoryFound = false;
+      console.log('🔍 Searching for project names in:', normalizedTags);
       for (const project of projectNames) {
         if (normalizedTags.includes(project)) {
+          console.log(`✅ Found project "${project}" - using category: ${cleanTag(project)}`);
           filenameStructure += '-' + cleanTag(project);
           categoryFound = true;
           break;
@@ -255,6 +261,8 @@ class FolderPathService {
       
       // Fallback category if no project found
       if (!categoryFound) {
+        console.log('⚠️ No project name found in tags, using "general"');
+        console.log('⚠️ Available project names:', projectNames.slice(0, 10), '... and more');
         filenameStructure += '-general';
       }
       
@@ -279,6 +287,10 @@ class FolderPathService {
       
     } else {
       // TYPE: Precedent (default for everything else)
+      console.log('⚠️ FALLING BACK TO PRECEDENT - no archier/texture tags found');
+      console.log('⚠️ Available tags for comparison:', normalizedTags);
+      console.log('⚠️ Looking for "archier":', normalizedTags.includes('archier'));
+      console.log('⚠️ Looking for "texture":', normalizedTags.includes('texture'));
       filenameStructure = 'precedent';
       
       // CATEGORY: Find precedent category
