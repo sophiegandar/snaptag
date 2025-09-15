@@ -2003,41 +2003,46 @@ app.post('/api/images/search', async (req, res) => {
     console.log(`🔗 Generating temporary URLs for ${filteredImages.length} images...`);
     
     // Quick fallback: if too many images, just use placeholders to prevent timeout
-    // Increased limit from 10 to 50 to accommodate typical project sizes
-    if (filteredImages.length > 50) {
+    // Increased limit to 100 to accommodate normal usage
+    if (filteredImages.length > 100) {
       console.log(`⚡ Too many images (${filteredImages.length}), using placeholders to prevent timeout`);
       for (const image of filteredImages) {
         image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`;
       }
     } else {
-      // Try to generate URLs for smaller batches
-      for (let i = 0; i < filteredImages.length; i++) {
-        const image = filteredImages[i];
+      // Generate URLs in parallel for better performance
+      console.log(`🚀 Generating ${filteredImages.length} URLs in parallel...`);
+      const urlPromises = filteredImages.map(async (image) => {
         try {
-          console.log(`🔗 Attempting to generate URL for ${image.filename} (${i+1}/${filteredImages.length}) at path: ${image.dropbox_path}`);
-          
           // Add timeout to prevent hanging
+          const urlPromise = dropboxService.getTemporaryLink(image.dropbox_path);
           const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('URL generation timeout')), 3000)
+            setTimeout(() => reject(new Error('URL generation timeout')), 5000)
           );
           
-          image.url = await Promise.race([
-            dropboxService.getTemporaryLink(image.dropbox_path),
-            timeoutPromise
-          ]);
-          
-          if (!image.url || image.url.length < 10) {
-            console.warn(`⚠️ Generated URL seems invalid for ${image.filename}: "${image.url}"`);
-            image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`;
-          } else {
-            console.log(`✅ Generated valid URL for ${image.filename} (${image.url.length} chars)`);
-          }
-          
+          const url = await Promise.race([urlPromise, timeoutPromise]);
+          return { image, url, success: true };
         } catch (error) {
-          console.error(`❌ Failed to generate URL for ${image.filename}:`, error.message);
-          image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`; // Use absolute placeholder URL
+          console.warn(`⚠️ URL generation failed for ${image.filename}:`, error.message);
+          return { 
+            image, 
+            url: `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`, 
+            success: false 
+          };
         }
-      }
+      });
+      
+      // Wait for all URLs to complete in parallel
+      const results = await Promise.all(urlPromises);
+      
+      // Apply URLs to images
+      results.forEach(({ image, url }) => {
+        image.url = url;
+      });
+      
+      const successCount = results.filter(r => r.success).length;
+      console.log(`✅ Generated URLs: ${successCount}/${filteredImages.length} successful`);
+      
     }
     
     console.log(`✅ Search completed: ${filteredImages.length} images found`);
