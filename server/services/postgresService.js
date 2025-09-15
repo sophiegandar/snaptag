@@ -304,17 +304,11 @@ class PostgresService {
     try {
       // Removed debug overhead for performance
       
-      // PERFORMANCE OPTIMIZED: Single query with JSON aggregation to eliminate N+1 problem
+      // PERFORMANCE OPTIMIZED: Single query with STRING_AGG to avoid JSON parsing issues
       let query = `
         SELECT DISTINCT i.*, 
-               COALESCE(json_agg(DISTINCT t.name) FILTER (WHERE t.name IS NOT NULL), '[]') as tags,
-               COALESCE(json_agg(DISTINCT jsonb_build_object(
-                 'tag_name', ft.tag_name,
-                 'x_coordinate', ft.x_coordinate,
-                 'y_coordinate', ft.y_coordinate,
-                 'width', ft.width,
-                 'height', ft.height
-               )) FILTER (WHERE ft.tag_name IS NOT NULL), '[]') as focused_tags
+               STRING_AGG(DISTINCT t.name, ',') as tag_names,
+               COUNT(DISTINCT ft.id) as focused_tag_count
         FROM images i
         LEFT JOIN image_tags it ON i.id = it.image_id
         LEFT JOIN tags t ON it.tag_id = t.id
@@ -417,15 +411,40 @@ class PostgresService {
       const result = await this.query(query, params);
       const images = result.rows || [];
 
-      // PERFORMANCE: Process JSON results (no additional queries needed!)
+      // PERFORMANCE: Process results and get focused tags in batch
       for (const image of images) {
-        // Parse JSON arrays returned by PostgreSQL
-        image.tags = Array.isArray(image.tags) ? image.tags : (image.tags || []);
-        image.focused_tags = Array.isArray(image.focused_tags) ? image.focused_tags : (image.focused_tags || []);
+        // Convert STRING_AGG result to array
+        image.tags = image.tag_names ? image.tag_names.split(',').filter(tag => tag.trim()) : [];
+      }
+      
+      // Get all focused tags for all images in one query if we have images
+      if (images.length > 0) {
+        const imageIds = images.map(img => img.id);
+        const focusedTagsResult = await this.query(`
+          SELECT image_id, tag_name, x_coordinate, y_coordinate, width, height
+          FROM focused_tags 
+          WHERE image_id = ANY($1)
+        `, [imageIds]);
         
-        // Add legacy fields for backwards compatibility
-        image.tag_names = image.tags.join(',');
-        image.focused_tag_count = image.focused_tags.length;
+        // Group focused tags by image_id
+        const focusedTagsByImage = {};
+        for (const ft of focusedTagsResult.rows) {
+          if (!focusedTagsByImage[ft.image_id]) {
+            focusedTagsByImage[ft.image_id] = [];
+          }
+          focusedTagsByImage[ft.image_id].push({
+            tag_name: ft.tag_name,
+            x_coordinate: ft.x_coordinate,
+            y_coordinate: ft.y_coordinate,
+            width: ft.width,
+            height: ft.height
+          });
+        }
+        
+        // Assign focused tags to images
+        for (const image of images) {
+          image.focused_tags = focusedTagsByImage[image.id] || [];
+        }
       }
 
       return images;
