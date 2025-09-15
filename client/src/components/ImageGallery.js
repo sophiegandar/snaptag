@@ -139,35 +139,8 @@ const ImageGallery = () => {
       const urlStats = data.map(img => ({ id: img.id, filename: img.filename, hasUrl: !!img.url, url: img.url?.substring(0, 50) }));
       console.log('🔍 URL Debug - Received data:', urlStats.slice(0, 5));
       
-      // TEMPORARY: Fix ALL images so user can see and delete incorrect ones
-      const placeholderCount = data.filter(img => img.url && img.url.includes('placeholder')).length;
-      console.log(`🚨 PLACEHOLDER COUNT: ${placeholderCount}/${data.length} images have placeholder URLs`);
-      
-      if (placeholderCount > 0) {
-        console.log('🔧 FIXING ALL IMAGES FOR CLEANUP: Generating real URLs for all images...');
-        data.forEach((img, index) => {
-          if (img.url && img.url.includes('placeholder')) {
-            setTimeout(() => {
-              fetch(`/api/images/${img.id}`)
-                .then(res => res.json())
-                .then(imageData => {
-                  if (imageData.url && !imageData.url.includes('placeholder')) {
-                    console.log(`✅ Fixed URL for image ${img.id}`);
-                    setImages(prevImages => {
-                      const newImages = [...prevImages];
-                      const imgIndex = newImages.findIndex(i => i.id === img.id);
-                      if (imgIndex !== -1) {
-                        newImages[imgIndex] = { ...newImages[imgIndex], url: imageData.url };
-                      }
-                      return newImages;
-                    });
-                  }
-                })
-                .catch(err => console.log(`❌ Failed to fix URL for image ${img.id}`));
-            }, index * 100); // Stagger requests by 100ms
-          }
-        });
-      }
+      // SIMPLE FIX: Just show filenames so user can identify and delete images
+      console.log(`📋 SIMPLE MODE: Showing ${data.length} images by filename (no URL loading)`);
       
       setImages(data);
       // Update filters only after successful load
@@ -1897,11 +1870,16 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
 
       {/* Image Container - Enforce consistent square aspect ratio */}
       <div className="relative aspect-square bg-gray-100 overflow-hidden w-full max-w-full">
-        {imageError ? (
-          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-            <div className="text-center text-gray-400">
-              <div className="text-3xl mb-2">🖼️</div>
-              <div className="text-sm font-medium">Image not available</div>
+        {imageError || !imageUrl || imageUrl.includes('placeholder') ? (
+          <div className="w-full h-full bg-gray-200 flex items-center justify-center p-2">
+            <div className="text-center text-gray-600">
+              <div className="text-xs font-mono break-all mb-1">{image.filename}</div>
+              <div className="text-xs text-gray-400">ID: {image.id}</div>
+              {image.tags && image.tags.length > 0 && (
+                <div className="text-xs mt-1 text-blue-600">
+                  {image.tags.join(', ')}
+                </div>
+              )}
             </div>
           </div>
         ) : (
