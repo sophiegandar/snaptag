@@ -300,20 +300,21 @@ class PostgresService {
     }
   }
 
-  async searchImages(searchTerm, tagFilter) {
+  async searchImages(searchTerm, tagFilter, sortBy = 'upload_date', sortOrder = 'desc') {
     try {
-      console.log('🔍 PostgresService.searchImages called with:', { searchTerm, tagFilter });
+      // Removed debug overhead for performance
       
-      // Debug: Show all tags in database
-      const allTags = await this.all('SELECT * FROM tags');
-      const allFocusedTags = await this.all('SELECT * FROM focused_tags');
-      console.log('📊 All regular tags in DB:', allTags.map(t => `"${t.name}"`).join(', '));
-      console.log('📊 All focused tags in DB:', allFocusedTags.map(t => `"${t.tag_name}"`).join(', '));
-      
+      // PERFORMANCE OPTIMIZED: Single query with JSON aggregation to eliminate N+1 problem
       let query = `
         SELECT DISTINCT i.*, 
-               STRING_AGG(DISTINCT t.name, ',') AS tag_names,
-               COUNT(DISTINCT ft.id) AS focused_tag_count
+               COALESCE(json_agg(DISTINCT t.name) FILTER (WHERE t.name IS NOT NULL), '[]') as tags,
+               COALESCE(json_agg(DISTINCT jsonb_build_object(
+                 'tag_name', ft.tag_name,
+                 'x_coordinate', ft.x_coordinate,
+                 'y_coordinate', ft.y_coordinate,
+                 'width', ft.width,
+                 'height', ft.height
+               )) FILTER (WHERE ft.tag_name IS NOT NULL), '[]') as focused_tags
         FROM images i
         LEFT JOIN image_tags it ON i.id = it.image_id
         LEFT JOIN tags t ON it.tag_id = t.id
@@ -323,8 +324,6 @@ class PostgresService {
       const params = [];
       const conditions = [];
       let paramCount = 0;
-      
-      console.log('📊 Initial query setup complete');
 
       // Smart search in content (case-insensitive)
       if (searchTerm && searchTerm.trim()) {
@@ -368,8 +367,6 @@ class PostgresService {
         });
         
         if (contentConditions.length > 0) {
-          console.log('📊 Content conditions count:', contentConditions.length);
-          console.log('📊 Sample content conditions:', contentConditions.slice(0, 6));
           conditions.push(`(${contentConditions.join(' OR ')})`);
         }
       }
@@ -378,8 +375,6 @@ class PostgresService {
       if (tagFilter) {
         const tagArray = Array.isArray(tagFilter) ? tagFilter : tagFilter.split(',');
         const validTags = tagArray.filter(tag => tag && tag.toString().trim());
-        
-        console.log('🔍 REWRITTEN POSTGRES QUERY: Required tags:', validTags);
         
         if (validTags.length > 0) {
           // SIMPLE AND RELIABLE: Use EXISTS for each required tag
@@ -401,7 +396,7 @@ class PostgresService {
             params.push(trimmedTag, trimmedTag);
           });
           
-          console.log('🔍 POSTGRES AND Logic: Added', validTags.length, 'EXISTS conditions for tags:', validTags);
+          // Removed debug logging for performance
         }
       }
 
@@ -409,40 +404,30 @@ class PostgresService {
         query += ' WHERE ' + conditions.join(' AND ');
       }
 
+      // Add sorting and pagination
+      const validSortColumns = ['upload_date', 'filename', 'file_size', 'created_at'];
+      const sortColumn = validSortColumns.includes(sortBy) ? sortBy : 'upload_date';
+      const sortDirection = sortOrder && sortOrder.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+
       query += `
-        GROUP BY i.id
-        ORDER BY i.upload_date DESC
+        GROUP BY i.id, i.filename, i.upload_date, i.file_size, i.created_at, i.original_name, i.dropbox_path, i.dropbox_id, i.title, i.description, i.source_url, i.width, i.height, i.mime_type, i.file_hash, i.project_assignments, i.updated_at
+        ORDER BY i.${sortColumn} ${sortDirection}
       `;
 
-      console.log('📊 Final query:', query);
-      console.log('📊 Query params:', params);
+      const result = await this.query(query, params);
+      const images = result.rows || [];
 
-      const images = await this.all(query, params);
-      console.log('📊 Database returned:', images.length, 'raw results');
-      
-      // Debug: Show what tags each image actually has
+      // PERFORMANCE: Process JSON results (no additional queries needed!)
       for (const image of images) {
-        console.log(`📊 Image ${image.id}: regular tags = "${image.tag_names}", focused_tag_count = ${image.focused_tag_count}`);
+        // Parse JSON arrays returned by PostgreSQL
+        image.tags = Array.isArray(image.tags) ? image.tags : (image.tags || []);
+        image.focused_tags = Array.isArray(image.focused_tags) ? image.focused_tags : (image.focused_tags || []);
+        
+        // Add legacy fields for backwards compatibility
+        image.tag_names = image.tags.join(',');
+        image.focused_tag_count = image.focused_tags.length;
       }
 
-      // Get focused tags and ALL regular tags for each image (not just filtered ones)
-      for (const image of images) {
-        image.focused_tags = await this.getFocusedTags(image.id);
-        
-        // CRITICAL FIX: Get ALL tags for this image, not just the filtered ones
-        // The main query only returns tags that match the search, but we need ALL tags for rollover display
-        const allImageTags = await this.all(`
-          SELECT t.name 
-          FROM image_tags it 
-          JOIN tags t ON it.tag_id = t.id 
-          WHERE it.image_id = $1
-        `, [image.id]);
-        
-        image.tags = allImageTags.map(tag => tag.name);
-        console.log(`🏷️ COMPLETE TAGS for ${image.filename}: [${image.tags.join(', ')}]`);
-      }
-
-      console.log('📊 Processed results:', images.length, 'images with tags');
       return images;
     } catch (error) {
       console.error('❌ Error searching images:', error);

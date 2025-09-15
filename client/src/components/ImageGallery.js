@@ -121,7 +121,7 @@ const ImageGallery = () => {
       });
       } else {
         console.log('📡 Using regular endpoint (no filters or sorting)');
-        response = await apiCall('/api/images');
+        response = await apiCall('/api/images?limit=50'); // Default pagination
       }
       
       if (!response.ok) {
@@ -130,7 +130,9 @@ const ImageGallery = () => {
         throw new Error(`API Error: ${response.status} - ${errorText}`);
       }
       
-      const data = await response.json();
+      const responseData = await response.json();
+      // Handle both old format (array) and new format (object with pagination)
+      const data = Array.isArray(responseData) ? responseData : responseData.images;
       console.log('✅ Images loaded successfully:', data.length, 'images');
       
       // Debug: Check URLs in received data

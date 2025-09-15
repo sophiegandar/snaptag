@@ -1096,14 +1096,25 @@ app.get('/api/debug/tags-test', async (req, res) => {
 // Get all images with tags
 app.get('/api/images', async (req, res) => {
   try {
-    const { search, tags, limit, sortBy, sortOrder } = req.query;
+    const { search, tags, limit, sortBy, sortOrder, page } = req.query;
+    
+    // PERFORMANCE: Default pagination to prevent loading all images
+    const defaultLimit = 50; // Default to 50 images per load
+    const requestedLimit = limit && !isNaN(parseInt(limit)) ? parseInt(limit) : defaultLimit;
+    const currentPage = page && !isNaN(parseInt(page)) ? parseInt(page) : 1;
+    
+    console.log(`📊 PAGINATION: Requesting page ${currentPage}, limit ${requestedLimit}`);
+    
     let images = await databaseService.searchImages(search, tags, sortBy, sortOrder);
     
-    // Apply limit if specified (for extension popup)
-    if (limit && !isNaN(parseInt(limit))) {
-      images = images.slice(0, parseInt(limit));
-      console.log(`📊 Applied limit: showing ${images.length} of total images`);
-    }
+    // Calculate pagination
+    const totalImages = images.length;
+    const startIndex = (currentPage - 1) * requestedLimit;
+    const endIndex = startIndex + requestedLimit;
+    
+    // Apply pagination
+    images = images.slice(startIndex, endIndex);
+    console.log(`📊 PAGINATION: Showing ${images.length} of ${totalImages} total images (page ${currentPage})`);
     
     // Generate temporary Dropbox URLs for each image (with performance optimization)
     console.log(`🔗 Generating temporary URLs for ${images.length} images...`);
@@ -1143,7 +1154,18 @@ app.get('/api/images', async (req, res) => {
       console.log(`✅ Generated URLs: ${successCount}/${images.length} successful`);
     }
     
-    res.json(images);
+    // Return paginated response with metadata
+    res.json({
+      images,
+      pagination: {
+        page: currentPage,
+        limit: requestedLimit,
+        total: totalImages,
+        pages: Math.ceil(totalImages / requestedLimit),
+        hasNext: endIndex < totalImages,
+        hasPrev: currentPage > 1
+      }
+    });
   } catch (error) {
     console.error('Error fetching images:', error);
     res.status(500).json({ error: 'Failed to fetch images' });
