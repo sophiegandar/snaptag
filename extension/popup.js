@@ -278,14 +278,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     try {
-      // Save selected images and form data BEFORE closing modal
-      const imagesToSave = [...selectedImages]; // Copy the array
+      // Save selected images, pageImages, and form data BEFORE closing modal
+      const imagesToSave = [...selectedImages]; // Copy the selected indices
+      const imagesData = [...pageImages]; // Copy the actual image data
       const title = modalTitle.value.trim();
       const description = modalDescription.value.trim();
       const tags = modalTags.value.split(',').map(tag => tag.trim()).filter(Boolean);
       
       console.log('📝 Metadata:', { title, description, tags });
       console.log('📋 Images to save (before modal close):', imagesToSave);
+      console.log('📊 Images data saved:', imagesData.length);
       
       showLoading(true);
       closeModal(); // Now safe to close modal
@@ -299,7 +301,7 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log('📋 Selected image indices:', imagesToSave);
       
       for (const imageIndex of imagesToSave) {
-        const image = pageImages[imageIndex];
+        const image = imagesData[imageIndex];
         console.log(`📷 Processing image ${imageIndex}:`, image);
         
         if (!image || !image.src) {
