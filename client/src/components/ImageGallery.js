@@ -779,10 +779,52 @@ const ImageGallery = () => {
 
       // Remove image from local state
       setImages(prev => prev.filter(img => img.id !== imageId));
+      setUntaggedImages(prev => prev.filter(img => img.id !== imageId));
+      setSelectedUntagged(prev => prev.filter(id => id !== imageId));
+      setSelectedGalleryImages(prev => prev.filter(id => id !== imageId));
       toast.success('Image deleted successfully');
     } catch (error) {
       console.error('Error deleting image:', error);
       toast.error('Failed to delete image');
+    }
+  };
+
+  const bulkDeleteUntagged = async () => {
+    if (!window.confirm(`Are you sure you want to delete ${selectedUntagged.length} selected images? This action cannot be undone.`)) {
+      return;
+    }
+
+    const deletePromises = selectedUntagged.map(async (imageId) => {
+      try {
+        const response = await apiCall(`/api/images/${imageId}`, {
+          method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to delete image ${imageId}`);
+        }
+        return imageId;
+      } catch (error) {
+        console.error(`Error deleting image ${imageId}:`, error);
+        throw error;
+      }
+    });
+
+    try {
+      const deletedIds = await Promise.all(deletePromises);
+      
+      // Remove images from local state
+      setImages(prev => prev.filter(img => !deletedIds.includes(img.id)));
+      setUntaggedImages(prev => prev.filter(img => !deletedIds.includes(img.id)));
+      setSelectedUntagged([]);
+      setSelectedGalleryImages(prev => prev.filter(id => !deletedIds.includes(id)));
+      
+      toast.success(`Successfully deleted ${deletedIds.length} images`);
+    } catch (error) {
+      console.error('Error in bulk delete:', error);
+      toast.error('Some images failed to delete');
+      // Refresh the list to see what's left
+      loadUntaggedImages();
     }
   };
 
@@ -832,6 +874,16 @@ const ImageGallery = () => {
                     >
                       Clear
                     </button>
+                    
+                    {canDelete && selectedUntagged.length > 0 && (
+                      <button
+                        onClick={bulkDeleteUntagged}
+                        className="text-sm bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 flex items-center gap-1"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        Delete {selectedUntagged.length}
+                      </button>
+                    )}
                     <button
                       onClick={loadTagSuggestions}
                       disabled={loadingSuggestions}
@@ -887,7 +939,7 @@ const ImageGallery = () => {
                   {untaggedImages.map((image) => (
                     <div
                       key={image.id}
-                      className={`relative cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${
+                      className={`relative cursor-pointer rounded-lg overflow-hidden border-2 transition-all group ${
                         selectedUntagged.includes(image.id)
                           ? 'border-blue-500 ring-2 ring-blue-200'
                           : 'border-gray-200 hover:border-gray-300'
@@ -912,6 +964,22 @@ const ImageGallery = () => {
                           }`}>
                             <CheckCircle className="h-3 w-3" />
                           </div>
+                        </div>
+                      )}
+                      
+                      {/* Delete button for edit mode */}
+                      {canDelete && (
+                        <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteImage(image.id, image.filename);
+                            }}
+                            className="p-1 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-colors"
+                            title="Delete image"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
                         </div>
                       )}
                       
