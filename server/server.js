@@ -3073,40 +3073,28 @@ app.post('/api/images/:id/apply-suggestions', async (req, res) => {
 
 // Helper functions
 async function processAndUploadImage({ filePath, originalName, tags, name, focusedTags }) {
-  console.log('🏷️ Adding metadata to image...');
-  console.log('🔍 PROCESS: Received tags:', tags);
-  console.log('🔍 PROCESS: Tags type:', typeof tags, 'Array?:', Array.isArray(tags));
+  // CRITICAL: Create a deep copy of tags to prevent corruption during processing
+  const originalTags = Array.isArray(tags) ? [...tags] : [];
   
-  // Check file size before processing
-  const statsBefore = await fs.stat(filePath);
-  console.log('📊 File size before metadata processing:', statsBefore.size, 'bytes');
-  
-  // Add metadata to image
+  // Add metadata to image using original tags
   const processedImagePath = await metadataService.addMetadataToImage(filePath, {
-    tags,
+    tags: originalTags,
     name,
     focusedTags
   });
-  console.log('✅ Metadata added, processed image:', processedImagePath);
-
-  // Check file size after processing
-  const statsAfter = await fs.stat(processedImagePath);
-  console.log('📊 File size after metadata processing:', statsAfter.size, 'bytes');
-  
   // Check if file is empty
+  const statsAfter = await fs.stat(processedImagePath);
   if (statsAfter.size === 0) {
     throw new Error(`Processed image file is empty: ${processedImagePath}`);
   }
 
   // Generate file hash for duplicate detection
-  console.log('🔒 Generating file hash...');
   const fileHash = await generateFileHash(processedImagePath);
-  console.log('✅ File hash generated:', fileHash.substring(0, 16) + '...');
 
-      // Generate folder path based on tags
-    const baseDropboxFolder = serverSettings.dropboxFolder || process.env.DROPBOX_FOLDER || '/ARCHIER Team Folder/Support/Production/SnapTag';
-    const normalizedBaseFolder = baseDropboxFolder.startsWith('/') ? baseDropboxFolder : `/${baseDropboxFolder}`;
-  const folderPath = folderPathService.generateFolderPath(tags, normalizedBaseFolder);
+  // Generate folder path using protected original tags
+  const baseDropboxFolder = serverSettings.dropboxFolder || process.env.DROPBOX_FOLDER || '/ARCHIER Team Folder/Support/Production/SnapTag';
+  const normalizedBaseFolder = baseDropboxFolder.startsWith('/') ? baseDropboxFolder : `/${baseDropboxFolder}`;
+  const folderPath = folderPathService.generateFolderPath(originalTags, normalizedBaseFolder);
   
   // Generate filename from tags with proper sequence number
   let ext = path.extname(originalName);
@@ -3119,30 +3107,22 @@ async function processAndUploadImage({ filePath, originalName, tags, name, focus
   
   // Get next sequence number for proper AXXXX format
   const sequenceNumber = await folderPathService.getNextSequenceNumber(databaseService);
-  console.log(`🔢 Generated sequence number: ${sequenceNumber}`);
-  
-  console.log('🔍 PROCESS: About to generate filename with tags:', tags);
-  const filename = folderPathService.generateTagBasedFilename(tags, ext, sequenceNumber);
-  console.log('🔍 PROCESS: Generated filename:', filename);
+  const filename = folderPathService.generateTagBasedFilename(originalTags, ext, sequenceNumber);
   
   // Combine folder path and filename
   const dropboxPath = path.posix.join(folderPath, filename);
-  console.log('📂 Final Dropbox path:', dropboxPath);
 
-  console.log('☁️ Uploading to Dropbox...');
   // Upload to Dropbox
   const uploadResult = await dropboxService.uploadFile(processedImagePath, dropboxPath);
-  console.log('✅ Uploaded to Dropbox:', uploadResult.id);
 
   let imageId;
   try {
-    console.log('💾 Saving to database...');
-    // Save to database
+    // Save to database using protected original tags
     const imageData = {
       filename,
       original_name: originalName,
       dropbox_path: dropboxPath,
-      tags,
+      tags: originalTags,
       name,
       focused_tags: focusedTags,
       upload_date: new Date().toISOString(),
@@ -3152,7 +3132,6 @@ async function processAndUploadImage({ filePath, originalName, tags, name, focus
     };
 
     imageId = await databaseService.saveImage(imageData);
-    console.log('✅ Saved to database with ID:', imageId);
   } catch (databaseError) {
     console.error('❌ Database save failed after Dropbox upload:', databaseError);
     

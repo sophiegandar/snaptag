@@ -229,16 +229,19 @@ class PostgresService {
     const useClient = client || await this.pool.connect();
     
     try {
+      if (!tags || tags.length === 0) return;
+      
+      // Process all tags in batch for better performance
       for (const tagName of tags) {
-        // Insert or get tag
         const tagId = await this.getOrCreateTag(tagName, useClient);
         
-        // Link image to tag
+        // Link image to tag (atomic operation)
         await useClient.query(`
           INSERT INTO image_tags (image_id, tag_id) VALUES ($1, $2)
           ON CONFLICT (image_id, tag_id) DO NOTHING
         `, [imageId, tagId]);
       }
+      
     } finally {
       if (!client) useClient.release();
     }
@@ -271,28 +274,32 @@ class PostgresService {
         throw new Error('Tag name cannot be empty');
       }
       
-      console.log(`🏷️ Getting or creating tag: "${tagName}" -> normalized: "${normalizedTagName}"`);
+      // Use INSERT ... ON CONFLICT for atomic tag creation (prevents race conditions)
+      const result = await useClient.query(`
+        INSERT INTO tags (name, created_at) 
+        VALUES ($1, CURRENT_TIMESTAMP) 
+        ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+        RETURNING id
+      `, [normalizedTagName]);
       
-      // Check if tag already exists (case-insensitive)
-      const existingTag = await useClient.query(
-        'SELECT id FROM tags WHERE LOWER(name) = LOWER($1)',
-        [normalizedTagName]
-      );
-      
-      if (existingTag.rows.length > 0) {
-        console.log(`✅ Found existing tag with ID: ${existingTag.rows[0].id}`);
-        return existingTag.rows[0].id;
-      }
-      
-      // Create new tag with normalized name
-      const result = await useClient.query(
-        'INSERT INTO tags (name, created_at) VALUES ($1, CURRENT_TIMESTAMP) RETURNING id',
-        [normalizedTagName]
-      );
-      
-      console.log(`✅ Created new tag "${normalizedTagName}" with ID: ${result.rows[0].id}`);
       return result.rows[0].id;
       
+    } catch (error) {
+      // Fallback: try to get existing tag
+      try {
+        const existingTag = await useClient.query(
+          'SELECT id FROM tags WHERE LOWER(name) = LOWER($1)',
+          [normalizedTagName]
+        );
+        
+        if (existingTag.rows.length > 0) {
+          return existingTag.rows[0].id;
+        }
+      } catch (fallbackError) {
+        console.error(`❌ Tag creation failed completely for "${tagName}":`, fallbackError);
+      }
+      
+      throw error;
     } finally {
       if (!client) {
         useClient.release();

@@ -121,7 +121,7 @@ const ImageGallery = () => {
       });
       } else {
         console.log('📡 Using regular endpoint (no filters or sorting)');
-        response = await apiCall(`/api/images?limit=50&t=${Date.now()}`); // Default pagination with cache busting
+        response = await apiCall('/api/images?limit=50'); // Smart pagination - load 50 at a time
       }
       
       if (!response.ok) {
@@ -135,12 +135,9 @@ const ImageGallery = () => {
       const data = Array.isArray(responseData) ? responseData : responseData.images;
       console.log('✅ Images loaded successfully:', data.length, 'images');
       
-      // Debug: Check URLs in received data
-      const urlStats = data.map(img => ({ id: img.id, filename: img.filename, hasUrl: !!img.url, url: img.url?.substring(0, 50) }));
-      console.log('🔍 URL Debug - Received data:', urlStats.slice(0, 5));
-      
-      // Production mode: Server handles URL generation efficiently
-      console.log(`🚀 PRODUCTION MODE: Received ${data.length} images with server-generated URLs`);
+      // Production mode: Fast, efficient image loading
+      const urlCount = data.filter(img => img.url && !img.url.includes('placeholder')).length;
+      console.log(`✅ Loaded ${data.length} images (${urlCount} with URLs)`);
       
       setImages(data);
       // Update filters only after successful load
@@ -1870,16 +1867,11 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
 
       {/* Image Container - Enforce consistent square aspect ratio */}
       <div className="relative aspect-square bg-gray-100 overflow-hidden w-full max-w-full">
-        {imageError || !imageUrl || imageUrl.includes('placeholder') ? (
-          <div className="w-full h-full bg-gray-200 flex items-center justify-center p-2">
-            <div className="text-center text-gray-600">
-              <div className="text-xs font-mono break-all mb-1">{image.filename}</div>
-              <div className="text-xs text-gray-400">ID: {image.id}</div>
-              {image.tags && image.tags.length > 0 && (
-                <div className="text-xs mt-1 text-blue-600">
-                  {image.tags.join(', ')}
-                </div>
-              )}
+        {imageError ? (
+          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+            <div className="text-center text-gray-400">
+              <div className="text-3xl mb-2">🖼️</div>
+              <div className="text-sm font-medium">Image not available</div>
             </div>
           </div>
         ) : (
