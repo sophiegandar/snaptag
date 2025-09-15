@@ -6,7 +6,6 @@ document.addEventListener('DOMContentLoaded', function() {
   // DOM elements
   const openAppBtn = document.getElementById('openApp');
   const saveAllImagesBtn = document.getElementById('saveAllImages');
-  const scanPageBtn = document.getElementById('scanPage');
   const recentImagesDiv = document.getElementById('recentImages');
   
   // Modal elements
@@ -67,7 +66,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Quick actions
     saveAllImagesBtn.addEventListener('click', findAndSaveImages);
-    scanPageBtn.addEventListener('click', scanPageForImages);
     
     // Tags management
 
@@ -178,64 +176,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  async function scanPageForImages() {
-    try {
-      saveAllImagesBtn.disabled = true;
-      scanPageBtn.disabled = true;
-      scanPageBtn.textContent = 'Scanning...';
-      
-      // Validate page access first
-      const validation = await validatePageAccess();
-      if (!validation.valid) {
-        showStatus(validation.reason, 'error');
-        scanPageBtn.textContent = 'Scan Page';
-        saveAllImagesBtn.disabled = false;
-        scanPageBtn.disabled = false;
-        return;
-      }
-      
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      
-      // Try script injection first
-      try {
-        const [result] = await chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          function: findImagesOnPage
-        });
-        pageImages = result.result || [];
-      } catch (injectionError) {
-        console.log('Script injection failed, trying content script fallback...', injectionError);
-        
-        // Fallback to content script messaging  
-        const response = await chrome.tabs.sendMessage(tab.id, { action: 'getPageImages' });
-        pageImages = response.images || [];
-      }
-      
-      scanPageBtn.textContent = `Found ${pageImages.length} images`;
-      
-      setTimeout(() => {
-        scanPageBtn.textContent = 'Scan Page';
-        saveAllImagesBtn.disabled = false;
-        scanPageBtn.disabled = false;
-      }, 2000);
-      
-    } catch (error) {
-      console.error('Error scanning page:', error);
-      console.error('Error details:', error.message, error.stack);
-      
-      if (error.message && error.message.includes('Cannot access')) {
-        showStatus('Cannot access this page. Try refreshing or use a different page.', 'error');
-      } else if (error.message && error.message.includes('scripting')) {
-        showStatus('Script injection failed. This page may not allow extensions.', 'error');
-      } else {
-        showStatus(`Error scanning page: ${error.message || 'Unknown error'}`, 'error');
-      }
-      
-      scanPageBtn.textContent = 'Scan Page';
-      saveAllImagesBtn.disabled = false;
-      scanPageBtn.disabled = false;
-    }
-  }
 
   function showImageSelectionModal() {
     // Populate modal with default values
