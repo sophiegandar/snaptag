@@ -1117,7 +1117,7 @@ app.get('/api/images', async (req, res) => {
     console.log(`📊 PAGINATION: Showing ${images.length} of ${totalImages} total images (page ${currentPage})`);
     
     // Generate temporary Dropbox URLs for each image (with performance optimization)
-    console.log(`🔗 Generating temporary URLs for ${images.length} images...`);
+    console.log(`🔗 [DEBUG v2] Generating temporary URLs for ${images.length} images...`);
     
     // TEMPORARILY DISABLED: Force real URL generation to debug issue
     // if (images.length > 500) {
