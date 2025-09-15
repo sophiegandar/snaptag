@@ -865,37 +865,46 @@ const ImageGallery = () => {
       return;
     }
 
-    const deletePromises = selectedGalleryImages.map(async (imageId) => {
-      try {
-        const response = await apiCall(`/api/images/${imageId}`, {
-          method: 'DELETE'
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Failed to delete image ${imageId}`);
-        }
-        return imageId;
-      } catch (error) {
-        console.error(`Error deleting image ${imageId}:`, error);
-        throw error;
-      }
-    });
-
     try {
       setUpdatingTags(true);
-      const deletedIds = await Promise.all(deletePromises);
+      console.log(`🗑️ BULK DELETE: Sending ${selectedGalleryImages.length} image IDs to server:`, selectedGalleryImages);
+      
+      // Use new bulk delete endpoint
+      const response = await apiCall('/api/images/bulk-delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          imageIds: selectedGalleryImages
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(`Bulk delete failed: ${response.status} - ${errorData}`);
+      }
+      
+      const result = await response.json();
+      console.log(`✅ BULK DELETE RESULT:`, result);
       
       // Remove images from local state
-      setImages(prev => prev.filter(img => !deletedIds.includes(img.id)));
-      setUntaggedImages(prev => prev.filter(img => !deletedIds.includes(img.id)));
+      setImages(prev => prev.filter(img => !selectedGalleryImages.includes(img.id)));
+      setUntaggedImages(prev => prev.filter(img => !selectedGalleryImages.includes(img.id)));
       setSelectedGalleryImages([]);
-      setSelectedUntagged(prev => prev.filter(id => !deletedIds.includes(id)));
+      setSelectedUntagged(prev => prev.filter(id => !selectedGalleryImages.includes(id)));
       
-      toast.success(`Successfully deleted ${deletedIds.length} images`);
+      toast.success(result.message || `Successfully deleted ${result.deletedCount} images`);
+      
+      if (result.errors && result.errors.length > 0) {
+        console.warn('Some delete operations had errors:', result.errors);
+        toast.warning(`${result.errors.length} images had deletion errors`);
+      }
+      
     } catch (error) {
-      console.error('Error in bulk delete:', error);
-      toast.error('Some images failed to delete');
-      // Refresh the list to see what's left
+      console.error('❌ BULK DELETE ERROR:', error);
+      toast.error(`Failed to delete images: ${error.message}`);
+      // Refresh the list to see current state
       loadImages(currentFilters);
     } finally {
       setUpdatingTags(false);

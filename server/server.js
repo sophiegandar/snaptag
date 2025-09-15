@@ -1117,7 +1117,7 @@ app.get('/api/images', async (req, res) => {
     console.log(`📊 PAGINATION: Showing ${images.length} of ${totalImages} total images (page ${currentPage})`);
     
     // Generate temporary Dropbox URLs for each image (with performance optimization)
-    console.log(`🔗 [DEBUG v2] Generating temporary URLs for ${images.length} images...`);
+    console.log(`🔗 [FORCE DEPLOY v3] Generating temporary URLs for ${images.length} images...`);
     
     // TEMPORARILY DISABLED: Force real URL generation to debug issue
     // if (images.length > 500) {
@@ -1549,6 +1549,60 @@ app.delete('/api/images/:id', async (req, res) => {
     console.error('❌ Error deleting image:', error);
     console.error('❌ Error stack:', error.stack);
     res.status(500).json({ error: `Failed to delete image: ${error.message}` });
+  }
+});
+
+// Bulk delete multiple images  
+app.post('/api/images/bulk-delete', async (req, res) => {
+  try {
+    const { imageIds } = req.body;
+    
+    if (!imageIds || !Array.isArray(imageIds) || imageIds.length === 0) {
+      return res.status(400).json({ error: 'Image IDs array is required' });
+    }
+    
+    console.log(`🗑️ Bulk deleting ${imageIds.length} images:`, imageIds);
+    
+    let deletedCount = 0;
+    let errors = [];
+    
+    for (const imageId of imageIds) {
+      try {
+        // Get image info for Dropbox deletion
+        const image = await databaseService.getImageById(imageId);
+        if (image) {
+          // Delete from Dropbox
+          try {
+            await dropboxService.deleteFile(image.dropbox_path);
+            console.log(`✅ Deleted from Dropbox: ${image.filename}`);
+          } catch (dropboxError) {
+            console.error(`❌ Dropbox delete failed for ${image.filename}:`, dropboxError.message);
+            // Continue with database deletion even if Dropbox fails
+          }
+          
+          // Delete from database
+          await databaseService.deleteImage(imageId);
+          deletedCount++;
+          console.log(`✅ Deleted from database: ${image.filename}`);
+        }
+      } catch (error) {
+        console.error(`❌ Error deleting image ${imageId}:`, error.message);
+        errors.push({ imageId, error: error.message });
+      }
+    }
+    
+    console.log(`🎉 Bulk delete completed: ${deletedCount}/${imageIds.length} deleted`);
+    
+    res.json({
+      success: true,
+      message: `Deleted ${deletedCount}/${imageIds.length} images`,
+      deletedCount,
+      errors: errors.length > 0 ? errors : undefined
+    });
+    
+  } catch (error) {
+    console.error('❌ Bulk delete error:', error);
+    res.status(500).json({ error: 'Failed to bulk delete images: ' + error.message });
   }
 });
 
