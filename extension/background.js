@@ -133,23 +133,10 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
 // Handle messages from content script and popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log('📨 Message received:', request.action);
   if (request.action === 'saveImage') {
-    console.log('💾 saveImage action - request:', request);
-    console.log('💾 saveImage action - sender:', sender);
-    console.log('💾 saveImage action - sender.tab:', sender.tab);
-    
     handleImageSave(request.imageUrl, sender.tab, request.metadata)
-      .then(result => {
-        console.log('✅ handleImageSave success:', result);
-        sendResponse({ success: true, result });
-      })
-      .catch(error => {
-        console.error('❌ handleImageSave error:', error);
-        console.error('❌ Error message:', error.message);
-        console.error('❌ Error stack:', error.stack);
-        sendResponse({ success: false, error: error.message });
-      });
+      .then(result => sendResponse({ success: true, result }))
+      .catch(error => sendResponse({ success: false, error: error.message }));
     return true; // Keep message channel open for async response
   }
   
@@ -196,9 +183,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 // Handle image saving
 async function handleImageSave(imageUrl, tab, metadata = {}) {
   console.log('🚀 handleImageSave called with:', { imageUrl, tabUrl: tab?.url, metadata });
-  console.log('🔍 DEBUG: imageUrl type:', typeof imageUrl);
-  console.log('🔍 DEBUG: tab object:', tab);
-  console.log('🔍 DEBUG: metadata object:', metadata);
   
   try {
     const settings = await getSettings();
@@ -206,10 +190,6 @@ async function handleImageSave(imageUrl, tab, metadata = {}) {
     console.log('⚙️ Using server URL:', serverUrl);
 
     // Get additional metadata from tab
-    console.log('🔍 DEBUG: Building imageMetadata...');
-    console.log('🔍 DEBUG: tab?.url:', tab?.url);
-    console.log('🔍 DEBUG: tab?.title:', tab?.title);
-    
     const imageMetadata = {
       imageUrl: imageUrl,
       sourceUrl: tab?.url,
@@ -231,26 +211,14 @@ async function handleImageSave(imageUrl, tab, metadata = {}) {
     });
 
     console.log('📥 Response status:', response.status);
-    console.log('📥 Response ok:', response.ok);
-    console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()));
     
     if (!response.ok) {
-      console.log('❌ Response not ok, reading error...');
-      try {
-        const errorData = await response.json();
-        console.error('❌ Server error data:', errorData);
-        throw new Error(errorData.error || 'Failed to save image');
-      } catch (parseError) {
-        console.error('❌ Failed to parse error response:', parseError);
-        const errorText = await response.text();
-        console.error('❌ Raw error response:', errorText);
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
+      const errorData = await response.json();
+      console.error('❌ Server error:', errorData);
+      throw new Error(errorData.error || 'Failed to save image');
     }
 
-    console.log('✅ Response ok, parsing JSON...');
     const result = await response.json();
-    console.log('📊 Parsed result:', result);
     
     if (result.duplicate) {
       console.log('♻️ Duplicate image found:', result.filename);

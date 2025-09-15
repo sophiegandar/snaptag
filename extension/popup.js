@@ -300,18 +300,12 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log(`📊 Processing ${totalCount} images`);
       console.log('📋 Selected image indices:', imagesToSave);
       
-      console.log('🔍 DEBUG: imagesToSave array:', imagesToSave);
-      console.log('🔍 DEBUG: imagesData array length:', imagesData.length);
-      console.log('🔍 DEBUG: imagesData array contents:', imagesData);
-      
       for (const imageIndex of imagesToSave) {
-        console.log(`🔍 DEBUG: Looking for image at index ${imageIndex}`);
         const image = imagesData[imageIndex];
         console.log(`📷 Processing image ${imageIndex}:`, image);
         
         if (!image || !image.src) {
           console.error(`❌ Image ${imageIndex} is missing or has no src:`, image);
-          console.error(`❌ Available indices in imagesData:`, Object.keys(imagesData));
           continue;
         }
         
@@ -447,7 +441,14 @@ document.addEventListener('DOMContentLoaded', function() {
       // Create new image element
       const imageElement = document.createElement('div');
       imageElement.className = 'recent-image new-image'; // Add 'new-image' class for animation
-      imageElement.innerHTML = `<img src="${imageData.url}" alt="${imageData.title || imageData.filename}" loading="lazy">`;
+      
+      if (imageData.url) {
+        imageElement.innerHTML = `<img src="${imageData.url}" alt="${imageData.title || imageData.filename}" loading="lazy">`;
+      } else {
+        // Show placeholder for newly saved images without URL
+        imageElement.innerHTML = `<div style="width: 60px; height: 60px; background: #e5e7eb; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #6b7280; border-radius: 4px;">${imageData.filename.substring(0, 8)}...</div>`;
+      }
+      
       imageElement.addEventListener('click', () => {
         chrome.tabs.create({ url: `${settings.serverUrl}/image/${imageData.id}` });
       });
