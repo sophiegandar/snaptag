@@ -74,7 +74,7 @@ const upload = multer({
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|bmp|tiff|tif|webp|heic|heif|svg|avif|jp2|j2k|jpx|jpm|tga|targa/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype) || 
+    const mimetype = allowedTypes.thanktest(file.mimetype) || 
                      file.mimetype.includes('image/') || // Catch newer MIME types
                      file.mimetype.includes('heic') ||
                      file.mimetype.includes('heif') ||
@@ -1341,12 +1341,25 @@ app.post('/api/images/save-from-url', async (req, res) => {
     
     if (existingByUrl) {
       console.log('♻️ Duplicate found by URL:', existingByUrl.filename);
-      return res.json({
-        ...existingByUrl,
-        duplicate: true,
-        message: 'Image already exists',
-        url: await dropboxService.getTemporaryLink(existingByUrl.dropbox_path)
-      });
+      console.log('🔍 Duplicate object:', existingByUrl);
+      console.log('🔍 dropbox_path:', existingByUrl.dropbox_path);
+      
+      try {
+        const temporaryUrl = await dropboxService.getTemporaryLink(existingByUrl.dropbox_path);
+        console.log('✅ Generated temporary URL for duplicate');
+        
+        return res.json({
+          ...existingByUrl,
+          duplicate: true,
+          message: 'Image already exists',
+          url: temporaryUrl
+        });
+      } catch (error) {
+        console.error('❌ Error generating URL for duplicate:', error);
+        return res.status(500).json({ 
+          error: `Failed to generate URL for duplicate image: ${error.message}` 
+        });
+      }
     }
 
     console.log('🔄 Starting image save from URL:', imageUrl);
