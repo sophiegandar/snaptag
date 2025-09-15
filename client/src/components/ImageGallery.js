@@ -139,6 +139,36 @@ const ImageGallery = () => {
       const urlStats = data.map(img => ({ id: img.id, filename: img.filename, hasUrl: !!img.url, url: img.url?.substring(0, 50) }));
       console.log('🔍 URL Debug - Received data:', urlStats.slice(0, 5));
       
+      // TEMPORARY FIX: If all URLs are placeholders, try to generate real ones
+      const placeholderCount = data.filter(img => img.url && img.url.includes('placeholder')).length;
+      console.log(`🚨 PLACEHOLDER COUNT: ${placeholderCount}/${data.length} images have placeholder URLs`);
+      
+      if (placeholderCount > data.length * 0.5) { // If more than 50% are placeholders
+        console.log('🔧 ATTEMPTING CLIENT-SIDE URL FIX: Too many placeholders detected');
+        for (let i = 0; i < Math.min(data.length, 10); i++) { // Try first 10 images
+          const img = data[i];
+          if (img.url && img.url.includes('placeholder')) {
+            try {
+              console.log(`🔄 Attempting to fix URL for image ${img.id}...`);
+              // Try to get real URL for this specific image
+              fetch(`/api/images/${img.id}`)
+                .then(res => res.json())
+                .then(imageData => {
+                  if (imageData.url && !imageData.url.includes('placeholder')) {
+                    console.log(`✅ Fixed URL for image ${img.id}`);
+                    img.url = imageData.url;
+                    // Force re-render by updating state
+                    setImages(prevImages => [...prevImages]);
+                  }
+                })
+                .catch(err => console.log(`❌ Failed to fix URL for image ${img.id}:`, err));
+            } catch (error) {
+              console.log(`❌ Error fixing URL for image ${img.id}:`, error);
+            }
+          }
+        }
+      }
+      
       setImages(data);
       // Update filters only after successful load
       setCurrentFilters(searchFilters);
