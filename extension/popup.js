@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
   let selectedImages = [];
   let pageImages = [];
   let settings = {};
-  let defaultTags = ['precedent']; // Default tags for images
+  let defaultTags = []; // Default tags for images - let user decide
 
   // Initialize popup
   init();

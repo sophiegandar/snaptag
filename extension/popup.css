@@ -125,6 +125,14 @@ body {
   margin-bottom: 8px;
 }
 
+.form-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
 .tags-input, .form-input {
   flex: 1;
   padding: 8px 12px;
