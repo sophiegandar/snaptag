@@ -216,11 +216,33 @@ class FolderPathService {
       // TYPE: Archier
       filenameStructure = 'archier';
       
-      // CATEGORY: Find project name
+      // CATEGORY: Find project name (must match the list in generateFolderPath)
       const projectNames = [
+        // Legacy city names
         'yandoit', 'ballarat', 'melbourne', 'brunswick', 'geelong', 
         'sydney', 'adelaide', 'perth', 'canberra', 'hobart',
-        'bendigo', 'shepparton', 'warrnambool', 'mildura'
+        'bendigo', 'shepparton', 'warrnambool', 'mildura',
+        // Current Archier projects
+        'taroona house', 'taroona',
+        'the boulevard', 'boulevard',
+        'five yards house', 'five yards',
+        'hampden road house', 'hampden road',
+        'davison street',
+        'yandoit house',
+        'oakover preston',
+        'corner house',
+        'parks victoria',
+        'caroma',
+        'off grid house', 'off grid',
+        'farm house',
+        'view house',
+        'court house',
+        'casa acton',
+        'harry house',
+        'willisdene house',
+        'julius street',
+        'yagiz',
+        'creative spaces'
       ];
       
       let categoryFound = false;
