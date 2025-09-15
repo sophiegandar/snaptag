@@ -240,11 +240,15 @@ const ImageGallery = () => {
   };
 
   const toggleUntaggedSelection = (imageId) => {
-    setSelectedUntagged(prev => 
-      prev.includes(imageId) 
+    console.log('🔄 Triage selection toggled for image:', imageId);
+    setSelectedUntagged(prev => {
+      const wasSelected = prev.includes(imageId);
+      const newSelection = wasSelected 
         ? prev.filter(id => id !== imageId)
-        : [...prev, imageId]
-    );
+        : [...prev, imageId];
+      console.log('🔄 Triage selection updated:', wasSelected ? 'deselected' : 'selected', 'New count:', newSelection.length);
+      return newSelection;
+    });
   };
 
   const selectAllUntagged = () => {
@@ -994,10 +998,13 @@ const ImageGallery = () => {
                       key={image.id}
                       className={`relative cursor-pointer rounded-lg overflow-hidden border-2 transition-all group ${
                         selectedUntagged.includes(image.id)
-                          ? 'border-blue-500 ring-2 ring-blue-200'
-                          : 'border-gray-200 hover:border-gray-300'
+                          ? 'border-blue-500 ring-2 ring-blue-200 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                       }`}
-                      onClick={() => toggleUntaggedSelection(image.id)}
+                      onClick={(e) => {
+                        console.log('🖱️ Triage image clicked:', image.id, e);
+                        toggleUntaggedSelection(image.id);
+                      }}
                     >
                       <div className="aspect-square">
                         <img
