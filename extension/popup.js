@@ -300,12 +300,18 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log(`📊 Processing ${totalCount} images`);
       console.log('📋 Selected image indices:', imagesToSave);
       
+      console.log('🔍 DEBUG: imagesToSave array:', imagesToSave);
+      console.log('🔍 DEBUG: imagesData array length:', imagesData.length);
+      console.log('🔍 DEBUG: imagesData array contents:', imagesData);
+      
       for (const imageIndex of imagesToSave) {
+        console.log(`🔍 DEBUG: Looking for image at index ${imageIndex}`);
         const image = imagesData[imageIndex];
         console.log(`📷 Processing image ${imageIndex}:`, image);
         
         if (!image || !image.src) {
           console.error(`❌ Image ${imageIndex} is missing or has no src:`, image);
+          console.error(`❌ Available indices in imagesData:`, Object.keys(imagesData));
           continue;
         }
         
