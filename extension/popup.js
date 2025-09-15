@@ -322,7 +322,12 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   async function saveSelectedImages() {
+    console.log('🚀 saveSelectedImages called');
+    console.log('📊 selectedImages:', selectedImages);
+    console.log('📊 pageImages:', pageImages);
+    
     if (selectedImages.length === 0) {
+      console.log('❌ No images selected');
       showStatus('Please select at least one image', 'error');
       return;
     }
@@ -335,13 +340,24 @@ document.addEventListener('DOMContentLoaded', function() {
       const description = modalDescription.value.trim();
       const tags = modalTags.value.split(',').map(tag => tag.trim()).filter(Boolean);
       
+      console.log('📝 Metadata:', { title, description, tags });
+      
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      console.log('🌐 Current tab:', tab.url);
       
       let savedCount = 0;
       const totalCount = selectedImages.length;
+      console.log(`📊 Processing ${totalCount} images`);
+      console.log('📋 Selected image indices:', selectedImages);
       
       for (const imageIndex of selectedImages) {
         const image = pageImages[imageIndex];
+        console.log(`📷 Processing image ${imageIndex}:`, image);
+        
+        if (!image || !image.src) {
+          console.error(`❌ Image ${imageIndex} is missing or has no src:`, image);
+          continue;
+        }
         
         try {
           const metadata = {
@@ -350,27 +366,44 @@ document.addEventListener('DOMContentLoaded', function() {
             tags: tags.length > 0 ? tags : defaultTags
           };
           
+          console.log(`📝 Sending save request for image ${imageIndex}:`, {
+            imageUrl: image.src,
+            metadata: metadata
+          });
+          
           await new Promise((resolve, reject) => {
             chrome.runtime.sendMessage({
               action: 'saveImage',
               imageUrl: image.src,
               metadata: metadata
             }, (response) => {
-              if (response.success) {
+              console.log(`📥 Response for image ${imageIndex}:`, response);
+              
+              if (chrome.runtime.lastError) {
+                console.error(`❌ Runtime error for image ${imageIndex}:`, chrome.runtime.lastError);
+                reject(new Error(chrome.runtime.lastError.message));
+                return;
+              }
+              
+              if (response && response.success) {
+                console.log(`✅ Successfully saved image ${imageIndex}`);
                 savedCount++;
                 resolve(response.result);
               } else {
-                reject(new Error(response.error));
+                console.error(`❌ Failed to save image ${imageIndex}:`, response?.error || 'Unknown error');
+                reject(new Error(response?.error || 'Unknown error'));
               }
             });
           });
           
         } catch (error) {
-          console.error(`Error saving image ${imageIndex}:`, error);
+          console.error(`❌ Error saving image ${imageIndex}:`, error);
         }
       }
       
       showLoading(false);
+      
+      console.log(`📊 Final results: savedCount=${savedCount}, totalCount=${totalCount}`);
       
       if (savedCount === totalCount) {
         showStatus(`Successfully saved ${savedCount} images`, 'success');
