@@ -139,8 +139,8 @@ const ImageGallery = () => {
       const urlStats = data.map(img => ({ id: img.id, filename: img.filename, hasUrl: !!img.url, url: img.url?.substring(0, 50) }));
       console.log('🔍 URL Debug - Received data:', urlStats.slice(0, 5));
       
-      // SIMPLE FIX: Just show filenames so user can identify and delete images
-      console.log(`📋 SIMPLE MODE: Showing ${data.length} images by filename (no URL loading)`);
+      // Production mode: Server handles URL generation efficiently
+      console.log(`🚀 PRODUCTION MODE: Received ${data.length} images with server-generated URLs`);
       
       setImages(data);
       // Update filters only after successful load
