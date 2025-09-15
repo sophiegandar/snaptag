@@ -828,6 +828,48 @@ const ImageGallery = () => {
     }
   };
 
+  const bulkDeleteGalleryImages = async () => {
+    if (!window.confirm(`Are you sure you want to delete ${selectedGalleryImages.length} selected images? This action cannot be undone.`)) {
+      return;
+    }
+
+    const deletePromises = selectedGalleryImages.map(async (imageId) => {
+      try {
+        const response = await apiCall(`/api/images/${imageId}`, {
+          method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to delete image ${imageId}`);
+        }
+        return imageId;
+      } catch (error) {
+        console.error(`Error deleting image ${imageId}:`, error);
+        throw error;
+      }
+    });
+
+    try {
+      setUpdatingTags(true);
+      const deletedIds = await Promise.all(deletePromises);
+      
+      // Remove images from local state
+      setImages(prev => prev.filter(img => !deletedIds.includes(img.id)));
+      setUntaggedImages(prev => prev.filter(img => !deletedIds.includes(img.id)));
+      setSelectedGalleryImages([]);
+      setSelectedUntagged(prev => prev.filter(id => !deletedIds.includes(id)));
+      
+      toast.success(`Successfully deleted ${deletedIds.length} images`);
+    } catch (error) {
+      console.error('Error in bulk delete:', error);
+      toast.error('Some images failed to delete');
+      // Refresh the list to see what's left
+      loadImages(currentFilters);
+    } finally {
+      setUpdatingTags(false);
+    }
+  };
+
     return (
     <div className="space-y-6">
       {/* Tag Update State */}
@@ -1442,6 +1484,17 @@ const ImageGallery = () => {
                       <FolderPlus className="h-4 w-4 mr-2" />
                       Assign Project
                     </button>
+                    
+                    {canDelete && (
+                      <button
+                        onClick={bulkDeleteGalleryImages}
+                        disabled={loading}
+                        className="bg-red-500 text-white px-3 py-2 rounded-md hover:bg-red-600 disabled:opacity-50 flex items-center border border-red-600 text-sm"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete {selectedGalleryImages.length}
+                      </button>
+                    )}
                   </div>
                   <div className="flex items-center space-x-2">
                     <button
@@ -1482,10 +1535,13 @@ const ImageGallery = () => {
           </p>
         </div>
       ) : (
-            <div className={viewMode === 'grid' 
-              ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-center'
-              : 'space-y-4'
-            }>
+            <div 
+              className={viewMode === 'grid' 
+                ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-center'
+                : 'space-y-4'
+              }
+              data-selection-count={selectedGalleryImages.length}
+            >
           {images.map(image => (
             <ImageCard 
               key={image.id} 
@@ -1613,6 +1669,21 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
     setImageError(true);
   };
 
+  // Handle click behavior: if any images are selected, clicking toggles selection; otherwise opens editor
+  const handleImageClick = (e) => {
+    // Get the current selection count from the parent component
+    const hasSelections = document.querySelector('[data-selection-count]')?.getAttribute('data-selection-count') > 0;
+    
+    if (hasSelections || isSelected) {
+      // If in selection mode, toggle selection
+      e.preventDefault();
+      onSelect();
+    } else {
+      // If not in selection mode, open editor
+      onEdit(image.id);
+    }
+  };
+
   // Helper functions to extract metadata
   const getImageType = () => {
     const tags = image.tags || [];
@@ -1704,7 +1775,7 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
           </div>
         )}
         {imageError ? (
-          <div className="w-24 h-24 bg-gray-200 flex items-center justify-center rounded cursor-pointer" onClick={() => onEdit(image.id)}>
+          <div className="w-24 h-24 bg-gray-200 flex items-center justify-center rounded cursor-pointer" onClick={handleImageClick}>
             <div className="text-center text-gray-500">
               <div className="text-lg">🖼️</div>
             </div>
@@ -1716,7 +1787,7 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
           className={`w-24 h-24 object-cover rounded cursor-pointer ${
             isUnusualTexture() ? 'scale-150' : ''
           }`}
-          onClick={() => onEdit(image.id)}
+          onClick={handleImageClick}
             onError={handleImageError}
         />
         )}
@@ -1768,7 +1839,7 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
       className={`relative group cursor-pointer transition-all duration-200 w-full max-w-full ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onClick={() => onEdit(image.id)}
+      onClick={handleImageClick}
     >
       {/* Selection Checkbox - only visible on hover or when selected */}
       {canEdit && (
