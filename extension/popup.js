@@ -1,6 +1,8 @@
 // SnapTag Extension Popup JavaScript
+console.log('🚀 SnapTag popup script file loaded!');
 
 document.addEventListener('DOMContentLoaded', function() {
+  console.log('🚀 SnapTag popup DOM ready!');
   // DOM elements
   const openAppBtn = document.getElementById('openApp');
   const saveAllImagesBtn = document.getElementById('saveAllImages');
