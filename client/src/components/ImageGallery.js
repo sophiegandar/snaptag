@@ -155,10 +155,17 @@ const ImageGallery = () => {
                 .then(res => res.json())
                 .then(imageData => {
                   if (imageData.url && !imageData.url.includes('placeholder')) {
-                    console.log(`✅ Fixed URL for image ${img.id}`);
+                    console.log(`✅ Fixed URL for image ${img.id}: ${imageData.url.substring(0, 50)}...`);
                     img.url = imageData.url;
-                    // Force re-render by updating state
-                    setImages(prevImages => [...prevImages]);
+                    // Force re-render by updating state with new array reference
+                    setImages(prevImages => {
+                      const newImages = [...prevImages];
+                      const index = newImages.findIndex(i => i.id === img.id);
+                      if (index !== -1) {
+                        newImages[index] = { ...newImages[index], url: imageData.url };
+                      }
+                      return newImages;
+                    });
                   }
                 })
                 .catch(err => console.log(`❌ Failed to fix URL for image ${img.id}:`, err));
