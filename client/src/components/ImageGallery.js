@@ -139,41 +139,34 @@ const ImageGallery = () => {
       const urlStats = data.map(img => ({ id: img.id, filename: img.filename, hasUrl: !!img.url, url: img.url?.substring(0, 50) }));
       console.log('🔍 URL Debug - Received data:', urlStats.slice(0, 5));
       
-      // TEMPORARY FIX: If all URLs are placeholders, try to generate real ones
+      // TEMPORARY: Fix ALL images so user can see and delete incorrect ones
       const placeholderCount = data.filter(img => img.url && img.url.includes('placeholder')).length;
       console.log(`🚨 PLACEHOLDER COUNT: ${placeholderCount}/${data.length} images have placeholder URLs`);
       
-      if (placeholderCount > data.length * 0.5) { // If more than 50% are placeholders
-        console.log('🔧 ATTEMPTING CLIENT-SIDE URL FIX: Too many placeholders detected');
-        for (let i = 0; i < Math.min(data.length, 50); i++) { // Try first 50 images
-          const img = data[i];
+      if (placeholderCount > 0) {
+        console.log('🔧 FIXING ALL IMAGES FOR CLEANUP: Generating real URLs for all images...');
+        data.forEach((img, index) => {
           if (img.url && img.url.includes('placeholder')) {
-            try {
-              console.log(`🔄 Attempting to fix URL for image ${img.id}...`);
-              // Try to get real URL for this specific image
+            setTimeout(() => {
               fetch(`/api/images/${img.id}`)
                 .then(res => res.json())
                 .then(imageData => {
                   if (imageData.url && !imageData.url.includes('placeholder')) {
-                    console.log(`✅ Fixed URL for image ${img.id}: ${imageData.url.substring(0, 50)}...`);
-                    img.url = imageData.url;
-                    // Force re-render by updating state with new array reference
+                    console.log(`✅ Fixed URL for image ${img.id}`);
                     setImages(prevImages => {
                       const newImages = [...prevImages];
-                      const index = newImages.findIndex(i => i.id === img.id);
-                      if (index !== -1) {
-                        newImages[index] = { ...newImages[index], url: imageData.url };
+                      const imgIndex = newImages.findIndex(i => i.id === img.id);
+                      if (imgIndex !== -1) {
+                        newImages[imgIndex] = { ...newImages[imgIndex], url: imageData.url };
                       }
                       return newImages;
                     });
                   }
                 })
-                .catch(err => console.log(`❌ Failed to fix URL for image ${img.id}:`, err));
-            } catch (error) {
-              console.log(`❌ Error fixing URL for image ${img.id}:`, error);
-            }
+                .catch(err => console.log(`❌ Failed to fix URL for image ${img.id}`));
+            }, index * 100); // Stagger requests by 100ms
           }
-        }
+        });
       }
       
       setImages(data);
