@@ -203,9 +203,8 @@ class FolderPathService {
     // Helper function to clean tag for filename
     const cleanTag = (tag) => {
       return tag
-        .replace(/[^a-z0-9]/g, '-') // Replace non-alphanumeric with hyphens
-        .replace(/-+/g, '-') // Replace multiple hyphens with single
-        .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+        .replace(/[^a-z0-9]/g, '') // Remove non-alphanumeric characters (no hyphens)
+        .replace(/\s+/g, ''); // Remove any remaining spaces
     };
     
     // Determine filename structure: AXXXX-Type-Category
