@@ -130,13 +130,13 @@ document.addEventListener('DOMContentLoaded', function() {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       
       // Try script injection first
-      let pageImages = [];
       try {
         const [result] = await chrome.scripting.executeScript({
           target: { tabId: tab.id },
           function: findImagesOnPage
         });
         pageImages = result.result || [];
+        console.log('📷 Found images via script injection:', pageImages.length);
       } catch (injectionError) {
         console.log('Script injection failed, trying content script fallback...', injectionError);
         
@@ -144,11 +144,14 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
           const response = await chrome.tabs.sendMessage(tab.id, { action: 'getPageImages' });
           pageImages = response.images || [];
+          console.log('📷 Found images via content script fallback:', pageImages.length);
         } catch (messageError) {
           console.error('Content script fallback also failed:', messageError);
           throw injectionError; // Re-throw original error
         }
       }
+      
+      console.log('📊 Global pageImages after scanning:', pageImages.length);
       
       if (pageImages.length === 0) {
         showStatus('No suitable images found on this page', 'error');
