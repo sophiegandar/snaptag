@@ -1119,13 +1119,13 @@ app.get('/api/images', async (req, res) => {
     // Generate temporary Dropbox URLs for each image (with performance optimization)
     console.log(`🔗 Generating temporary URLs for ${images.length} images...`);
     
-    // Performance optimization: if too many images, use placeholders to prevent timeout
-    if (images.length > 500) {
-      console.log(`⚡ Too many images (${images.length}), using placeholders to prevent timeout`);
-      for (const image of images) {
-        image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`;
-      }
-    } else {
+    // TEMPORARILY DISABLED: Force real URL generation to debug issue
+    // if (images.length > 500) {
+    //   console.log(`⚡ Too many images (${images.length}), using placeholders to prevent timeout`);
+    //   for (const image of images) {
+    //     image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`;
+    //   }
+    // } else {
       // For smaller sets, generate URLs in parallel for better performance
       console.log(`🚀 Generating ${images.length} URLs in parallel...`);
       const urlPromises = images.map(async (image) => {
@@ -1160,7 +1160,7 @@ app.get('/api/images', async (req, res) => {
       
       const successCount = results.filter(r => r.success).length;
       console.log(`✅ Generated URLs: ${successCount}/${images.length} successful`);
-    }
+    // }
     
     // Return appropriate response format based on request
     // For extension requests (with limit parameter), return simple array
