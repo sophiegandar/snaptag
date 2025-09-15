@@ -64,9 +64,31 @@ class FolderPathService {
       
       // Look for project names (expandable list)
       const projectNames = [
+        // Legacy city names
         'yandoit', 'ballarat', 'melbourne', 'brunswick', 'geelong', 
         'sydney', 'adelaide', 'perth', 'canberra', 'hobart',
-        'bendigo', 'shepparton', 'warrnambool', 'mildura'
+        'bendigo', 'shepparton', 'warrnambool', 'mildura',
+        // Current Archier projects
+        'taroona house', 'taroona',
+        'the boulevard', 'boulevard',
+        'five yards house', 'five yards',
+        'hampden road house', 'hampden road',
+        'davison street',
+        'yandoit house',
+        'oakover preston',
+        'corner house',
+        'parks victoria',
+        'caroma',
+        'off grid house', 'off grid',
+        'farm house',
+        'view house',
+        'court house',
+        'casa acton',
+        'harry house',
+        'willisdene house',
+        'julius street',
+        'yagiz',
+        'creative spaces'
       ];
       
       let projectName = null;
@@ -144,6 +166,23 @@ class FolderPathService {
     return str.split(' ').map(word => 
       word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
     ).join(' ');
+  }
+
+  /**
+   * Convert sequence number to letter format: 
+   * 1-9999 -> AA, 10000-19999 -> AB, 20000-29999 -> AC, etc.
+   */
+  getLetterSequence(sequenceNumber) {
+    if (sequenceNumber < 1) return 'AA';
+    
+    // Determine which 9999-image group we're in
+    const groupIndex = Math.floor((sequenceNumber - 1) / 9999);
+    
+    // Convert group index to double letters: 0->AA, 1->AB, 2->AC, etc.
+    const firstLetter = 'A';
+    const secondLetter = String.fromCharCode(65 + groupIndex); // A, B, C, D...
+    
+    return firstLetter + secondLetter;
   }
 
   /**
@@ -237,11 +276,17 @@ class FolderPathService {
       }
     }
     
-    // Add sequential number with A prefix
+    // Add sequential number with AA prefix (double letter format)
     let filename;
     if (sequenceNumber !== null) {
-      const paddedNumber = sequenceNumber.toString().padStart(4, '0');
-      filename = `A${paddedNumber}-${filenameStructure}`;
+      // Convert sequence number to AA, AB, AC... format
+      const letterPart = this.getLetterSequence(sequenceNumber);
+      
+      // Calculate the number within the current letter group (1-9999)
+      const numberInGroup = ((sequenceNumber - 1) % 9999) + 1;
+      const paddedNumber = numberInGroup.toString().padStart(4, '0');
+      
+      filename = `${letterPart}-${paddedNumber}-${filenameStructure}`;
     } else {
       // Fallback to date-based if no sequence provided
       const date = new Date();
@@ -273,25 +318,37 @@ class FolderPathService {
   async getNextSequenceNumber(databaseService) {
     try {
       // Get the highest current sequence number from existing filenames (PostgreSQL compatible)
-      // Look for AXXXX format (preferred) and fallback to legacy XXXX format
+      // Look for AA-XXXX format (preferred) and fallback to legacy A-XXXX format
       const result = await databaseService.query(`
         SELECT filename 
         FROM images 
-        WHERE filename ~ '^A?[0-9]{4,5}-'
+        WHERE filename ~ '^[A-Z]{1,2}[0-9]{4}-'
         ORDER BY filename DESC 
         LIMIT 1
       `);
       
       if (result.rows && result.rows.length > 0) {
         const latestFilename = result.rows[0].filename;
-        // Try AXXXX format first
-        let match = latestFilename.match(/^A(\d{4})-/);
+        console.log('🔍 Latest filename found:', latestFilename);
+        
+        // Try AA-XXXX format first (new format)
+        let match = latestFilename.match(/^[A-Z]{2}(\d{4})-/);
         if (match) {
+          console.log('📋 Found AA-XXXX format, sequence:', match[1]);
           return parseInt(match[1]) + 1;
         }
+        
+        // Fallback to A-XXXX format 
+        match = latestFilename.match(/^[A-Z](\d{4})-/);
+        if (match) {
+          console.log('📋 Found A-XXXX format, sequence:', match[1]);
+          return parseInt(match[1]) + 1;
+        }
+        
         // Fallback to legacy XXXX format
         match = latestFilename.match(/^(\d{4,5})-/);
         if (match) {
+          console.log('📋 Found legacy XXXX format, sequence:', match[1]);
           return parseInt(match[1]) + 1;
         }
       }
@@ -318,9 +375,16 @@ class FolderPathService {
     paths.push(archierBase);
     
     const projectNames = [
+      // Legacy city names
       'Yandoit', 'Ballarat', 'Melbourne', 'Brunswick', 'Geelong',
       'Sydney', 'Adelaide', 'Perth', 'Canberra', 'Hobart',
-      'Bendigo', 'Shepparton', 'Warrnambool', 'Mildura'
+      'Bendigo', 'Shepparton', 'Warrnambool', 'Mildura',
+      // Current Archier projects
+      'Taroona House', 'The Boulevard', 'Five Yards House', 'Hampden Road House',
+      'Davison Street', 'Yandoit House', 'Oakover Preston', 'Corner House',
+      'Parks Victoria', 'Caroma', 'Off Grid House', 'Farm House',
+      'View House', 'Court House', 'Casa Acton', 'Harry House',
+      'Willisdene House', 'Julius Street', 'Yagiz', 'Creative Spaces'
     ];
     
     for (const project of projectNames) {
