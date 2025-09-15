@@ -1154,18 +1154,24 @@ app.get('/api/images', async (req, res) => {
       console.log(`✅ Generated URLs: ${successCount}/${images.length} successful`);
     }
     
-    // Return paginated response with metadata
-    res.json({
-      images,
-      pagination: {
-        page: currentPage,
-        limit: requestedLimit,
-        total: totalImages,
-        pages: Math.ceil(totalImages / requestedLimit),
-        hasNext: endIndex < totalImages,
-        hasPrev: currentPage > 1
-      }
-    });
+    // Return appropriate response format based on request
+    // For extension requests (with limit parameter), return simple array
+    if (limit && !isNaN(parseInt(limit))) {
+      res.json(images);
+    } else {
+      // For app requests, return paginated response with metadata
+      res.json({
+        images,
+        pagination: {
+          page: currentPage,
+          limit: requestedLimit,
+          total: totalImages,
+          pages: Math.ceil(totalImages / requestedLimit),
+          hasNext: endIndex < totalImages,
+          hasPrev: currentPage > 1
+        }
+      });
+    }
   } catch (error) {
     console.error('Error fetching images:', error);
     res.status(500).json({ error: 'Failed to fetch images' });
@@ -1342,10 +1348,48 @@ app.post('/api/images/upload', upload.single('image'), async (req, res) => {
   }
 });
 
+// Request queue to prevent sequence number collisions
+const saveQueue = [];
+let isProcessingQueue = false;
+
+async function processSaveQueue() {
+  if (isProcessingQueue || saveQueue.length === 0) return;
+  
+  isProcessingQueue = true;
+  console.log(`🚦 Processing save queue: ${saveQueue.length} requests waiting`);
+  
+  while (saveQueue.length > 0) {
+    const { req, res, requestId, startTime } = saveQueue.shift();
+    try {
+      await processSaveRequest(req, res, requestId, startTime);
+    } catch (error) {
+      console.error(`❌ Queue processing error for ${requestId}:`, error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  }
+  
+  isProcessingQueue = false;
+}
+
 // Save image from URL (for browser extension)
 app.post('/api/images/save-from-url', async (req, res) => {
+  const startTime = Date.now();
+  const requestId = Math.random().toString(36).substring(7);
+  
+  // Add to queue for sequential processing
+  saveQueue.push({ req, res, requestId, startTime });
+  console.log(`🚦 [${requestId}] Added to save queue (position: ${saveQueue.length})`);
+  
+  // Start processing queue
+  processSaveQueue();
+});
+
+async function processSaveRequest(req, res, requestId, startTime) {
+  
   try {
-    console.log('🌐 Extension save request received:', {
+    console.log(`🌐 [${requestId}] Extension save request received:`, {
       imageUrl: req.body.imageUrl?.substring(0, 100) + '...',
       tags: req.body.tags,
       title: req.body.title,
@@ -1358,10 +1402,11 @@ app.post('/api/images/save-from-url', async (req, res) => {
     }
 
     // Check for duplicate by URL first (fastest check)
-    console.log('🔍 Checking for duplicate by URL:', imageUrl);
+    console.log(`🔍 [${requestId}] Checking for duplicate by URL:`, imageUrl);
     const existingByUrl = await databaseService.checkDuplicateByUrl(imageUrl);
     
     if (existingByUrl) {
+      console.log(`♻️ [${requestId}] DUPLICATE DETECTED - skipping save:`, existingByUrl.filename);
       console.log('♻️ Duplicate found by URL:', existingByUrl.filename);
       console.log('🔍 Duplicate object:', existingByUrl);
       console.log('🔍 dropbox_path:', existingByUrl.dropbox_path);
@@ -1384,27 +1429,29 @@ app.post('/api/images/save-from-url', async (req, res) => {
       }
     }
 
-    console.log('🔄 Starting image save from URL:', imageUrl);
+    console.log(`🔄 [${requestId}] Starting image save from URL:`, imageUrl);
     const result = await saveImageFromUrl({
       imageUrl,
       tags: tags || [],
       title,
       description,
       focusedTags: focusedTags || [],
-      sourceUrl
+      sourceUrl,
+      requestId
     });
 
-    console.log('✅ Image saved successfully:', result.filename);
+    const duration = Date.now() - startTime;
+    console.log(`✅ [${requestId}] Image saved successfully in ${duration}ms:`, result.filename);
     res.json({
       success: true,
       result: result
     });
   } catch (error) {
-    console.error('❌ Error saving image from URL:', error);
-    console.error('❌ Full error details:', error.message, error.stack);
+    console.error(`❌ [${requestId}] Error saving image from URL:`, error);
+    console.error(`❌ [${requestId}] Full error details:`, error.message, error.stack);
     res.status(500).json({ error: `Failed to save image from URL: ${error.message}` });
   }
-});
+}
 
 // Update image tags
 app.put('/api/images/:id/tags', async (req, res) => {
