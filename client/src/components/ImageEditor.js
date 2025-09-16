@@ -232,6 +232,8 @@ const ImageEditor = () => {
       setProjectAssignments(imageData.project_assignments || []);
       
       console.log('🔧 DEBUG: Loaded tags from server:', imageData.tags);
+      console.log('🔧 DEBUG: Tags type:', typeof imageData.tags);
+      console.log('🔧 DEBUG: Tags isArray:', Array.isArray(imageData.tags));
       console.log('🔧 DEBUG: Parsed tags:', parsedTags);
       
       // Store original values for change tracking
