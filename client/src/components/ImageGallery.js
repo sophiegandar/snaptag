@@ -1004,10 +1004,9 @@ const ImageGallery = () => {
                           ? 'border-blue-500 ring-2 ring-blue-200 bg-blue-50'
                           : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                       }`}
-                      onClick={(e) => {
-                        console.log('🖱️ Triage image clicked:', image.id, e);
-                        toggleUntaggedSelection(image.id);
-                      }}
+                      onClick={() => toggleUntaggedSelection(image.id)}
+                      onDoubleClick={() => navigate(`/image/${image.id}`, { state: { from: 'triage' } })}
+                      title="Click to select/deselect • Double-click to edit"
                     >
                       <div className="aspect-square">
                         <img
