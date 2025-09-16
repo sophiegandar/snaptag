@@ -59,6 +59,53 @@ const ImageEditor = () => {
   // AI suggestions state
   const [aiSuggestions, setAiSuggestions] = useState([]);
   const [loadingAiSuggestions, setLoadingAiSuggestions] = useState(false);
+
+  // Dynamic property calculation functions
+  const getImageType = () => {
+    const lowercaseTags = tags.map(tag => tag.toLowerCase());
+    if (lowercaseTags.includes('archier')) return 'Archier';
+    if (lowercaseTags.includes('precedent')) return 'Precedent';
+    if (lowercaseTags.includes('texture')) return 'Texture';
+    return 'General';
+  };
+
+  const getImageCategory = () => {
+    const lowercaseTags = tags.map(tag => tag.toLowerCase());
+    if (lowercaseTags.includes('complete')) return 'Complete';
+    if (lowercaseTags.includes('wip')) return 'WIP';
+    
+    // Check for specific category tags
+    const categoryTags = ['brick', 'carpet', 'concrete', 'fabric', 'metal', 'stone', 'tile', 'wood', 
+                         'art', 'bathrooms', 'details', 'doors', 'exteriors', 'furniture', 'interiors', 
+                         'joinery', 'kitchens', 'landscape', 'lighting', 'spatial', 'stairs', 'structure'];
+    
+    for (const tag of lowercaseTags) {
+      if (categoryTags.includes(tag)) {
+        return capitalizeForDisplay(tag);
+      }
+    }
+    
+    return 'General';
+  };
+
+  const getProject = () => {
+    const lowercaseTags = tags.map(tag => tag.toLowerCase());
+    
+    // Check for project names
+    const projectNames = ['taroona house', 'corner house', 'oakover preston', 'the boulevard',
+                         'de witt st', 'couvreur', 'yandoit', 'archier'];
+    
+    for (const project of projectNames) {
+      if (lowercaseTags.includes(project)) {
+        return capitalizeForDisplay(project);
+      }
+    }
+    
+    // Check for team tags
+    if (lowercaseTags.includes('archier')) return 'Archier';
+    
+    return null;
+  };
   const [showAiSuggestions, setShowAiSuggestions] = useState(false);
 
   useEffect(() => {
@@ -1003,6 +1050,7 @@ const ImageEditor = () => {
     try {
       console.log('🔧 DEBUG: Making API call to /api/images/' + id + '/tags');
       console.log('🔧 DEBUG: Request body:', { tags, focusedTags, name: editableName, projectAssignments });
+      console.log('🔧 DEBUG: tags array contents:', tags);
       const response = await fetch(`/api/images/${id}/tags`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
