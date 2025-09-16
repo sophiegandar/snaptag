@@ -296,6 +296,9 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log('🌐 Current tab:', tab.url);
       
       let savedCount = 0;
+      let actualSavedCount = 0;
+      let duplicateCount = 0;
+      let errorCount = 0;
       const totalCount = imagesToSave.length;
       console.log(`📊 Processing ${totalCount} images`);
       console.log('📋 Selected image indices:', imagesToSave);
@@ -336,10 +339,17 @@ document.addEventListener('DOMContentLoaded', function() {
               }
               
               if (response && response.success) {
-                console.log(`✅ Successfully saved image ${imageIndex}`);
                 savedCount++;
+                if (response.result && response.result.duplicate) {
+                  duplicateCount++;
+                  console.log(`🔄 Image ${imageIndex} was a duplicate:`, response.result.filename);
+                } else {
+                  actualSavedCount++;
+                  console.log(`✅ Successfully saved image ${imageIndex} as:`, response.result?.filename);
+                }
                 resolve(response.result);
               } else {
+                errorCount++;
                 console.error(`❌ Failed to save image ${imageIndex}:`, response?.error || 'Unknown error');
                 reject(new Error(response?.error || 'Unknown error'));
               }
@@ -353,15 +363,25 @@ document.addEventListener('DOMContentLoaded', function() {
       
       showLoading(false);
       
-      console.log(`📊 Final results: savedCount=${savedCount}, totalCount=${totalCount}`);
+      console.log(`📊 Final results: savedCount=${savedCount}, actualSavedCount=${actualSavedCount}, duplicateCount=${duplicateCount}, errorCount=${errorCount}, totalCount=${totalCount}`);
       
-      if (savedCount === totalCount) {
-        showStatus(`Successfully saved ${savedCount} images`, 'success');
-      } else if (savedCount > 0) {
-        showStatus(`Saved ${savedCount} of ${totalCount} images`, 'success');
+      let statusMessage = '';
+      let statusType = 'error';
+      
+      if (actualSavedCount > 0) {
+        statusMessage = `Saved ${actualSavedCount} new images`;
+        if (duplicateCount > 0) statusMessage += `, ${duplicateCount} duplicates`;
+        if (errorCount > 0) statusMessage += `, ${errorCount} errors`;
+        statusType = 'success';
+      } else if (duplicateCount > 0) {
+        statusMessage = `${duplicateCount} images were duplicates`;
+        statusType = 'warning';
       } else {
-        showStatus('Failed to save images', 'error');
+        statusMessage = `Failed to save images (${errorCount} errors)`;
+        statusType = 'error';
       }
+      
+      showStatus(statusMessage, statusType);
       
       // Refresh recent images
       setTimeout(loadRecentImages, 1000);
