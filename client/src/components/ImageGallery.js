@@ -1410,7 +1410,9 @@ const ImageGallery = () => {
                             {image?.tags && image.tags.length > 0 ? (
                               image.tags.map((tag, index) => (
                                 <span key={index} className="inline-block px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
-                                  {tag}
+                                  {tag.split(' ').map(word => 
+                                    word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                                  ).join(' ')}
                                 </span>
                               ))
                             ) : (
@@ -1775,7 +1777,13 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
   };
 
   const getAllTags = () => {
-    return image.tags || [];
+    const tags = image.tags || [];
+    // Capitalize all words in multi-word tags for display
+    return tags.map(tag => 
+      tag.split(' ').map(word => 
+        word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+      ).join(' ')
+    );
   };
 
   const getDisplayName = () => {
@@ -1865,7 +1873,9 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
                 onClick={() => onTagClick(tag)}
                 className="tag-item cursor-pointer hover:bg-blue-200"
               >
-                {tag}
+                {tag.split(' ').map(word => 
+                  word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                ).join(' ')}
               </span>
             ))}
           </div>

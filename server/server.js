@@ -1116,27 +1116,39 @@ app.get('/api/images', async (req, res) => {
     images = images.slice(startIndex, endIndex);
     console.log(`📊 PAGINATION: Showing ${images.length} of ${totalImages} total images (page ${currentPage})`);
     
-    // NUCLEAR OPTION: Process images one by one until this works
-    console.log(`🚨 NUCLEAR: Processing ${images.length} images sequentially...`);
+    // EFFICIENT: Generate URLs with caching to prevent 429 errors
+    console.log(`🚀 CACHED: Processing ${images.length} images with URL caching...`);
     
-    // SIMPLE: Generate URLs one by one with full logging
+    // Process images in smaller batches with caching
+    const BATCH_SIZE = 10;
+    const batches = [];
+    for (let i = 0; i < images.length; i += BATCH_SIZE) {
+      batches.push(images.slice(i, i + BATCH_SIZE));
+    }
+    
     let successCount = 0;
-    
-    for (let i = 0; i < images.length; i++) {
-      const image = images[i];
-      try {
-        console.log(`🔄 ${i+1}/${images.length}: ${image.filename}`);
-          const url = await dropboxService.getTemporaryLink(image.dropbox_path);
-        image.url = url;
-        successCount++;
-        console.log(`✅ ${i+1}/${images.length}: SUCCESS`);
+    for (const batch of batches) {
+      const promises = batch.map(async (image) => {
+        try {
+          image.url = await getCachedDropboxUrl(image.dropbox_path, req);
+          successCount++;
+          return true;
         } catch (error) {
-        console.error(`❌ ${i+1}/${images.length}: FAILED - ${error.message}`);
-        image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`;
+          console.error(`❌ Failed to get URL for ${image.filename}:`, error.message);
+          image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`;
+          return false;
+        }
+      });
+      
+      await Promise.all(promises);
+      
+      // Small delay between batches to avoid overwhelming Dropbox API
+      if (batches.indexOf(batch) < batches.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
     
-    console.log(`📊 FINAL: ${successCount}/${images.length} images have real URLs`);
+    console.log(`📊 CACHED FINAL: ${successCount}/${images.length} images have URLs (${urlCache.size} cached)`);
     
     // Return appropriate response format based on request
     // For extension requests (with limit parameter), return simple array
@@ -1335,6 +1347,116 @@ app.post('/api/images/upload', upload.single('image'), async (req, res) => {
 // Request queue to prevent sequence number collisions
 const saveQueue = [];
 let isProcessingQueue = false;
+
+// URL cache to prevent repeated Dropbox API calls and 429 errors
+const urlCache = new Map();
+const URL_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+
+// Get cached URL or fetch from Dropbox with rate limiting protection
+async function getCachedDropboxUrl(dropboxPath, req) {
+  const cacheKey = dropboxPath;
+  const cached = urlCache.get(cacheKey);
+  
+  // Return cached URL if still valid
+  if (cached && (Date.now() - cached.timestamp) < URL_CACHE_TTL) {
+    return cached.url;
+  }
+  
+  try {
+    const url = await dropboxService.getTemporaryLink(dropboxPath);
+    
+    // Cache the URL
+    urlCache.set(cacheKey, {
+      url: url,
+      timestamp: Date.now()
+    });
+    
+    return url;
+  } catch (error) {
+    console.error(`❌ Failed to get Dropbox URL for ${dropboxPath}:`, error.message);
+    // Return placeholder on error
+    return `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`;
+  }
+}
+
+// Auto-create Archier projects based on tags
+async function autoCreateArchierProjects(tags) {
+  const normalizedTags = tags.map(tag => tag.toLowerCase().trim());
+  
+  // Only auto-create for Archier projects with 'complete' status
+  if (!normalizedTags.includes('archier') || !normalizedTags.includes('complete')) {
+    return;
+  }
+  
+  console.log('🏗️ Checking for Archier project auto-creation:', tags);
+  
+  // List of recognized Archier project names
+  const archierProjects = [
+    'taroona house', 'corner house', 'oakover preston', 'the boulevard',
+    'de witt st', 'couvreur', 'camberwell house', 'brighton house',
+    'malvern house', 'toorak house', 'south yarra house', 'prahran house',
+    'fitzroy house', 'collingwood house', 'carlton house', 'northcote house',
+    'richmond house', 'abbotsford house', 'kew house', 'hawthorn house',
+    'surrey hills house', 'albert park house', 'st kilda house', 'elwood house',
+    'caulfield house', 'glen iris house', 'armadale house', 'windsor house',
+    'chapel street house', 'high street house', 'burke road house',
+    'glenferrie road house', 'swan street house', 'smith street house'
+  ];
+  
+  // Find matching project name in tags
+  let projectName = null;
+  for (const project of archierProjects) {
+    if (normalizedTags.includes(project)) {
+      projectName = project;
+      break;
+    }
+  }
+  
+  if (!projectName) {
+    console.log('⚠️ No recognized Archier project name found in tags:', tags);
+    return;
+  }
+  
+  console.log(`🏗️ Found Archier project: "${projectName}"`);
+  
+  // Generate project data
+  const displayName = projectName.split(' ').map(word => 
+    word.charAt(0).toUpperCase() + word.slice(1)
+  ).join(' ');
+  const projectId = projectName.replace(/\s+/g, '-');
+  
+  try {
+    // Check if project already exists
+    const existingProject = await databaseService.query(
+      'SELECT id FROM projects WHERE id = $1', 
+      [projectId]
+    );
+    
+    if (existingProject.rows && existingProject.rows.length > 0) {
+      console.log(`✅ Project "${displayName}" already exists`);
+      return;
+    }
+    
+    // Create the project
+    await databaseService.query(`
+      INSERT INTO projects (id, name, description, status, team_tag, status_tag)
+      VALUES ($1, $2, $3, $4, $5, $6)
+    `, [
+      projectId,
+      displayName,
+      `Complete Project - Auto-created from image tags`,
+      'complete',
+      'archier',
+      'complete'
+    ]);
+    
+    console.log(`🎉 AUTO-CREATED Archier project: "${displayName}" (ID: ${projectId})`);
+    
+  } catch (error) {
+    console.error(`❌ Failed to auto-create project "${displayName}":`, error.message);
+    throw error;
+  }
+}
 
 async function processSaveQueue() {
   if (isProcessingQueue || saveQueue.length === 0) return;
@@ -2186,26 +2308,39 @@ app.post('/api/images/search', async (req, res) => {
       });
     }
     
-    // SIMPLE: Generate URLs one by one (same as main endpoint)
-    console.log(`🔄 SEARCH: Processing ${filteredImages.length} images one by one...`);
+    // EFFICIENT: Generate URLs with caching (same as main endpoint)
+    console.log(`🔄 SEARCH: Processing ${filteredImages.length} images with caching...`);
+    
+    // Process images in smaller batches with caching
+    const SEARCH_BATCH_SIZE = 10;
+    const searchBatches = [];
+    for (let i = 0; i < filteredImages.length; i += SEARCH_BATCH_SIZE) {
+      searchBatches.push(filteredImages.slice(i, i + SEARCH_BATCH_SIZE));
+    }
     
     let successCount = 0;
-    
-      for (let i = 0; i < filteredImages.length; i++) {
-        const image = filteredImages[i];
+    for (const batch of searchBatches) {
+      const promises = batch.map(async (image) => {
         try {
-        console.log(`🔄 SEARCH ${i+1}/${filteredImages.length}: ${image.filename}`);
-        const url = await dropboxService.getTemporaryLink(image.dropbox_path);
-        image.url = url;
-        successCount++;
-        console.log(`✅ SEARCH ${i+1}/${filteredImages.length}: SUCCESS`);
-      } catch (error) {
-        console.error(`❌ SEARCH ${i+1}/${filteredImages.length}: FAILED - ${error.message}`);
-            image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`;
+          image.url = await getCachedDropboxUrl(image.dropbox_path, req);
+          successCount++;
+          return true;
+        } catch (error) {
+          console.error(`❌ SEARCH Failed to get URL for ${image.filename}:`, error.message);
+          image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`;
+          return false;
+        }
+      });
+      
+      await Promise.all(promises);
+      
+      // Small delay between batches
+      if (searchBatches.indexOf(batch) < searchBatches.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
     
-    console.log(`📊 SEARCH FINAL: ${successCount}/${filteredImages.length} images have real URLs`);
+    console.log(`📊 SEARCH FINAL: ${successCount}/${filteredImages.length} images have URLs (${urlCache.size} cached)`);
     
     console.log(`✅ Search completed: ${filteredImages.length} images found`);
     
@@ -5284,6 +5419,122 @@ app.post('/api/admin/refresh-dropbox-token', async (req, res) => {
       error: 'Failed to refresh Dropbox token', 
       details: error.message 
     });
+  }
+});
+
+// ================ ESSENTIAL API ENDPOINTS ================
+
+// Get all tags
+app.get('/api/tags', async (req, res) => {
+  try {
+    const tags = await databaseService.getAllTags();
+    res.json(tags);
+  } catch (error) {
+    console.error('Error fetching tags:', error);
+    res.status(500).json({ error: 'Failed to fetch tags' });
+  }
+});
+
+// Get all projects
+app.get('/api/projects', async (req, res) => {
+  try {
+    const projects = await databaseService.getAllProjects();
+    res.json(projects);
+  } catch (error) {
+    console.error('Error fetching projects:', error);
+    res.status(500).json({ error: 'Failed to fetch projects' });
+  }
+});
+
+// Get all rooms
+app.get('/api/rooms', async (req, res) => {
+  try {
+    const rooms = await databaseService.getAllRooms();
+    res.json(rooms);
+  } catch (error) {
+    console.error('Error fetching rooms:', error);
+    res.status(500).json({ error: 'Failed to fetch rooms' });
+  }
+});
+
+// Get all stages
+app.get('/api/stages', async (req, res) => {
+  try {
+    const stages = await databaseService.getAllStages();
+    res.json(stages);
+  } catch (error) {
+    console.error('Error fetching stages:', error);
+    res.status(500).json({ error: 'Failed to fetch stages' });
+  }
+});
+
+// Get single image by ID
+app.get('/api/images/:id', async (req, res) => {
+  try {
+    const image = await databaseService.getImageById(req.params.id);
+    if (!image) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+    
+    // Generate Dropbox URL
+    try {
+      image.url = await getCachedDropboxUrl(image.dropbox_path, req);
+    } catch (error) {
+      console.error('Error generating URL for image:', error);
+      image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`;
+    }
+    
+    res.json(image);
+  } catch (error) {
+    console.error('Error fetching image:', error);
+    res.status(500).json({ error: 'Failed to fetch image' });
+  }
+});
+
+// Update image tags
+app.put('/api/images/:id/tags', async (req, res) => {
+  try {
+    const { tags, focusedTags, projectAssignments } = req.body;
+    const imageId = req.params.id;
+    
+    console.log(`🏷️ Updating tags for image ${imageId}:`, { tags, focusedTags, projectAssignments });
+    
+    await databaseService.updateImageTags(imageId, tags, focusedTags, projectAssignments);
+    
+    res.json({ success: true, message: 'Tags updated successfully' });
+  } catch (error) {
+    console.error('Error updating image tags:', error);
+    res.status(500).json({ error: 'Failed to update tags' });
+  }
+});
+
+// Delete single image
+app.delete('/api/images/:id', async (req, res) => {
+  try {
+    const imageId = req.params.id;
+    
+    // Get image info before deletion
+    const image = await databaseService.getImageById(imageId);
+    if (!image) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+    
+    // Delete from Dropbox
+    try {
+      await dropboxService.deleteFile(image.dropbox_path);
+      console.log(`✅ Deleted from Dropbox: ${image.dropbox_path}`);
+    } catch (dropboxError) {
+      console.error(`⚠️ Failed to delete from Dropbox (continuing anyway): ${dropboxError.message}`);
+    }
+    
+    // Delete from database
+    await databaseService.deleteImage(imageId);
+    
+    console.log(`✅ Deleted image ${imageId}: ${image.filename}`);
+    res.json({ success: true, message: 'Image deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting image:', error);
+    res.status(500).json({ error: 'Failed to delete image' });
   }
 });
 
