@@ -1166,8 +1166,26 @@ app.get('/api/images', async (req, res) => {
     
     console.log(`✅ PRODUCTION URL GENERATION COMPLETE: ${totalSuccess} success, ${totalFailed} fallback placeholders`);
     
-    // If too many failures, might be Dropbox API issue
-    if (totalFailed > images.length * 0.5) {
+    // EMERGENCY: If ALL URLs failed, force simple fallback
+    if (totalSuccess === 0 && images.length > 0) {
+      console.error(`🚨 COMPLETE URL FAILURE: All ${images.length} URLs failed - forcing simple generation`);
+      
+      // Emergency fallback: Generate URLs one by one without timeout
+      for (const image of images.slice(0, 20)) { // Limit to first 20 for speed
+        try {
+          image.url = await dropboxService.getTemporaryLink(image.dropbox_path);
+          console.log(`✅ Emergency URL generated for ${image.filename}`);
+        } catch (error) {
+          image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`;
+          console.error(`❌ Emergency fallback failed for ${image.filename}`);
+        }
+      }
+      
+      // Set remaining to placeholders for now
+      for (let i = 20; i < images.length; i++) {
+        images[i].url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`;
+      }
+    } else if (totalFailed > images.length * 0.5) {
       console.warn(`⚠️ HIGH FAILURE RATE: ${totalFailed}/${images.length} URLs failed - potential Dropbox API issue`);
     }
     
@@ -1916,14 +1934,17 @@ app.post('/api/batch/apply-tags', async (req, res) => {
         if (uniqueNewTags.length > 0) {
           // Try to get sequence number from existing filename, or get next available
           let sequenceNumber = null;
-          const existingMatch = image.filename.match(/^(\d{5})-/);
+          // Handle both AA-XXXX and legacy XXXXX formats
+          const existingMatch = image.filename.match(/^(?:[A-Z]{2}-)?(\d{4,5})-/) || image.filename.match(/^(\d{5})-/);
           
           if (existingMatch) {
             // Preserve existing sequence number
             sequenceNumber = parseInt(existingMatch[1]);
+            console.log(`♻️ Preserving sequence number ${sequenceNumber} from filename: ${image.filename}`);
           } else {
             // Get next sequence number for new files
             sequenceNumber = await folderPathService.getNextSequenceNumber(databaseService);
+            console.log(`🔢 Generated new sequence number ${sequenceNumber} for: ${image.filename}`);
           }
           
           newFilename = folderPathService.generateTagBasedFilename(allTags, ext, sequenceNumber);
