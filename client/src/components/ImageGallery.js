@@ -135,9 +135,12 @@ const ImageGallery = () => {
       const data = Array.isArray(responseData) ? responseData : responseData.images;
       console.log('✅ Images loaded successfully:', data.length, 'images');
       
-      // Production mode: Fast, efficient image loading
+      // EMERGENCY DEBUG: Log what we're getting
+      console.log('🚨 EMERGENCY DEBUG - Raw API response:', data.slice(0, 3));
       const urlCount = data.filter(img => img.url && !img.url.includes('placeholder')).length;
-      console.log(`✅ Loaded ${data.length} images (${urlCount} with URLs)`);
+      const taggedCount = data.filter(img => img.tags && img.tags.length > 0).length;
+      const untaggedCount = data.filter(img => !img.tags || img.tags.length === 0).length;
+      console.log(`🚨 EMERGENCY: ${data.length} total, ${urlCount} with URLs, ${taggedCount} tagged, ${untaggedCount} untagged`);
       
       setImages(data);
       // Update filters only after successful load

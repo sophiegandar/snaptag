@@ -1119,11 +1119,11 @@ app.get('/api/images', async (req, res) => {
     // Generate temporary Dropbox URLs for each image (with performance optimization)
     console.log(`🔗 [FORCE DEPLOY v3] Generating temporary URLs for ${images.length} images...`);
     
-    // TEMPORARY FIX: Force real URLs for debugging the 9 new images
-    const MAX_CONCURRENT = 25; // Increased for better throughput
-    const TIMEOUT_MS = 5000; // Longer timeout for reliability
+    // EMERGENCY FIX: Force all images to load properly
+    const MAX_CONCURRENT = 30; // Optimized for reliability
+    const TIMEOUT_MS = 8000; // Extended timeout to ensure URLs generate
     
-    console.log(`🔧 DEBUG MODE: Generating ${images.length} URLs to see the 9 new images...`);
+    console.log(`🚨 EMERGENCY: Forcing ${images.length} images to display properly...`);
     
     // Process images in batches to avoid overwhelming Dropbox API
     const batches = [];
