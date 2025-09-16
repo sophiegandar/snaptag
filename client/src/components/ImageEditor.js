@@ -60,52 +60,6 @@ const ImageEditor = () => {
   const [aiSuggestions, setAiSuggestions] = useState([]);
   const [loadingAiSuggestions, setLoadingAiSuggestions] = useState(false);
 
-  // Dynamic property calculation functions
-  const getImageType = () => {
-    const lowercaseTags = tags.map(tag => tag.toLowerCase());
-    if (lowercaseTags.includes('archier')) return 'Archier';
-    if (lowercaseTags.includes('precedent')) return 'Precedent';
-    if (lowercaseTags.includes('texture')) return 'Texture';
-    return 'General';
-  };
-
-  const getImageCategory = () => {
-    const lowercaseTags = tags.map(tag => tag.toLowerCase());
-    if (lowercaseTags.includes('complete')) return 'Complete';
-    if (lowercaseTags.includes('wip')) return 'WIP';
-    
-    // Check for specific category tags
-    const categoryTags = ['brick', 'carpet', 'concrete', 'fabric', 'metal', 'stone', 'tile', 'wood', 
-                         'art', 'bathrooms', 'details', 'doors', 'exteriors', 'furniture', 'interiors', 
-                         'joinery', 'kitchens', 'landscape', 'lighting', 'spatial', 'stairs', 'structure'];
-    
-    for (const tag of lowercaseTags) {
-      if (categoryTags.includes(tag)) {
-        return capitalizeForDisplay(tag);
-      }
-    }
-    
-    return 'General';
-  };
-
-  const getProject = () => {
-    const lowercaseTags = tags.map(tag => tag.toLowerCase());
-    
-    // Check for project names
-    const projectNames = ['taroona house', 'corner house', 'oakover preston', 'the boulevard',
-                         'de witt st', 'couvreur', 'yandoit', 'archier'];
-    
-    for (const project of projectNames) {
-      if (lowercaseTags.includes(project)) {
-        return capitalizeForDisplay(project);
-      }
-    }
-    
-    // Check for team tags
-    if (lowercaseTags.includes('archier')) return 'Archier';
-    
-    return null;
-  };
   const [showAiSuggestions, setShowAiSuggestions] = useState(false);
 
   useEffect(() => {
@@ -803,18 +757,52 @@ const ImageEditor = () => {
     }
   };
 
-  // Properties helper functions
+  // Properties helper functions - now reactive to tag changes
   const getImageType = () => {
-    if (tags.some(tag => tag.toLowerCase() === 'precedent')) return 'Precedent';
-    if (tags.some(tag => tag.toLowerCase() === 'texture')) return 'Texture';
-    if (tags.some(tag => tag.toLowerCase() === 'photos')) return 'Photos';
-    return 'General'; // Default
+    const lowercaseTags = tags.map(tag => tag.toLowerCase());
+    if (lowercaseTags.includes('archier')) return 'Archier';
+    if (lowercaseTags.includes('precedent')) return 'Precedent';
+    if (lowercaseTags.includes('texture')) return 'Texture';
+    if (lowercaseTags.includes('photos')) return 'Photos';
+    return 'General';
   };
 
   const getImageCategory = () => {
-    const categoryTags = ['brick', 'carpet', 'concrete', 'fabric', 'metal', 'stone', 'tile', 'wood', 'general', 'art', 'bathrooms', 'details', 'doors', 'exteriors', 'furniture', 'interiors', 'joinery', 'kitchens', 'landscape', 'lighting', 'spatial', 'stairs', 'structure'];
-    const foundCategory = tags.find(tag => categoryTags.includes(tag.toLowerCase()));
-    return foundCategory ? foundCategory.charAt(0).toUpperCase() + foundCategory.slice(1).toLowerCase() : 'General';
+    const lowercaseTags = tags.map(tag => tag.toLowerCase());
+    if (lowercaseTags.includes('complete')) return 'Complete';
+    if (lowercaseTags.includes('wip')) return 'WIP';
+    
+    // Check for specific category tags
+    const categoryTags = ['brick', 'carpet', 'concrete', 'fabric', 'metal', 'stone', 'tile', 'wood', 
+                         'art', 'bathrooms', 'details', 'doors', 'exteriors', 'furniture', 'interiors', 
+                         'joinery', 'kitchens', 'landscape', 'lighting', 'spatial', 'stairs', 'structure'];
+    
+    for (const tag of lowercaseTags) {
+      if (categoryTags.includes(tag)) {
+        return capitalizeForDisplay(tag);
+      }
+    }
+    
+    return 'General';
+  };
+
+  const getProject = () => {
+    const lowercaseTags = tags.map(tag => tag.toLowerCase());
+    
+    // Check for project names
+    const projectNames = ['taroona house', 'corner house', 'oakover preston', 'the boulevard',
+                         'de witt st', 'couvreur', 'yandoit', 'archier'];
+    
+    for (const project of projectNames) {
+      if (lowercaseTags.includes(project)) {
+        return capitalizeForDisplay(project);
+      }
+    }
+    
+    // Check for team tags
+    if (lowercaseTags.includes('archier')) return 'Archier';
+    
+    return null;
   };
 
   const getCategoryOptions = () => {
