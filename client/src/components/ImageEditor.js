@@ -217,13 +217,24 @@ const ImageEditor = () => {
       
       const imageData = await response.json();
       setImage(imageData);
-      setTags(imageData.tags || []);
+      
+      // Parse tags properly - handle both string and array formats
+      const parsedTags = Array.isArray(imageData.tags) 
+        ? imageData.tags 
+        : (typeof imageData.tags === 'string' 
+          ? imageData.tags.split(',').map(tag => tag.trim()).filter(Boolean)
+          : []);
+      
+      setTags(parsedTags);
       setFocusedTags(imageData.focused_tags || []);
       setEditableName(imageData.name || '');
       setProjectAssignments(imageData.project_assignments || []);
       
+      console.log('🔧 DEBUG: Loaded tags from server:', imageData.tags);
+      console.log('🔧 DEBUG: Parsed tags:', parsedTags);
+      
       // Store original values for change tracking
-      setOriginalTags([...(imageData.tags || [])]);
+      setOriginalTags([...parsedTags]);
       setOriginalFocusedTags([...(imageData.focused_tags || [])]);
       setOriginalProjectAssignments([...(imageData.project_assignments || [])]);
     } catch (error) {
