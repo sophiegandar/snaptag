@@ -1004,9 +1004,18 @@ const ImageGallery = () => {
                           ? 'border-blue-500 ring-2 ring-blue-200 bg-blue-50'
                           : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                       }`}
-                      onClick={() => toggleUntaggedSelection(image.id)}
-                      onDoubleClick={() => navigate(`/image/${image.id}`, { state: { from: 'triage' } })}
-                      title="Click to select/deselect • Double-click to edit"
+                      onClick={(e) => {
+                        const hasSelections = selectedUntagged.length > 0;
+                        
+                        if (hasSelections || selectedUntagged.includes(image.id)) {
+                          // If any images are selected, or this image is selected, toggle selection
+                          e.preventDefault();
+                          toggleUntaggedSelection(image.id);
+                        } else {
+                          // If no selections, open image editor
+                          navigate(`/image/${image.id}`, { state: { from: 'triage' } });
+                        }
+                      }}
                     >
                       <div className="aspect-square">
                         <img
@@ -1017,17 +1026,28 @@ const ImageGallery = () => {
                         />
                       </div>
                       
-                      {selectedUntagged.includes(image.id) && (
-                        <div className="absolute top-2 right-2">
-                          <div className={`text-white rounded-full p-1 ${
-                            image.tags && image.tags.length > 0 
-                              ? 'bg-green-500' 
-                              : 'bg-blue-500'
-                          }`}>
-                            <CheckCircle className="h-3 w-3" />
-                          </div>
+                      {/* Selection checkbox - shows on hover or when selected */}
+                      <div className={`absolute top-2 right-2 transition-opacity ${
+                        selectedUntagged.includes(image.id) 
+                          ? 'opacity-100' 
+                          : 'opacity-0 group-hover:opacity-100'
+                      }`}>
+                        <div 
+                          className={`w-6 h-6 rounded border-2 flex items-center justify-center cursor-pointer ${
+                            selectedUntagged.includes(image.id)
+                              ? 'bg-blue-500 border-blue-500'
+                              : 'bg-white border-gray-300 hover:border-blue-400'
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleUntaggedSelection(image.id);
+                          }}
+                        >
+                          {selectedUntagged.includes(image.id) && (
+                            <Check className="h-4 w-4 text-white" />
+                          )}
                         </div>
-                      )}
+                      </div>
                       
                       {/* Delete button for edit mode */}
                       {canDelete && (
