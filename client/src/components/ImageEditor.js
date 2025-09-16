@@ -102,7 +102,8 @@ const ImageEditor = () => {
       const response = await fetch(`/api/images?${queryParams.toString()}`);
       if (!response.ok) throw new Error('Failed to load navigation context');
       
-      const images = await response.json();
+      const responseData = await response.json();
+      const images = Array.isArray(responseData) ? responseData : responseData.images || [];
       const currentIndex = images.findIndex(img => img.id === parseInt(id));
       
       setNavigationContext({
