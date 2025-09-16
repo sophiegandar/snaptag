@@ -996,27 +996,45 @@ const ImageGallery = () => {
               {/* Untagged Images Grid */}
               <div className="p-6">
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
-                  {untaggedImages.map((image) => (
+                  {untaggedImages.map((image) => {
+                    const isSelected = selectedUntagged.includes(image.id);
+                    
+                    const handleImageClick = (e) => {
+                      const hasSelections = selectedUntagged.length > 0;
+                      
+                      if (hasSelections || isSelected) {
+                        // If any images are selected, or this image is selected, toggle selection
+                        e.preventDefault();
+                        toggleUntaggedSelection(image.id);
+                      } else {
+                        // If no selections, open image editor
+                        navigate(`/image/${image.id}`, { state: { from: 'triage' } });
+                      }
+                    };
+                    
+                    return (
                     <div
                       key={image.id}
-                      className={`relative cursor-pointer rounded-lg overflow-hidden border-2 transition-all group ${
-                        selectedUntagged.includes(image.id)
-                          ? 'border-blue-500 ring-2 ring-blue-200 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      className={`relative group cursor-pointer rounded-lg overflow-hidden border-2 transition-all duration-200 ${
+                        isSelected
+                          ? 'border-blue-500 ring-2 ring-blue-200'
+                          : 'border-gray-200 hover:border-gray-300'
                       }`}
-                      onClick={(e) => {
-                        const hasSelections = selectedUntagged.length > 0;
-                        
-                        if (hasSelections || selectedUntagged.includes(image.id)) {
-                          // If any images are selected, or this image is selected, toggle selection
-                          e.preventDefault();
-                          toggleUntaggedSelection(image.id);
-                        } else {
-                          // If no selections, open image editor
-                          navigate(`/image/${image.id}`, { state: { from: 'triage' } });
-                        }
-                      }}
+                      onClick={handleImageClick}
                     >
+                      {/* Selection Checkbox - appears on hover using CSS group-hover */}
+                      {canEdit && (
+                        <div className={`absolute top-3 left-3 z-20 transition-opacity duration-200 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleUntaggedSelection(image.id)}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded bg-white shadow-lg"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                      )}
+                      
                       <div className="aspect-square">
                         <img
                           src={image.url}
@@ -1024,29 +1042,6 @@ const ImageGallery = () => {
                           className="w-full h-full object-cover"
                           loading="lazy"
                         />
-                      </div>
-                      
-                      {/* Selection checkbox - shows on hover or when selected */}
-                      <div className={`absolute top-2 right-2 transition-opacity ${
-                        selectedUntagged.includes(image.id) 
-                          ? 'opacity-100' 
-                          : 'opacity-0 group-hover:opacity-100'
-                      }`}>
-                        <div 
-                          className={`w-6 h-6 rounded border-2 flex items-center justify-center cursor-pointer ${
-                            selectedUntagged.includes(image.id)
-                              ? 'bg-blue-500 border-blue-500'
-                              : 'bg-white border-gray-300 hover:border-blue-400'
-                          }`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleUntaggedSelection(image.id);
-                          }}
-                        >
-                          {selectedUntagged.includes(image.id) && (
-                            <Check className="h-4 w-4 text-white" />
-                          )}
-                        </div>
                       </div>
                       
                       {/* Delete button for edit mode */}
@@ -1711,6 +1706,14 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
 
   // Handle click behavior: if any images are selected, clicking toggles selection; otherwise opens editor
   const handleImageClick = (e) => {
+    // Handle Command+Click (Mac) or Ctrl+Click (Windows) for new tab
+    if (e.metaKey || e.ctrlKey) {
+      e.preventDefault();
+      const imageUrl = `/image/${image.id}`;
+      window.open(imageUrl, '_blank');
+      return;
+    }
+    
     // Get the current selection count from the parent component
     const hasSelections = document.querySelector('[data-selection-count]')?.getAttribute('data-selection-count') > 0;
     

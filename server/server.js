@@ -1126,11 +1126,11 @@ app.get('/api/images', async (req, res) => {
       const image = images[i];
       try {
         console.log(`🔄 ${i+1}/${images.length}: ${image.filename}`);
-        const url = await dropboxService.getTemporaryLink(image.dropbox_path);
+          const url = await dropboxService.getTemporaryLink(image.dropbox_path);
         image.url = url;
         successCount++;
         console.log(`✅ ${i+1}/${images.length}: SUCCESS`);
-      } catch (error) {
+        } catch (error) {
         console.error(`❌ ${i+1}/${images.length}: FAILED - ${error.message}`);
         image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`;
       }
@@ -1395,11 +1395,11 @@ async function processSaveRequest(req, res, requestId, startTime) {
       try {
         const temporaryUrl = await dropboxService.getTemporaryLink(existingByUrl.dropbox_path);
         
-        return res.json({
+      return res.json({
           success: true,
           result: {
-            ...existingByUrl,
-            duplicate: true,
+        ...existingByUrl,
+        duplicate: true,
             message: 'Image already exists in database',
             url: temporaryUrl
           }
@@ -1780,6 +1780,98 @@ app.post('/api/tags/merge', async (req, res) => {
 const fileMoveLocks = new Set();
 
 // Batch apply tags to multiple images
+// Auto-create Archier projects when tagged with archier + project name + complete
+async function autoCreateArchierProjects(tags) {
+  // Check if this is an Archier project (has 'archier' and 'complete' tags)
+  const normalizedTags = tags.map(tag => tag.toLowerCase().trim());
+  
+  if (!normalizedTags.includes('archier') || !normalizedTags.includes('complete')) {
+    return; // Not an Archier complete project
+  }
+  
+  console.log('🏗️ Checking for Archier project auto-creation:', tags);
+  
+  // List of known Archier project names (same as in folderPathService)
+  const archierProjects = [
+    'taroona house', 'taroona',
+    'the boulevard', 'boulevard',
+    'five yards house', 'five yards',
+    'hampden road house', 'hampden road',
+    'davison street',
+    'yandoit house',
+    'oakover preston',
+    'corner house',
+    'parks victoria',
+    'caroma',
+    'off grid house', 'off grid',
+    'farm house',
+    'view house',
+    'court house',
+    'casa acton',
+    'harry house',
+    'willisdene house',
+    'julius street',
+    'yagiz',
+    'creative spaces'
+  ];
+  
+  // Find which project name is in the tags
+  let projectName = null;
+  for (const project of archierProjects) {
+    if (normalizedTags.includes(project)) {
+      projectName = project;
+      break;
+    }
+  }
+  
+  if (!projectName) {
+    console.log('⚠️ No recognized Archier project name found in tags:', tags);
+    return;
+  }
+  
+  console.log(`🏗️ Found Archier project: "${projectName}"`);
+  
+  // Convert to proper case for display (capitalize each word)
+  const displayName = projectName.split(' ').map(word => 
+    word.charAt(0).toUpperCase() + word.slice(1)
+  ).join(' ');
+  
+  // Create project ID (lowercase, replace spaces with hyphens)
+  const projectId = projectName.replace(/\s+/g, '-');
+  
+  try {
+    // Check if project already exists
+    const existingProject = await databaseService.query(
+      'SELECT id FROM projects WHERE id = $1', 
+      [projectId]
+    );
+    
+    if (existingProject.rows && existingProject.rows.length > 0) {
+      console.log(`✅ Project "${displayName}" already exists`);
+      return;
+    }
+    
+    // Create the project
+    await databaseService.query(`
+      INSERT INTO projects (id, name, description, status, team_tag, status_tag)
+      VALUES ($1, $2, $3, $4, $5, $6)
+    `, [
+      projectId,
+      displayName,
+      `Complete Project - Auto-created from image tags`,
+      'complete',
+      'archier',
+      'complete'
+    ]);
+    
+    console.log(`🎉 AUTO-CREATED Archier project: "${displayName}" (ID: ${projectId})`);
+    
+  } catch (error) {
+    console.error(`❌ Failed to auto-create project "${displayName}":`, error.message);
+    throw error;
+  }
+}
+
 app.post('/api/batch/apply-tags', async (req, res) => {
   try {
     const { imageIds, tags } = req.body;
@@ -1985,6 +2077,14 @@ app.post('/api/batch/apply-tags', async (req, res) => {
     
     console.log(message);
     
+    // AUTO-CREATE ARCHIER PROJECTS: Check if we need to create new projects
+    try {
+      await autoCreateArchierProjects(tags);
+    } catch (projectError) {
+      console.error('⚠️ Auto-project creation failed:', projectError.message);
+      // Don't fail the entire operation for project creation issues
+    }
+    
     res.json({
       success: true,
       message,
@@ -2091,9 +2191,9 @@ app.post('/api/images/search', async (req, res) => {
     
     let successCount = 0;
     
-    for (let i = 0; i < filteredImages.length; i++) {
-      const image = filteredImages[i];
-      try {
+      for (let i = 0; i < filteredImages.length; i++) {
+        const image = filteredImages[i];
+        try {
         console.log(`🔄 SEARCH ${i+1}/${filteredImages.length}: ${image.filename}`);
         const url = await dropboxService.getTemporaryLink(image.dropbox_path);
         image.url = url;
@@ -2101,7 +2201,7 @@ app.post('/api/images/search', async (req, res) => {
         console.log(`✅ SEARCH ${i+1}/${filteredImages.length}: SUCCESS`);
       } catch (error) {
         console.error(`❌ SEARCH ${i+1}/${filteredImages.length}: FAILED - ${error.message}`);
-        image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`;
+            image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`;
       }
     }
     
@@ -3036,8 +3136,8 @@ async function processAndUploadImage({ filePath, originalName, tags, name, focus
   const fileHash = await generateFileHash(processedImagePath);
 
   // Generate folder path using protected original tags
-  const baseDropboxFolder = serverSettings.dropboxFolder || process.env.DROPBOX_FOLDER || '/ARCHIER Team Folder/Support/Production/SnapTag';
-  const normalizedBaseFolder = baseDropboxFolder.startsWith('/') ? baseDropboxFolder : `/${baseDropboxFolder}`;
+    const baseDropboxFolder = serverSettings.dropboxFolder || process.env.DROPBOX_FOLDER || '/ARCHIER Team Folder/Support/Production/SnapTag';
+    const normalizedBaseFolder = baseDropboxFolder.startsWith('/') ? baseDropboxFolder : `/${baseDropboxFolder}`;
   const folderPath = folderPathService.generateFolderPath(originalTags, normalizedBaseFolder);
   
   // Generate filename from tags with proper sequence number
@@ -3062,18 +3162,18 @@ async function processAndUploadImage({ filePath, originalName, tags, name, focus
   let imageId;
   try {
     // Save to database using protected original tags
-    const imageData = {
-      filename,
-      original_name: originalName,
-      dropbox_path: dropboxPath,
+  const imageData = {
+    filename,
+    original_name: originalName,
+    dropbox_path: dropboxPath,
       tags: originalTags,
-      name,
-      focused_tags: focusedTags,
-      upload_date: new Date().toISOString(),
-      file_size: uploadResult.size,
-      dropbox_id: uploadResult.id,
-      file_hash: fileHash
-    };
+    name,
+    focused_tags: focusedTags,
+    upload_date: new Date().toISOString(),
+    file_size: uploadResult.size,
+    dropbox_id: uploadResult.id,
+    file_hash: fileHash
+  };
 
     imageId = await databaseService.saveImage(imageData);
   } catch (databaseError) {
