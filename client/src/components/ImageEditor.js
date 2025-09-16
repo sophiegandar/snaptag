@@ -858,12 +858,6 @@ const ImageEditor = () => {
     return tags.find(tag => roomTags.includes(tag.toLowerCase())) || '';
   };
 
-  const getProject = () => {
-    // Complete projects (archier tagged)
-    const completeProjects = ['yandoit', 'archier'];
-    const foundCompleteProject = tags.find(tag => completeProjects.includes(tag.toLowerCase()));
-    return foundCompleteProject ? foundCompleteProject.charAt(0).toUpperCase() + foundCompleteProject.slice(1).toLowerCase() : '';
-  };
 
   const getDesign = () => {
     // All project names (current projects)
