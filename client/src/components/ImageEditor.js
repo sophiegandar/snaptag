@@ -8,7 +8,10 @@ import { useMode } from '../context/ModeContext';
 // Utility function to capitalize text for display
 const capitalizeForDisplay = (text) => {
   if (!text) return text;
-  return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+  // Capitalize all words in multi-word tags/text
+  return text.split(' ').map(word => 
+    word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+  ).join(' ');
 };
 
 const ImageEditor = () => {
