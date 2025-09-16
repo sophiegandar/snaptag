@@ -5499,7 +5499,97 @@ app.put('/api/images/:id/tags', async (req, res) => {
     
     console.log(`🏷️ Updating tags for image ${imageId}:`, { tags, focusedTags, projectAssignments });
     
+    // Get current image data
+    const image = await databaseService.getImageById(imageId);
+    if (!image) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+    
+    // Update tags in database first
     await databaseService.updateImageTags(imageId, tags, focusedTags, projectAssignments);
+    
+    // Check if filename needs to be regenerated based on new tags
+    if (tags && tags.length > 0) {
+      console.log(`🔄 Checking if filename needs update for image ${imageId}...`);
+      
+      const baseDropboxFolder = serverSettings.dropboxFolder || process.env.DROPBOX_FOLDER || '/ARCHIER Team Folder/Support/Production/SnapTag';
+      const normalizedBaseFolder = baseDropboxFolder.startsWith('/') ? baseDropboxFolder : `/${baseDropboxFolder}`;
+      const newFolderPath = folderPathService.generateFolderPath(tags, normalizedBaseFolder);
+      let ext = path.extname(image.filename);
+      
+      // Fallback to .jpg if no extension found
+      if (!ext || ext === '.' || ext === '') {
+        ext = '.jpg';
+        console.log(`⚠️ Using fallback extension .jpg for image ${imageId}: "${image.filename}"`);
+      }
+      
+      // Try to preserve existing sequence number, or get next available
+      let sequenceNumber = null;
+      // Handle both AA-XXXX and legacy XXXXX formats
+      const existingMatch = image.filename.match(/^(?:[A-Z]{2}-)?(\d{4,5})-/) || image.filename.match(/^(\d{5})-/);
+      
+      if (existingMatch) {
+        // Preserve existing sequence number
+        sequenceNumber = parseInt(existingMatch[1]);
+        console.log(`♻️ Preserving sequence number ${sequenceNumber} from filename: ${image.filename}`);
+      } else {
+        // Get next sequence number for new files
+        sequenceNumber = await folderPathService.getNextSequenceNumber(databaseService);
+        console.log(`🔢 Generated new sequence number ${sequenceNumber} for: ${image.filename}`);
+      }
+      
+      const newFilename = folderPathService.generateTagBasedFilename(tags, ext, sequenceNumber);
+      const newDropboxPath = path.posix.join(newFolderPath, newFilename);
+      
+      // Move file in Dropbox if path or filename has changed
+      if (image.dropbox_path !== newDropboxPath) {
+        console.log(`📁 FILENAME UPDATE REQUIRED for image ${imageId}:`);
+        console.log(`   From: ${image.dropbox_path}`);
+        console.log(`   To: ${newDropboxPath}`);
+        console.log(`   Reason: Tags updated, triggering filename regeneration`);
+        
+        try {
+          // Use Dropbox move API to rename/reorganize file
+          await dropboxService.moveFile(image.dropbox_path, newDropboxPath);
+          console.log(`✅ File moved successfully: ${newDropboxPath}`);
+          
+          // Update database with new path and filename
+          await databaseService.query(
+            'UPDATE images SET dropbox_path = $1, filename = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
+            [newDropboxPath, newFilename, imageId]
+          );
+          
+          console.log(`✅ DATABASE UPDATED: Image ${imageId} filename updated to ${newFilename}`);
+          
+          // Try to update metadata in the file
+          try {
+            await metadataService.updateImageMetadata(newDropboxPath, {
+              tags: tags,
+              focusedTags: focusedTags || [],
+              title: image.title,
+              description: image.description
+            });
+            console.log(`✅ Metadata updated for image ${imageId}`);
+          } catch (metadataError) {
+            console.error(`⚠️ Failed to update metadata for image ${imageId} (non-critical):`, metadataError.message);
+          }
+          
+        } catch (moveError) {
+          console.error(`❌ FILENAME UPDATE FAILED for image ${imageId}:`, moveError.message);
+          // Continue anyway - tags are already updated in database
+        }
+      } else {
+        console.log(`✅ NO FILENAME UPDATE NEEDED: Image ${imageId} already has correct filename: ${newFilename}`);
+      }
+      
+      // Auto-create Archier projects if applicable
+      try {
+        await autoCreateArchierProjects(tags);
+      } catch (projectError) {
+        console.error('⚠️ Auto-project creation failed:', projectError.message);
+        // Don't fail the entire operation for project creation issues
+      }
+    }
     
     res.json({ success: true, message: 'Tags updated successfully' });
   } catch (error) {
