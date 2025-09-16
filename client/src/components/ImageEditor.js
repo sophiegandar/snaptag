@@ -987,6 +987,7 @@ const ImageEditor = () => {
     
     try {
       console.log('🔧 DEBUG: Making API call to /api/images/' + id + '/tags');
+      console.log('🔧 DEBUG: Request body:', { tags, focusedTags, name: editableName, projectAssignments });
       const response = await fetch(`/api/images/${id}/tags`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
