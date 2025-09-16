@@ -5498,6 +5498,7 @@ app.put('/api/images/:id/tags', async (req, res) => {
     const imageId = req.params.id;
     
     console.log(`🏷️ Updating tags for image ${imageId}:`, { tags, focusedTags, projectAssignments });
+    console.log(`🔍 DEBUG: Starting individual tag update for image ${imageId}`);
     
     // Get current image data
     const image = await databaseService.getImageById(imageId);
@@ -5509,8 +5510,10 @@ app.put('/api/images/:id/tags', async (req, res) => {
     await databaseService.updateImageTags(imageId, tags, focusedTags, projectAssignments);
     
     // Check if filename needs to be regenerated based on new tags
+    console.log(`🔍 DEBUG: tags array:`, tags, `length: ${tags?.length}`);
     if (tags && tags.length > 0) {
       console.log(`🔄 Checking if filename needs update for image ${imageId}...`);
+      console.log(`🔍 DEBUG: Current image filename: ${image.filename}`);
       
       const baseDropboxFolder = serverSettings.dropboxFolder || process.env.DROPBOX_FOLDER || '/ARCHIER Team Folder/Support/Production/SnapTag';
       const normalizedBaseFolder = baseDropboxFolder.startsWith('/') ? baseDropboxFolder : `/${baseDropboxFolder}`;
@@ -5540,6 +5543,10 @@ app.put('/api/images/:id/tags', async (req, res) => {
       
       const newFilename = folderPathService.generateTagBasedFilename(tags, ext, sequenceNumber);
       const newDropboxPath = path.posix.join(newFolderPath, newFilename);
+      
+      console.log(`🔍 DEBUG: Generated filename: ${newFilename}`);
+      console.log(`🔍 DEBUG: New Dropbox path: ${newDropboxPath}`);
+      console.log(`🔍 DEBUG: Current path: ${image.dropbox_path}`);
       
       // Move file in Dropbox if path or filename has changed
       if (image.dropbox_path !== newDropboxPath) {
