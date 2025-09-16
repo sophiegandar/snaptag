@@ -1507,9 +1507,9 @@ async function processSaveRequest(req, res, requestId, startTime) {
       return res.status(400).json({ error: 'Image URL is required' });
     }
 
-    // Check for duplicate by URL (database check only - Dropbox duplicates will be handled by filename collision)
-    console.log(`🔍 [${requestId}] Checking for duplicate by URL:`, imageUrl);
-    const existingByUrl = await databaseService.checkDuplicateByUrl(imageUrl);
+    // Check for intelligent duplicate by URL + tags (allows re-save with different tags)
+    console.log(`🔍 [${requestId}] Checking for duplicate by URL + tags:`, imageUrl, tags);
+    const existingByUrl = await databaseService.checkDuplicateByUrlAndTags(imageUrl, tags);
     
     if (existingByUrl) {
       console.log(`♻️ [${requestId}] DUPLICATE DETECTED in database - skipping save:`, existingByUrl.filename);

@@ -613,12 +613,51 @@ class PostgresService {
     if (!sourceUrl) return null;
     
     return await this.get(`
-      SELECT id, filename, original_name, created_at, dropbox_path
+      SELECT id, filename, original_name, created_at, dropbox_path, source_url
       FROM images 
       WHERE source_url = $1
       ORDER BY created_at DESC
       LIMIT 1
     `, [sourceUrl]);
+  }
+
+  // More intelligent duplicate detection: check URL + tags combination
+  async checkDuplicateByUrlAndTags(sourceUrl, tags) {
+    if (!sourceUrl) return null;
+    
+    // First check if URL exists at all
+    const urlExists = await this.checkDuplicateByUrl(sourceUrl);
+    if (!urlExists) return null;
+    
+    // If URL exists, check if it has the same tags (allowing re-save with different tags)
+    const tagString = Array.isArray(tags) ? tags.join(',') : (tags || '');
+    
+    const result = await this.query(`
+      SELECT i.id, i.filename, i.original_name, i.created_at, i.dropbox_path, i.source_url,
+             string_agg(t.name, ',' ORDER BY t.name) as existing_tags
+      FROM images i
+      LEFT JOIN image_tags it ON i.id = it.image_id  
+      LEFT JOIN tags t ON it.tag_id = t.id
+      WHERE i.source_url = $1
+      GROUP BY i.id, i.filename, i.original_name, i.created_at, i.dropbox_path, i.source_url
+      ORDER BY i.created_at DESC
+      LIMIT 1
+    `, [sourceUrl]);
+    
+    if (!result.rows || result.rows.length === 0) return urlExists;
+    
+    const existing = result.rows[0];
+    const existingTags = existing.existing_tags ? existing.existing_tags.split(',').sort() : [];
+    const newTags = tagString.split(',').map(t => t.trim()).filter(Boolean).sort();
+    
+    // If tags are different, allow re-save (not a duplicate)
+    const tagsMatch = JSON.stringify(existingTags) === JSON.stringify(newTags);
+    
+    console.log(`🔍 Duplicate check: URL exists, tags match: ${tagsMatch}`);
+    console.log(`   Existing tags: [${existingTags.join(', ')}]`);
+    console.log(`   New tags: [${newTags.join(', ')}]`);
+    
+    return tagsMatch ? existing : null;
   }
 
   async checkDuplicateByHash(fileHash) {
