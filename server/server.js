@@ -24,7 +24,7 @@ const duplicateDetectionService = new DuplicateDetectionService(databaseService,
 
 // Debug: Log deployment info
 console.log('🚀 Server starting with PostgresService');
-console.log('🚀 Version: 1.0.1-coalesce-fix');
+console.log('🚀 Version: 1.0.2-syntax-fixed');
 console.log('🚀 Has searchImagesWithProjectAssignments:', typeof databaseService.searchImagesWithProjectAssignments === 'function');
 
 const app = express();
