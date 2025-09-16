@@ -1130,7 +1130,8 @@ const ImageGallery = () => {
                         </div>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
