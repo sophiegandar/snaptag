@@ -1116,14 +1116,8 @@ app.get('/api/images', async (req, res) => {
     images = images.slice(startIndex, endIndex);
     console.log(`📊 PAGINATION: Showing ${images.length} of ${totalImages} total images (page ${currentPage})`);
     
-    // Generate temporary Dropbox URLs for each image (with performance optimization)
-    console.log(`🔗 [FORCE DEPLOY v3] Generating temporary URLs for ${images.length} images...`);
-    
-    // EMERGENCY FIX: Force all images to load properly
-    const MAX_CONCURRENT = 30; // Optimized for reliability
-    const TIMEOUT_MS = 8000; // Extended timeout to ensure URLs generate
-    
-    console.log(`🚨 EMERGENCY: Forcing ${images.length} images to display properly...`);
+    // NUCLEAR OPTION: Process images one by one until this works
+    console.log(`🚨 NUCLEAR: Processing ${images.length} images sequentially...`);
     
     // Process images in batches to avoid overwhelming Dropbox API
     const batches = [];
