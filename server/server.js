@@ -1119,69 +1119,24 @@ app.get('/api/images', async (req, res) => {
     // NUCLEAR OPTION: Process images one by one until this works
     console.log(`🚨 NUCLEAR: Processing ${images.length} images sequentially...`);
     
-    // Process images in batches to avoid overwhelming Dropbox API
-    const batches = [];
-    for (let i = 0; i < images.length; i += MAX_CONCURRENT) {
-      batches.push(images.slice(i, i + MAX_CONCURRENT));
-    }
+    // SIMPLE: Generate URLs one by one with full logging
+    let successCount = 0;
     
-    let totalSuccess = 0;
-    let totalFailed = 0;
-    
-    for (const batch of batches) {
-      const urlPromises = batch.map(async (image) => {
-        try {
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Timeout')), TIMEOUT_MS)
-          );
-          
-          const url = await Promise.race([
-            dropboxService.getTemporaryLink(image.dropbox_path),
-            timeoutPromise
-          ]);
-          
-          image.url = url;
-          return { success: true };
-        } catch (error) {
-          image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`;
-          return { success: false };
-        }
-      });
-      
-      const results = await Promise.all(urlPromises);
-      const batchSuccess = results.filter(r => r.success).length;
-      const batchFailed = results.length - batchSuccess;
-      
-      totalSuccess += batchSuccess;
-      totalFailed += batchFailed;
-      
-      console.log(`📊 Batch complete: ${batchSuccess}/${results.length} URLs generated (${totalSuccess}/${images.length} total)`);
-    }
-    
-    console.log(`✅ PRODUCTION URL GENERATION COMPLETE: ${totalSuccess} success, ${totalFailed} fallback placeholders`);
-    
-    // EMERGENCY: If ALL URLs failed, force simple fallback
-    if (totalSuccess === 0 && images.length > 0) {
-      console.error(`🚨 COMPLETE URL FAILURE: All ${images.length} URLs failed - forcing simple generation`);
-      
-      // Emergency fallback: Generate URLs one by one without timeout
-      for (const image of images.slice(0, 20)) { // Limit to first 20 for speed
-        try {
-          image.url = await dropboxService.getTemporaryLink(image.dropbox_path);
-          console.log(`✅ Emergency URL generated for ${image.filename}`);
-        } catch (error) {
-          image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`;
-          console.error(`❌ Emergency fallback failed for ${image.filename}`);
-        }
+    for (let i = 0; i < images.length; i++) {
+      const image = images[i];
+      try {
+        console.log(`🔄 ${i+1}/${images.length}: ${image.filename}`);
+        const url = await dropboxService.getTemporaryLink(image.dropbox_path);
+        image.url = url;
+        successCount++;
+        console.log(`✅ ${i+1}/${images.length}: SUCCESS`);
+      } catch (error) {
+        console.error(`❌ ${i+1}/${images.length}: FAILED - ${error.message}`);
+        image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`;
       }
-      
-      // Set remaining to placeholders for now
-      for (let i = 20; i < images.length; i++) {
-        images[i].url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`;
-      }
-    } else if (totalFailed > images.length * 0.5) {
-      console.warn(`⚠️ HIGH FAILURE RATE: ${totalFailed}/${images.length} URLs failed - potential Dropbox API issue`);
     }
+    
+    console.log(`📊 FINAL: ${successCount}/${images.length} images have real URLs`);
     
     // Return appropriate response format based on request
     // For extension requests (with limit parameter), return simple array
