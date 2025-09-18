@@ -3864,6 +3864,8 @@ app.post('/api/admin/fix-archier-filenames', async (req, res) => {
 // Initialize database and start server
 async function startServer() {
   try {
+    console.log('🚀 Starting SnapTag server...');
+    
     // Debug environment variables
     console.log('🔍 Environment Check:');
     console.log('DATABASE_URL:', process.env.DATABASE_URL ? '✅ Set' : '❌ Missing');
@@ -3871,17 +3873,22 @@ async function startServer() {
     console.log('DROPBOX_FOLDER:', process.env.DROPBOX_FOLDER || '❌ Missing');
     console.log('NODE_ENV:', process.env.NODE_ENV || 'development');
     
-    // Initialize PostgreSQL database
-    await databaseService.init();
-
-app.listen(PORT, () => {
-  console.log(`SnapTag server running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log('✅ PostgreSQL database connected and initialized');
+    // Start server first to ensure Railway sees it as responsive
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 SnapTag server running on port ${PORT}`);
+      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
     });
+
+    // Initialize database after server is running
+    console.log('🗃️ Initializing database...');
+    await databaseService.init();
+    console.log('✅ PostgreSQL database connected and initialized');
+    
+    return server;
   } catch (error) {
     console.error('❌ Failed to start server:', error);
     console.error('❌ Error details:', error.message);
+    console.error('❌ Stack trace:', error.stack);
     process.exit(1);
   }
 }
