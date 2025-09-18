@@ -560,5 +560,5 @@ function findImagesOnPage() {
   // Sort by size (larger images first)
   images.sort((a, b) => (b.width * b.height) - (a.width * a.height));
   
-  return images.slice(0, 20); // Limit to top 20 images
+  return images.slice(0, 40); // Limit to top 40 images
 } 
