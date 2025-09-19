@@ -355,6 +355,12 @@ document.addEventListener('DOMContentLoaded', function() {
               }
               
               if (response && response.success) {
+                console.log(`🔍 Image ${imageIndex} response:`, {
+                  success: response.success,
+                  isDuplicate: !!(response.result && response.result.duplicate),
+                  result: response.result
+                });
+                
                 if (response.result && response.result.duplicate) {
                   duplicateCount++;
                   console.log(`🔄 Image ${imageIndex} was a duplicate:`, response.result.filename);
@@ -498,7 +504,8 @@ document.addEventListener('DOMContentLoaded', function() {
         imageElement.innerHTML = `<img src="${imageData.url}" alt="${imageData.title || imageData.filename}" loading="lazy">`;
       } else {
         // Show placeholder for newly saved images without URL
-        imageElement.innerHTML = `<div style="width: 60px; height: 60px; background: #e5e7eb; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #6b7280; border-radius: 4px;">${imageData.filename.substring(0, 8)}...</div>`;
+        const displayName = imageData.filename ? imageData.filename.substring(0, 8) : imageData.original_name ? imageData.original_name.substring(0, 8) : 'Image';
+        imageElement.innerHTML = `<div style="width: 60px; height: 60px; background: #e5e7eb; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #6b7280; border-radius: 4px;">${displayName}...</div>`;
       }
       
       imageElement.addEventListener('click', () => {
