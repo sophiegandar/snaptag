@@ -117,61 +117,6 @@ const AdvancedSearch = ({ onSearch, initialFilters = {} }) => {
         </div>
       </div>
 
-      {/* Advanced Filters */}
-      {isExpanded && (
-        <div className="p-4 space-y-6">
-
-
-          {/* Date Range Filter */}
-          <div>
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Upload Date</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">From</label>
-                <input
-                  type="date"
-                  value={filters.dateRange.start}
-                  onChange={(e) => updateFilter('dateRange', { 
-                    ...filters.dateRange, 
-                    start: e.target.value 
-                  })}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">To</label>
-                <input
-                  type="date"
-                  value={filters.dateRange.end}
-                  onChange={(e) => updateFilter('dateRange', { 
-                    ...filters.dateRange, 
-                    end: e.target.value 
-                  })}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-            </div>
-          </div>
-
-
-
-          {/* Actions */}
-          <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-            <button
-              onClick={clearAllFilters}
-              className="text-sm text-gray-500 hover:text-gray-700"
-            >
-              Clear all filters
-            </button>
-            
-            {searchStats && (
-              <div className="text-sm text-gray-500">
-                {searchStats.activeFilters} active filter{searchStats.activeFilters !== 1 ? 's' : ''}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

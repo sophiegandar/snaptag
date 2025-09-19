@@ -1626,13 +1626,14 @@ const ImageGallery = () => {
               onTagClick={handleTagClick}
               onDelete={deleteImage}
               onEdit={(id) => navigate(`/image/${id}`)}
-                  isSelected={selectedGalleryImages.includes(image.id)}
-                  onSelect={() => toggleGalleryImageSelection(image.id)}
-                  canEdit={canEdit}
-                  canDelete={canDelete}
+              isSelected={selectedGalleryImages.includes(image.id)}
+              onSelect={() => toggleGalleryImageSelection(image.id)}
+              canEdit={canEdit}
+              canDelete={canDelete}
             />
           ))}
         </div>
+      )}
         
         {/* Pagination Info and Load More Button */}
         {pagination.total > 0 && (
