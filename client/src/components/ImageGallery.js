@@ -15,6 +15,17 @@ const ImageGallery = () => {
   const [currentFilters, setCurrentFilters] = useState({});
   const [lastErrorTime, setLastErrorTime] = useState(0);
   
+  // Pagination state for large galleries
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 50, // Start with 50 images per page
+    total: 0,
+    pages: 0,
+    hasNext: false,
+    hasPrev: false
+  });
+  const [loadingMore, setLoadingMore] = useState(false);
+  
   // Untagged images state
   const [untaggedImages, setUntaggedImages] = useState([]);
   const [showUntagged, setShowUntagged] = useState(true);
@@ -92,9 +103,13 @@ const ImageGallery = () => {
     };
   }, [isTagsDropdownOpen, isSortDropdownOpen]);
 
-  const loadImages = async (searchFilters = {}) => {
+  const loadImages = async (searchFilters = {}, loadMore = false) => {
     try {
-      setLoading(true);
+      if (loadMore) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
       // Auto-dismiss AI suggestions when loading new images
       setImageSuggestions({});
       
@@ -121,7 +136,7 @@ const ImageGallery = () => {
       });
       } else {
         console.log('📡 Using regular endpoint (no filters or sorting)');
-        response = await apiCall('/api/images?limit=50'); // Smart pagination - load 50 at a time
+        response = await apiCall(`/api/images?limit=${pagination.limit}&page=${loadMore ? pagination.page + 1 : 1}`); // Smart pagination
       }
       
       if (!response.ok) {
@@ -133,16 +148,32 @@ const ImageGallery = () => {
       const responseData = await response.json();
       // Handle both old format (array) and new format (object with pagination)
       const data = Array.isArray(responseData) ? responseData : responseData.images;
-      console.log('✅ Images loaded successfully:', data.length, 'images');
+      const paginationData = responseData.pagination || null;
       
-      // EMERGENCY DEBUG: Log what we're getting
-      console.log('🚨 EMERGENCY DEBUG - Raw API response:', data.slice(0, 3));
+      console.log('✅ Images loaded successfully:', data.length, 'images');
+      if (paginationData) {
+        console.log('📊 Pagination info:', paginationData);
+      }
+      
+      // Debug: Log what we're getting
       const urlCount = data.filter(img => img.url && !img.url.includes('placeholder')).length;
       const taggedCount = data.filter(img => img.tags && img.tags.length > 0).length;
       const untaggedCount = data.filter(img => !img.tags || img.tags.length === 0).length;
-      console.log(`🚨 EMERGENCY: ${data.length} total, ${urlCount} with URLs, ${taggedCount} tagged, ${untaggedCount} untagged`);
+      console.log(`📊 Gallery: ${data.length} loaded, ${urlCount} with URLs, ${taggedCount} tagged, ${untaggedCount} untagged`);
       
-      setImages(data);
+      if (loadMore) {
+        // Append new images to existing ones
+        setImages(prev => [...prev, ...data]);
+      } else {
+        // Replace images for new search/filter
+        setImages(data);
+      }
+      
+      // Update pagination state if available
+      if (paginationData) {
+        setPagination(paginationData);
+      }
+      
       // Update filters only after successful load
       setCurrentFilters(searchFilters);
     } catch (error) {
@@ -156,6 +187,13 @@ const ImageGallery = () => {
       }
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const loadMoreImages = () => {
+    if (pagination.hasNext && !loadingMore) {
+      loadImages(currentFilters, true);
     }
   };
 
@@ -1595,6 +1633,35 @@ const ImageGallery = () => {
             />
           ))}
         </div>
+        
+        {/* Pagination Info and Load More Button */}
+        {pagination.total > 0 && (
+          <div className="flex flex-col items-center py-6">
+            <div className="text-sm text-gray-500 mb-4">
+              Showing {images.length} of {pagination.total} images
+            </div>
+            
+            {pagination.hasNext && !loading && (
+              <button
+                onClick={loadMoreImages}
+                disabled={loadingMore}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2"
+              >
+                {loadingMore ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4" />
+                    Load More ({pagination.total - images.length} remaining)
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        )}
           )}
         </>
       )}
@@ -1836,6 +1903,7 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
         <img
           src={imageUrl}
           alt={image.title || image.filename}
+          loading="lazy"
           className={`w-24 h-24 object-cover rounded cursor-pointer ${
             isUnusualTexture() ? 'scale-150' : ''
           }`}

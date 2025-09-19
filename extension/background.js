@@ -2,12 +2,24 @@
 
 console.log('🚀 SnapTag background script loaded!');
 
-// Function to create context menus
+// Function to create context menus with proper error handling
+let menusCreated = false;
+
 function createContextMenus() {
+  if (menusCreated) {
+    console.log('🔧 Context menus already created, skipping...');
+    return;
+  }
+  
   console.log('🔧 Creating SnapTag context menus...');
   
   // Remove any existing menus first
   chrome.contextMenus.removeAll(() => {
+    if (chrome.runtime.lastError) {
+      console.error('❌ Error removing existing menus:', chrome.runtime.lastError);
+      return;
+    }
+    
     console.log('🗑️ Cleared existing menus');
     
     // Create individual image menu (right-click on image)
@@ -58,6 +70,7 @@ function createContextMenus() {
         console.error('❌ Error creating page "save all" context menu:', chrome.runtime.lastError);
       } else {
         console.log('✅ Page "save all" context menu created successfully');
+        menusCreated = true; // Mark as created after the last menu
       }
     });
   });
@@ -66,16 +79,18 @@ function createContextMenus() {
 // Create context menus on install
 chrome.runtime.onInstalled.addListener(() => {
   console.log('📦 SnapTag extension installed/updated');
+  menusCreated = false; // Reset flag on install/update
   createContextMenus();
 });
 
 // Create context menus on startup (in case of reload)
 chrome.runtime.onStartup.addListener(() => {
   console.log('🔄 SnapTag extension starting up');
+  menusCreated = false; // Reset flag on startup
   createContextMenus();
 });
 
-// Also create them immediately when script loads
+// Create them immediately when script loads (only if not already created)
 createContextMenus();
 
 // Handle context menu clicks

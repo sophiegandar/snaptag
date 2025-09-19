@@ -247,13 +247,25 @@ document.addEventListener('DOMContentLoaded', function() {
     const count = selectedImages.length;
     const total = pageImages.length;
     
-    // Update save button text
-    saveSelectedImagesBtn.textContent = count > 0 ? `Save ${count} Selected` : 'Save Selected';
+    // Update save button text with better feedback
+    if (count === 0) {
+      saveSelectedImagesBtn.textContent = 'Select images to save';
+      saveSelectedImagesBtn.disabled = true;
+    } else {
+      saveSelectedImagesBtn.textContent = `Save ${count} Image${count === 1 ? '' : 's'}`;
+      saveSelectedImagesBtn.disabled = false;
+    }
     
-    // Update selection count
+    // Update selection count with better language
     const selectionCount = document.getElementById('selectionCount');
     if (selectionCount) {
-      selectionCount.textContent = `${count} of ${total} images selected`;
+      if (count === 0) {
+        selectionCount.textContent = `${total} image${total === 1 ? '' : 's'} found - select some to save`;
+      } else if (count === total) {
+        selectionCount.textContent = `All ${count} image${count === 1 ? '' : 's'} selected`;
+      } else {
+        selectionCount.textContent = `${count} of ${total} image${total === 1 ? '' : 's'} selected`;
+      }
     }
   }
 
@@ -303,7 +315,11 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log(`📊 Processing ${totalCount} images`);
       console.log('📋 Selected image indices:', imagesToSave);
       
-      for (const imageIndex of imagesToSave) {
+      // Update loading overlay with progress
+      updateLoadingProgress(0, totalCount);
+      
+      for (let i = 0; i < imagesToSave.length; i++) {
+        const imageIndex = imagesToSave[i];
         const image = imagesData[imageIndex];
         console.log(`📷 Processing image ${imageIndex}:`, image);
         
@@ -339,12 +355,12 @@ document.addEventListener('DOMContentLoaded', function() {
               }
               
               if (response && response.success) {
-                savedCount++;
                 if (response.result && response.result.duplicate) {
                   duplicateCount++;
                   console.log(`🔄 Image ${imageIndex} was a duplicate:`, response.result.filename);
                 } else {
                   actualSavedCount++;
+                  savedCount++; // Only count actual saves as "saved"
                   console.log(`✅ Successfully saved image ${imageIndex} as:`, response.result?.filename);
                 }
                 resolve(response.result);
@@ -358,7 +374,11 @@ document.addEventListener('DOMContentLoaded', function() {
           
         } catch (error) {
           console.error(`❌ Error saving image ${imageIndex}:`, error);
+          errorCount++; // Make sure uncaught errors are counted
         }
+        
+        // Update progress
+        updateLoadingProgress(i + 1, totalCount);
       }
       
       showLoading(false);
@@ -368,17 +388,29 @@ document.addEventListener('DOMContentLoaded', function() {
       let statusMessage = '';
       let statusType = 'error';
       
+      // Calculate what actually happened
+      const attemptedCount = totalCount;
+      const successfullyProcessed = actualSavedCount + duplicateCount;
+      const failed = attemptedCount - successfullyProcessed;
+      
       if (actualSavedCount > 0) {
-        statusMessage = `Saved ${actualSavedCount} new images`;
-        if (duplicateCount > 0) statusMessage += `, ${duplicateCount} duplicates`;
-        if (errorCount > 0) statusMessage += `, ${errorCount} errors`;
+        statusMessage = `✅ Saved ${actualSavedCount} new image${actualSavedCount === 1 ? '' : 's'}`;
+        if (duplicateCount > 0) statusMessage += `, ${duplicateCount} duplicate${duplicateCount === 1 ? '' : 's'} skipped`;
+        if (failed > 0) statusMessage += `, ${failed} failed`;
         statusType = 'success';
       } else if (duplicateCount > 0) {
-        statusMessage = `${duplicateCount} images were duplicates`;
-        statusType = 'warning';
+        statusMessage = `ℹ️ All ${duplicateCount} image${duplicateCount === 1 ? ' was already saved' : 's were already saved'}`;
+        if (failed > 0) statusMessage += `, ${failed} failed`;
+        statusType = failed > 0 ? 'warning' : 'info';
       } else {
-        statusMessage = `Failed to save images (${errorCount} errors)`;
+        statusMessage = `❌ Failed to save images (${failed} error${failed === 1 ? '' : 's'})`;
         statusType = 'error';
+      }
+      
+      // ⚠️ CRITICAL: Alert user if any images failed to save
+      if (failed > 0) {
+        statusMessage = `⚠️ Warning: ${failed} of ${attemptedCount} images failed to save! ` + statusMessage;
+        statusType = 'warning';
       }
       
       showStatus(statusMessage, statusType);
@@ -497,6 +529,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function showLoading(show) {
     loadingOverlay.classList.toggle('hidden', !show);
+  }
+
+  function updateLoadingProgress(current, total) {
+    const loadingText = loadingOverlay.querySelector('p');
+    if (loadingText) {
+      if (current === 0) {
+        loadingText.textContent = `Starting to save ${total} image${total === 1 ? '' : 's'}...`;
+      } else if (current === total) {
+        loadingText.textContent = 'Finishing up...';
+      } else {
+        loadingText.textContent = `Saving image ${current} of ${total}...`;
+      }
+    }
   }
 
   function showStatus(message, type) {

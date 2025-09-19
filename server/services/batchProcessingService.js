@@ -1,4 +1,5 @@
-const databaseService = require('./databaseService');
+const PostgresService = require('./postgresService');
+const databaseService = new PostgresService();
 const metadataService = require('./metadataService');
 const dropboxService = require('./dropboxService');
 const fs = require('fs').promises;

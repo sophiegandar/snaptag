@@ -15,7 +15,6 @@ import {
 import { apiCall } from '../utils/apiConfig';
 
 const AdvancedSearch = ({ onSearch, initialFilters = {} }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
   const [filters, setFilters] = useState({
     searchTerm: '',
     tags: [],
@@ -115,21 +114,6 @@ const AdvancedSearch = ({ onSearch, initialFilters = {} }) => {
             <span>Clear</span>
           </button>
           
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className={`flex items-center space-x-2 px-4 py-3 border rounded-lg transition-colors ${
-              isExpanded ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-gray-300 hover:bg-gray-50'
-            }`}
-          >
-            <Sliders className="h-5 w-5" />
-            <span>Filters</span>
-            {searchStats && searchStats.activeFilters > 0 && (
-              <span className="bg-blue-500 text-white text-xs rounded-full px-2 py-1">
-                {searchStats.activeFilters}
-              </span>
-            )}
-            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          </button>
         </div>
       </div>
 

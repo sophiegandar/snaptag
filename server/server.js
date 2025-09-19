@@ -18,6 +18,8 @@ const { generateFileHash } = require('./utils/fileHash');
 
 // Initialize services
 const databaseService = new PostgresService();
+
+// Initialize services
 const folderPathService = new FolderPathService();
 const tagSuggestionService = new TagSuggestionService(databaseService);
 const duplicateDetectionService = new DuplicateDetectionService(databaseService, dropboxService);
@@ -1119,36 +1121,47 @@ app.get('/api/images', async (req, res) => {
     // EFFICIENT: Generate URLs with caching to prevent 429 errors
     console.log(`🚀 CACHED: Processing ${images.length} images with URL caching...`);
     
-    // Process images in smaller batches with caching
-    const BATCH_SIZE = 10;
+    // Enhanced batch processing for better performance
+    const BATCH_SIZE = 20; // Increased for better throughput
     const batches = [];
     for (let i = 0; i < images.length; i += BATCH_SIZE) {
       batches.push(images.slice(i, i + BATCH_SIZE));
     }
     
     let successCount = 0;
+    let cacheHits = 0;
+    
     for (const batch of batches) {
       const promises = batch.map(async (image) => {
         try {
+          // Check cache first to track hits
+          const cached = urlCache.get(image.dropbox_path);
+          if (cached && (Date.now() - cached.timestamp) < URL_CACHE_TTL) {
+            cacheHits++;
+          }
+          
           image.url = await getCachedDropboxUrl(image.dropbox_path, req);
           successCount++;
           return true;
         } catch (error) {
           console.error(`❌ Failed to get URL for ${image.filename}:`, error.message);
-          image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`;
+          // Provide a more specific placeholder
+          image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg?error=dropbox&file=${encodeURIComponent(image.filename)}`;
           return false;
         }
       });
       
       await Promise.all(promises);
       
-      // Small delay between batches to avoid overwhelming Dropbox API
-      if (batches.indexOf(batch) < batches.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+      // Adaptive delay - shorter for small batches, skip for cached results
+      const batchIndex = batches.indexOf(batch);
+      if (batchIndex < batches.length - 1) {
+        const delay = Math.max(25, 100 - (cacheHits * 5)); // Reduce delay if many cache hits
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
     
-    console.log(`📊 CACHED FINAL: ${successCount}/${images.length} images have URLs (${urlCache.size} cached)`);
+    console.log(`📊 CACHED FINAL: ${successCount}/${images.length} images have URLs (${cacheHits} cache hits, ${urlCache.size} total cached)`);
     
     // Return appropriate response format based on request
     // For extension requests (with limit parameter), return simple array
@@ -1191,38 +1204,54 @@ app.get('/api/images/untagged', async (req, res) => {
     const images = untaggedImages.rows; // PostgreSQL returns .rows
     console.log(`📊 Found ${images.length} untagged images`);
     
-    // Generate temporary URLs for display (with performance optimization)
-    let imagesWithUrls;
+    // Generate temporary URLs using enhanced caching system
+    console.log(`🚀 Generating URLs for ${images.length} untagged images with caching...`);
     
-    if (images.length > 50) {
-      console.log(`⚡ Too many untagged images (${images.length}), using placeholders for speed`);
-      imagesWithUrls = images.map(image => ({
-        ...image,
-        url: `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`,
-        tags: []
-      }));
-    } else {
-      console.log(`🚀 Generating URLs in parallel for ${images.length} untagged images...`);
-      imagesWithUrls = await Promise.all(
-        images.map(async (image) => {
-          try {
-            const url = await dropboxService.getTemporaryLink(image.dropbox_path);
-            return {
-              ...image,
-              url,
-              tags: [] // Ensure tags is empty array
-            };
-          } catch (error) {
-            console.error(`❌ Failed to get URL for ${image.filename}:`, error.message);
-            return {
-              ...image,
-              url: `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`,
-              tags: []
-            };
-          }
-        })
-      );
+    // Use the same enhanced batch processing as main gallery
+    const UNTAGGED_BATCH_SIZE = 15;
+    const untaggedBatches = [];
+    for (let i = 0; i < images.length; i += UNTAGGED_BATCH_SIZE) {
+      untaggedBatches.push(images.slice(i, i + UNTAGGED_BATCH_SIZE));
     }
+    
+    let untaggedSuccessCount = 0;
+    let untaggedCacheHits = 0;
+    
+    for (const batch of untaggedBatches) {
+      const promises = batch.map(async (image) => {
+        try {
+          // Check cache first
+          const cached = urlCache.get(image.dropbox_path);
+          if (cached && (Date.now() - cached.timestamp) < URL_CACHE_TTL) {
+            untaggedCacheHits++;
+          }
+          
+          image.url = await getCachedDropboxUrl(image.dropbox_path, req);
+          image.tags = []; // Ensure tags is empty array
+          untaggedSuccessCount++;
+          return image;
+        } catch (error) {
+          console.error(`❌ Failed to get URL for untagged ${image.filename}:`, error.message);
+          return {
+            ...image,
+            url: `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg?error=untagged&file=${encodeURIComponent(image.filename)}`,
+            tags: []
+          };
+        }
+      });
+      
+      await Promise.all(promises);
+      
+      // Adaptive delay for untagged images
+      const batchIndex = untaggedBatches.indexOf(batch);
+      if (batchIndex < untaggedBatches.length - 1) {
+        const delay = Math.max(25, 80 - (untaggedCacheHits * 3));
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    
+    console.log(`📊 UNTAGGED: ${untaggedSuccessCount}/${images.length} URLs generated (${untaggedCacheHits} cache hits)`);
+    const imagesWithUrls = images;
     
     res.json({
       success: true,
@@ -1348,12 +1377,13 @@ app.post('/api/images/upload', upload.single('image'), async (req, res) => {
 const saveQueue = [];
 let isProcessingQueue = false;
 
-// URL cache to prevent repeated Dropbox API calls and 429 errors
+// Enhanced URL cache to prevent repeated Dropbox API calls and 429 errors
 const urlCache = new Map();
-const URL_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+const URL_CACHE_TTL = 2 * 60 * 60 * 1000; // 2 hours (Dropbox temp links last 4 hours)
+const MAX_CACHE_SIZE = 10000; // Prevent memory issues
 
-// Get cached URL or fetch from Dropbox with rate limiting protection
-async function getCachedDropboxUrl(dropboxPath, req) {
+// Get cached URL or fetch from Dropbox with enhanced error handling
+async function getCachedDropboxUrl(dropboxPath, req, retryCount = 0) {
   const cacheKey = dropboxPath;
   const cached = urlCache.get(cacheKey);
   
@@ -1365,6 +1395,12 @@ async function getCachedDropboxUrl(dropboxPath, req) {
   try {
     const url = await dropboxService.getTemporaryLink(dropboxPath);
     
+    // Cache management - remove oldest entries if cache is full
+    if (urlCache.size >= MAX_CACHE_SIZE) {
+      const oldestKey = urlCache.keys().next().value;
+      urlCache.delete(oldestKey);
+    }
+    
     // Cache the URL
     urlCache.set(cacheKey, {
       url: url,
@@ -1373,9 +1409,17 @@ async function getCachedDropboxUrl(dropboxPath, req) {
     
     return url;
   } catch (error) {
-    console.error(`❌ Failed to get Dropbox URL for ${dropboxPath}:`, error.message);
-    // Return placeholder on error
-    return `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`;
+    console.error(`❌ Failed to get Dropbox URL for ${dropboxPath} (attempt ${retryCount + 1}):`, error.message);
+    
+    // Enhanced error handling - retry once for rate limiting
+    if (retryCount === 0 && (error.message.includes('429') || error.message.includes('rate'))) {
+      console.log(`🔄 Rate limited, retrying in 2 seconds...`);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      return getCachedDropboxUrl(dropboxPath, req, 1);
+    }
+    
+    // Only fall back to placeholder for non-retryable errors
+    throw error; // Let calling code handle placeholders
   }
 }
 
@@ -1464,18 +1508,30 @@ async function processSaveQueue() {
   isProcessingQueue = true;
   console.log(`🚦 Processing save queue: ${saveQueue.length} requests waiting`);
   
+  let processed = 0;
+  let failed = 0;
+  
   while (saveQueue.length > 0) {
     const { req, res, requestId, startTime } = saveQueue.shift();
     try {
       await processSaveRequest(req, res, requestId, startTime);
+      processed++;
     } catch (error) {
+      failed++;
       console.error(`❌ Queue processing error for ${requestId}:`, error);
+      console.error(`❌ Error details: ${error.message}`);
+      console.error(`❌ Stack trace:`, error.stack);
       if (!res.headersSent) {
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ 
+          success: false,
+          error: 'Internal server error',
+          requestId: requestId 
+        });
       }
     }
   }
   
+  console.log(`🏁 Queue processing complete: ${processed} processed, ${failed} failed`);
   isProcessingQueue = false;
 }
 
@@ -1501,6 +1557,16 @@ async function processSaveRequest(req, res, requestId, startTime) {
       title: req.body.title,
       sourceUrl: req.body.sourceUrl?.substring(0, 100) + '...'
     });
+    
+    // RELIABILITY: Validate input data
+    if (!req.body.imageUrl || typeof req.body.imageUrl !== 'string') {
+      console.error(`❌ [${requestId}] VALIDATION ERROR: Invalid imageUrl:`, req.body.imageUrl);
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Valid image URL is required',
+        requestId 
+      });
+    }
     const { imageUrl, tags, title, description, focusedTags, sourceUrl } = req.body;
     
     if (!imageUrl) {
@@ -2311,23 +2377,31 @@ app.post('/api/images/search', async (req, res) => {
     // EFFICIENT: Generate URLs with caching (same as main endpoint)
     console.log(`🔄 SEARCH: Processing ${filteredImages.length} images with caching...`);
     
-    // Process images in smaller batches with caching
-    const SEARCH_BATCH_SIZE = 10;
+    // Enhanced search batch processing for better performance
+    const SEARCH_BATCH_SIZE = 20; // Increased for better throughput
     const searchBatches = [];
     for (let i = 0; i < filteredImages.length; i += SEARCH_BATCH_SIZE) {
       searchBatches.push(filteredImages.slice(i, i + SEARCH_BATCH_SIZE));
     }
     
     let successCount = 0;
+    let searchCacheHits = 0;
+    
     for (const batch of searchBatches) {
       const promises = batch.map(async (image) => {
         try {
+          // Check cache first to track hits
+          const cached = urlCache.get(image.dropbox_path);
+          if (cached && (Date.now() - cached.timestamp) < URL_CACHE_TTL) {
+            searchCacheHits++;
+          }
+          
           image.url = await getCachedDropboxUrl(image.dropbox_path, req);
           successCount++;
           return true;
         } catch (error) {
           console.error(`❌ SEARCH Failed to get URL for ${image.filename}:`, error.message);
-          image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`;
+          image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg?error=search&file=${encodeURIComponent(image.filename)}`;
           return false;
         }
       });
@@ -3072,7 +3146,7 @@ app.get('/api/images/:id/suggestions', async (req, res) => {
       if (tagsResult.rows) {
         existingTags = tagsResult.rows.map(row => row.name);
       } else if (Array.isArray(tagsResult)) {
-        // Fallback for SQLite-style response
+        // Fallback for array-style response
         existingTags = tagsResult.map(row => row.name);
       }
       
@@ -3351,19 +3425,53 @@ async function processAndUploadImage({ filePath, originalName, tags, name, focus
   };
 }
 
-async function saveImageFromUrl({ imageUrl, tags, title, name, description, focusedTags, sourceUrl }) {
-  console.log('📥 Downloading image from:', imageUrl);
+async function saveImageFromUrl({ imageUrl, tags, title, name, description, focusedTags, sourceUrl, requestId }) {
+  console.log(`📥 [${requestId || 'N/A'}] STEP 1: Downloading image from:`, imageUrl);
   
-  // Download image
-  const response = await fetch(imageUrl);
-  if (!response.ok) {
-    throw new Error(`Failed to download image: ${response.status} ${response.statusText}`);
+  // RELIABILITY: Download with timeout and better error handling
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout (increased for large images)
+  
+  let response;
+  try {
+    response = await fetch(imageUrl, { 
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'SnapTag/1.0 (Image Archival Bot)'
+      }
+    });
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to download image: ${response.status} ${response.statusText} from ${imageUrl}`);
+    }
+    console.log(`✅ [${requestId || 'N/A'}] STEP 1 SUCCESS: Image response received (${response.status})`);
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error(`Download timeout (60s) for image: ${imageUrl}`);
+    }
+    throw new Error(`Network error downloading image: ${error.message} from ${imageUrl}`);
   }
 
-  const buffer = await response.arrayBuffer();
-  const tempFilePath = `temp/${Date.now()}-downloaded-image`;
-  await fs.writeFile(tempFilePath, Buffer.from(buffer));
-  console.log('📁 Image downloaded to:', tempFilePath);
+  let buffer;
+  try {
+    buffer = await response.arrayBuffer();
+    if (!buffer || buffer.byteLength === 0) {
+      throw new Error(`Downloaded image is empty or corrupted: ${imageUrl}`);
+    }
+    console.log(`✅ [${requestId || 'N/A'}] STEP 2 SUCCESS: Image buffer received (${buffer.byteLength} bytes)`);
+  } catch (error) {
+    throw new Error(`Failed to read image data: ${error.message} from ${imageUrl}`);
+  }
+
+  const tempFilePath = `temp/${Date.now()}-${requestId || 'unknown'}-downloaded-image`;
+  try {
+    await fs.writeFile(tempFilePath, Buffer.from(buffer));
+    console.log(`✅ [${requestId || 'N/A'}] STEP 3 SUCCESS: Image saved to temp file:`, tempFilePath);
+  } catch (error) {
+    throw new Error(`Failed to write temp file: ${error.message}`);
+  }
 
   try {
     // Extract filename from URL

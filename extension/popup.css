@@ -114,8 +114,12 @@ body {
 }
 
 .action-btn:disabled {
-  opacity: 0.6;
+  background: #f3f4f6 !important;
+  color: #9ca3af !important;
   cursor: not-allowed;
+  border-color: #e5e7eb;
+  opacity: 1;
+  transform: none !important;
 }
 
 /* Tags Input */
@@ -500,6 +504,18 @@ body {
   background: #fee2e2;
   color: #991b1b;
   border: 1px solid #fca5a5;
+}
+
+.status-message.warning {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fbbf24;
+}
+
+.status-message.info {
+  background: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #93c5fd;
 }
 
 @keyframes slideDown {

@@ -180,7 +180,7 @@ class PostgresService {
     };
   }
 
-  // Same interface methods as SQLite service
+  // Database operations
   async saveImage(imageData) {
     const client = await this.pool.connect();
     
