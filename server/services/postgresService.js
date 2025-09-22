@@ -742,7 +742,8 @@ class PostgresService {
   // Projects methods
   async getAllProjects() {
     const query = 'SELECT * FROM projects ORDER BY created_at DESC';
-    return await this.query(query);
+    const result = await this.query(query);
+    return result.rows || result; // Return just the rows array
   }
 
   // Project assignments search method
