@@ -228,9 +228,25 @@ async function handleImageSave(imageUrl, tab, metadata = {}) {
     console.log('📥 Response status:', response.status);
     
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('❌ Server error:', errorData);
-      throw new Error(errorData.error || 'Failed to save image');
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      
+      try {
+        // Try to parse as JSON first (most errors)
+        const errorData = await response.json();
+        console.error('❌ Server error:', errorData);
+        errorMessage = errorData.error || errorMessage;
+      } catch (jsonError) {
+        // If JSON parsing fails (like with 429 rate limit), use text response
+        try {
+          const textError = await response.text();
+          console.error('❌ Server error (non-JSON):', textError);
+          errorMessage = textError || errorMessage;
+        } catch (textError) {
+          console.error('❌ Error reading response:', textError);
+        }
+      }
+      
+      throw new Error(errorMessage);
     }
 
     const result = await response.json();

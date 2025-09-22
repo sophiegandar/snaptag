@@ -393,6 +393,13 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Update progress
         updateLoadingProgress(i + 1, totalCount);
+        
+        // Rate limiting protection: Add delay between images (except for last image)
+        if (i < imagesToSave.length - 1) {
+          const delay = errorCount > 0 ? 3000 : 1500; // 3s delay if errors, 1.5s normally
+          console.log(`⏱️ Waiting ${delay}ms before next image to prevent rate limiting...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
       }
       
       showLoading(false);
