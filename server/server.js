@@ -1985,7 +1985,7 @@ async function autoCreateArchierProjects(tags) {
     'the boulevard', 'boulevard',
     'five yards house', 'five yards',
     'hampden road house', 'hampden road',
-    'davison street',
+    'davison street', 'davison st',
     'yandoit house',
     'oakover preston',
     'corner house',

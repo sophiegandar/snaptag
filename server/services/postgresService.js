@@ -739,6 +739,12 @@ class PostgresService {
     return result.rows[0];
   }
 
+  // Projects methods
+  async getAllProjects() {
+    const query = 'SELECT * FROM projects ORDER BY created_at DESC';
+    return await this.query(query);
+  }
+
   // Project assignments search method
   async searchImagesWithProjectAssignments(searchFilters) {
     try {
