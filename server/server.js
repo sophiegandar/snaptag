@@ -3569,22 +3569,6 @@ app.use((error, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-// Stages API endpoints - MUST BE BEFORE CATCH-ALL ROUTE
-app.get('/api/stages', async (req, res) => {
-  try {
-    console.log('🔍 Fetching all stages...');
-    const stages = await databaseService.getAllStages();
-    console.log(`✅ Found ${stages.length} stages`);
-    res.json(stages);
-  } catch (error) {
-    console.error('❌ Error fetching stages:', error);
-    res.status(500).json({ 
-      error: 'Failed to fetch stages',
-      details: error.message,
-      stack: error.stack 
-    });
-  }
-});
 
 app.post('/api/stages', async (req, res) => {
   try {
@@ -3656,22 +3640,6 @@ app.delete('/api/stages/:id', async (req, res) => {
   }
 });
 
-// Rooms API endpoints - MUST BE BEFORE CATCH-ALL ROUTE
-app.get('/api/rooms', async (req, res) => {
-  try {
-    console.log('🔍 Fetching all rooms...');
-    const rooms = await databaseService.getAllRooms();
-    console.log(`✅ Found ${rooms.length} rooms`);
-    res.json(rooms);
-  } catch (error) {
-    console.error('❌ Error fetching rooms:', error);
-    res.status(500).json({ 
-      error: 'Failed to fetch rooms',
-      details: error.message,
-      stack: error.stack 
-    });
-  }
-});
 
 app.post('/api/rooms', async (req, res) => {
   try {
@@ -3737,6 +3705,52 @@ app.delete('/api/rooms/:id', async (req, res) => {
     console.error('❌ Error deleting room:', error);
     res.status(500).json({ 
       error: 'Failed to delete room',
+      details: error.message,
+      stack: error.stack 
+    });
+  }
+});
+
+// API routes that MUST come before static file serving
+// Get all projects
+app.get('/api/projects', async (req, res) => {
+  try {
+    const projects = await databaseService.getAllProjects();
+    res.json(projects);
+  } catch (error) {
+    console.error('Error fetching projects:', error);
+    res.status(500).json({ error: 'Failed to fetch projects' });
+  }
+});
+
+// Get all stages
+app.get('/api/stages', async (req, res) => {
+  try {
+    console.log('🔍 Fetching all stages...');
+    const stages = await databaseService.getAllStages();
+    console.log(`✅ Found ${stages.length} stages`);
+    res.json(stages);
+  } catch (error) {
+    console.error('❌ Error fetching stages:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch stages',
+      details: error.message,
+      stack: error.stack 
+    });
+  }
+});
+
+// Get all rooms
+app.get('/api/rooms', async (req, res) => {
+  try {
+    console.log('🔍 Fetching all rooms...');
+    const rooms = await databaseService.getAllRooms();
+    console.log(`✅ Found ${rooms.length} rooms`);
+    res.json(rooms);
+  } catch (error) {
+    console.error('❌ Error fetching rooms:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch rooms',
       details: error.message,
       stack: error.stack 
     });
@@ -5550,38 +5564,6 @@ app.get('/api/tags', async (req, res) => {
   }
 });
 
-// Get all projects
-app.get('/api/projects', async (req, res) => {
-  try {
-    const projects = await databaseService.getAllProjects();
-    res.json(projects);
-  } catch (error) {
-    console.error('Error fetching projects:', error);
-    res.status(500).json({ error: 'Failed to fetch projects' });
-  }
-});
-
-// Get all rooms
-app.get('/api/rooms', async (req, res) => {
-  try {
-    const rooms = await databaseService.getAllRooms();
-    res.json(rooms);
-  } catch (error) {
-    console.error('Error fetching rooms:', error);
-    res.status(500).json({ error: 'Failed to fetch rooms' });
-  }
-});
-
-// Get all stages
-app.get('/api/stages', async (req, res) => {
-  try {
-    const stages = await databaseService.getAllStages();
-    res.json(stages);
-  } catch (error) {
-    console.error('Error fetching stages:', error);
-    res.status(500).json({ error: 'Failed to fetch stages' });
-  }
-});
 
 // Get single image by ID
 app.get('/api/images/:id', async (req, res) => {
