@@ -3723,6 +3723,89 @@ app.get('/api/projects', async (req, res) => {
   }
 });
 
+// Admin endpoint to cleanup duplicate and comma-separated tags
+app.post('/api/admin/cleanup-tags', async (req, res) => {
+  try {
+    console.log('🧹 Starting tag cleanup...');
+    let results = { fixed: 0, deleted: 0, created: 0 };
+    
+    // 1. Get all tags
+    const tags = await databaseService.getAllTags();
+    console.log(`📊 Found ${tags.length} tags`);
+    
+    // 2. Find tags that contain commas (these should be split)
+    const commaTagsToFix = tags.filter(tag => tag.name.includes(','));
+    console.log(`🔍 Found ${commaTagsToFix.length} comma-separated tags to fix`);
+    
+    // 3. Process comma-separated tags
+    for (const commaTag of commaTagsToFix) {
+      console.log(`🔧 Processing comma tag: "${commaTag.name}"`);
+      
+      // Split the comma-separated tag into individual tags
+      const individualTags = commaTag.name.split(',').map(t => t.trim().toLowerCase());
+      console.log(`   → Split into: [${individualTags.join(', ')}]`);
+      
+      // Get all images that have this comma-separated tag
+      const imagesWithCommaTag = await databaseService.query(
+        `SELECT id, tags FROM images WHERE tags @> $1::jsonb`,
+        [JSON.stringify([commaTag.name])]
+      );
+      
+      console.log(`   → Found ${imagesWithCommaTag.rows.length} images with this tag`);
+      
+      // For each image, replace the comma tag with individual tags
+      for (const image of imagesWithCommaTag.rows) {
+        const currentTags = image.tags || [];
+        const updatedTags = currentTags.filter(tag => tag !== commaTag.name);
+        
+        // Add individual tags (avoid duplicates)
+        for (const newTag of individualTags) {
+          if (!updatedTags.includes(newTag)) {
+            updatedTags.push(newTag);
+          }
+        }
+        
+        // Update the image
+        await databaseService.updateImageTags(image.id, updatedTags, []);
+        results.fixed++;
+      }
+      
+      // Delete the comma-separated tag
+      await databaseService.query('DELETE FROM tags WHERE id = $1', [commaTag.id]);
+      results.deleted++;
+      console.log(`   → Deleted comma tag "${commaTag.name}"`);
+    }
+    
+    // 4. Trigger project auto-creation for existing tags
+    const archierProjects = ['taroona house', 'corner house', 'court house', 'davison street', 'farm house', 'the boulevard'];
+    
+    for (const projectName of archierProjects) {
+      // Check if there are images with archier + complete + project name
+      const projectImages = await databaseService.query(
+        `SELECT id FROM images WHERE tags @> $1::jsonb AND tags @> $2::jsonb AND tags @> $3::jsonb LIMIT 1`,
+        [JSON.stringify(['archier']), JSON.stringify(['complete']), JSON.stringify([projectName])]
+      );
+      
+      if (projectImages.rows.length > 0) {
+        console.log(`🏗️ Found images for ${projectName}, triggering auto-creation...`);
+        await autoCreateArchierProjects(['archier', 'complete', projectName]);
+        results.created++;
+      }
+    }
+    
+    console.log('✅ Tag cleanup completed!');
+    res.json({ 
+      success: true, 
+      message: 'Tag cleanup completed',
+      results 
+    });
+    
+  } catch (error) {
+    console.error('❌ Error during cleanup:', error);
+    res.status(500).json({ error: 'Tag cleanup failed', details: error.message });
+  }
+});
+
 // Get all stages
 app.get('/api/stages', async (req, res) => {
   try {
