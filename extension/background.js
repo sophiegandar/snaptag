@@ -215,15 +215,31 @@ async function handleImageSave(imageUrl, tab, metadata = {}) {
     };
     console.log('📝 Image metadata:', imageMetadata);
 
-    // Send to SnapTag server
+    // Send to SnapTag server with optimized retry logic
     console.log('📡 Sending request to server...');
-    const response = await fetch(`${serverUrl}/api/images/save-from-url`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(imageMetadata)
-    });
+    let retryCount = 0;
+    const maxRetries = 1; // Reduced to 1 retry for speed
+    let response;
+    
+    while (retryCount <= maxRetries) {
+      try {
+        response = await fetch(`${serverUrl}/api/images/save-from-url`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(imageMetadata)
+        });
+        break; // Success, exit retry loop
+      } catch (fetchError) {
+        retryCount++;
+        if (retryCount > maxRetries) {
+          throw fetchError; // Final failure
+        }
+        console.log(`🔄 Retry ${retryCount}/${maxRetries} for image save after fetch error:`, fetchError.message);
+        await new Promise(resolve => setTimeout(resolve, 1000)); // 1s delay before retry (reduced)
+      }
+    }
 
     console.log('📥 Response status:', response.status);
     

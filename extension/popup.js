@@ -341,10 +341,10 @@ document.addEventListener('DOMContentLoaded', function() {
           });
           
           await new Promise((resolve, reject) => {
-            // Add timeout for individual image saves
+            // Add timeout for individual image saves  
             const timeout = setTimeout(() => {
-              reject(new Error(`Timeout saving image ${imageIndex} after 45 seconds`));
-            }, 45000); // 45 second timeout per image
+              reject(new Error(`Timeout saving image ${imageIndex} after 90 seconds`));
+            }, 90000); // 90 second timeout per image (increased for large images)
 
             chrome.runtime.sendMessage({
               action: 'saveImage',
@@ -396,7 +396,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Rate limiting protection: Add delay between images (except for last image)
         if (i < imagesToSave.length - 1) {
-          const delay = errorCount > 0 ? 3000 : 1500; // 3s delay if errors, 1.5s normally
+          const delay = errorCount > 2 ? 2000 : 800; // 2s delay if multiple errors, 0.8s normally
           console.log(`⏱️ Waiting ${delay}ms before next image to prevent rate limiting...`);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
