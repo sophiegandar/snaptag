@@ -341,11 +341,17 @@ document.addEventListener('DOMContentLoaded', function() {
           });
           
           await new Promise((resolve, reject) => {
+            // Add timeout for individual image saves
+            const timeout = setTimeout(() => {
+              reject(new Error(`Timeout saving image ${imageIndex} after 45 seconds`));
+            }, 45000); // 45 second timeout per image
+
             chrome.runtime.sendMessage({
               action: 'saveImage',
               imageUrl: image.src,
               metadata: metadata
             }, (response) => {
+              clearTimeout(timeout);
               console.log(`📥 Response for image ${imageIndex}:`, response);
               
               if (chrome.runtime.lastError) {
@@ -361,13 +367,15 @@ document.addEventListener('DOMContentLoaded', function() {
                   result: response.result
                 });
                 
-                if (response.result && response.result.duplicate) {
+                // Handle both nested and flat response structures
+                const resultData = response.result?.result || response.result;
+                if (resultData && resultData.duplicate) {
                   duplicateCount++;
-                  console.log(`🔄 Image ${imageIndex} was a duplicate:`, response.result.filename);
+                  console.log(`🔄 Image ${imageIndex} was a duplicate:`, resultData.filename);
                 } else {
                   actualSavedCount++;
                   savedCount++; // Only count actual saves as "saved"
-                  console.log(`✅ Successfully saved image ${imageIndex} as:`, response.result?.filename);
+                  console.log(`✅ Successfully saved image ${imageIndex} as:`, resultData?.filename);
                 }
                 resolve(response.result);
               } else {

@@ -3430,7 +3430,7 @@ async function saveImageFromUrl({ imageUrl, tags, title, name, description, focu
   
   // RELIABILITY: Download with timeout and better error handling
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout (increased for large images)
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout (balanced for reliability vs speed)
   
   let response;
   try {
