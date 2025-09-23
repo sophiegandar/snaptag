@@ -3750,9 +3750,9 @@ app.post('/api/admin/create-all-archier-projects', async (req, res) => {
     let created = 0;
     let found = 0;
     
-    // Get all images with archier + complete tags
+    // Get all images with archier + complete tags (fix JSON query)
     const archierImages = await databaseService.query(
-      `SELECT DISTINCT tags FROM images WHERE tags::text LIKE '%archier%' AND tags::text LIKE '%complete%'`
+      `SELECT DISTINCT tags FROM images WHERE tags::jsonb ? 'archier' AND tags::jsonb ? 'complete'`
     );
     
     console.log(`🔍 Found ${archierImages.rows.length} distinct tag combinations with archier+complete`);
