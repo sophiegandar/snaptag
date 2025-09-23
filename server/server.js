@@ -1631,6 +1631,14 @@ async function processSaveRequest(req, res, requestId, startTime) {
       requestId
     });
 
+    // AUTO-CREATE ARCHIER PROJECTS: Check if we need to create projects after successful save
+    try {
+      await autoCreateArchierProjects(tags || []);
+    } catch (projectError) {
+      console.error(`⚠️ [${requestId}] Auto-project creation failed:`, projectError.message);
+      // Don't fail the entire operation for project creation issues
+    }
+
     const duration = Date.now() - startTime;
     console.log(`✅ [${requestId}] Image saved successfully in ${duration}ms:`, result.filename);
     res.json({
