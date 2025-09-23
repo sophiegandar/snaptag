@@ -3735,43 +3735,63 @@ app.post('/api/admin/cleanup-tags', async (req, res) => {
   }
 });
 
-// Manual project creation for existing tagged images
-app.post('/api/admin/create-missing-projects', async (req, res) => {
+// Manual project creation for all existing archier+complete tagged images
+app.post('/api/admin/create-all-archier-projects', async (req, res) => {
   try {
-    console.log('🏗️ Creating missing projects...');
-    const projectsToCreate = ['court house', 'davison street', 'hampden road house', 'taroona house', 'farm house', 'the boulevard'];
+    console.log('🏗️ Finding and creating ALL Archier projects from existing images...');
     let created = 0;
+    let found = 0;
     
-    for (const projectName of projectsToCreate) {
-      // Check if there are images with archier + complete + project name
-      const projectImages = await databaseService.query(
-        `SELECT id FROM images WHERE tags @> $1::jsonb AND tags @> $2::jsonb AND tags @> $3::jsonb LIMIT 1`,
-        [JSON.stringify(['archier']), JSON.stringify(['complete']), JSON.stringify([projectName])]
-      );
-      
-      if (projectImages.rows.length > 0) {
-        console.log(`🏗️ Found images for "${projectName}", creating project...`);
-        try {
-          await autoCreateArchierProjects(['archier', 'complete', projectName]);
-          created++;
-          console.log(`✅ Created project for "${projectName}"`);
-        } catch (error) {
-          console.error(`❌ Error creating project for "${projectName}":`, error.message);
+    // Get all images with archier + complete tags
+    const archierImages = await databaseService.query(
+      `SELECT DISTINCT tags FROM images WHERE tags::text LIKE '%archier%' AND tags::text LIKE '%complete%'`
+    );
+    
+    console.log(`🔍 Found ${archierImages.rows.length} distinct tag combinations with archier+complete`);
+    
+    // Extract unique project names (third tag that's not archier or complete)
+    const projectNames = new Set();
+    
+    for (const row of archierImages.rows) {
+      const tags = row.tags || [];
+      if (tags.includes('archier') && tags.includes('complete')) {
+        // Find the project name (tag that's not archier or complete)
+        for (const tag of tags) {
+          const lowerTag = tag.toLowerCase();
+          if (lowerTag !== 'archier' && lowerTag !== 'complete') {
+            projectNames.add(lowerTag);
+            break; // Take first non-archier/complete tag as project name
+          }
         }
-      } else {
-        console.log(`⚠️ No images found for "${projectName}" with required tags`);
       }
     }
     
-    console.log(`✅ Project creation completed! Created ${created} projects.`);
+    console.log(`🏗️ Found ${projectNames.size} unique project names:`, Array.from(projectNames));
+    
+    // Create project for each unique project name
+    for (const projectName of projectNames) {
+      found++;
+      try {
+        console.log(`🏗️ Creating project for: "${projectName}"`);
+        await autoCreateArchierProjects(['archier', 'complete', projectName]);
+        created++;
+        console.log(`✅ Created project: "${projectName}"`);
+      } catch (error) {
+        console.error(`❌ Error creating project "${projectName}":`, error.message);
+      }
+    }
+    
+    console.log(`✅ Project creation completed! Found ${found} projects, created ${created} new ones.`);
     res.json({ 
       success: true, 
-      message: `Created ${created} missing projects`,
-      created 
+      message: `Found ${found} projects, created ${created} new ones`,
+      found,
+      created,
+      projects: Array.from(projectNames)
     });
     
   } catch (error) {
-    console.error('❌ Error creating missing projects:', error);
+    console.error('❌ Error creating Archier projects:', error);
     res.status(500).json({ error: 'Project creation failed', details: error.message });
   }
 });
