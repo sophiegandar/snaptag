@@ -3752,7 +3752,8 @@ app.post('/api/admin/create-all-archier-projects', async (req, res) => {
     
     // Get all images with archier + complete tags (fix JSON query)
     const archierImages = await databaseService.query(
-      `SELECT DISTINCT tags FROM images WHERE tags::jsonb ? 'archier' AND tags::jsonb ? 'complete'`
+      `SELECT DISTINCT tags FROM images WHERE tags @> $1::jsonb AND tags @> $2::jsonb`,
+      [JSON.stringify(['archier']), JSON.stringify(['complete'])]
     );
     
     console.log(`🔍 Found ${archierImages.rows.length} distinct tag combinations with archier+complete`);
