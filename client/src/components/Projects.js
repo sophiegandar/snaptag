@@ -558,8 +558,6 @@ const Projects = () => {
           const projectNameTag = project.name.toLowerCase().replace(/\s+/g, ' ');
           const searchTags = ['archier', 'complete', projectNameTag];
           
-          console.log(`🔍 Searching thumbnail for "${project.name}" with tags:`, searchTags);
-          
           const response = await apiCall('/api/images/search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -568,17 +566,15 @@ const Projects = () => {
           
           if (response.ok) {
             const images = await response.json();
-            console.log(`📷 Found ${images.length} images for "${project.name}"`);
             if (images.length > 0) {
               // Use a random image instead of first image for complete projects
               const randomIndex = Math.floor(Math.random() * images.length);
               setThumbnailImage(images[randomIndex]);
-              console.log(`✅ Set thumbnail for "${project.name}": ${images[randomIndex].filename}`);
             } else {
-              console.log(`❌ No images found for "${project.name}" with tags:`, searchTags);
+              console.warn(`No images found for "${project.name}" with tags:`, searchTags);
             }
           } else {
-            console.error(`❌ Search failed for "${project.name}":`, response.status);
+            console.error(`Search failed for "${project.name}":`, response.status);
           }
         }
       } catch (error) {
@@ -617,17 +613,21 @@ const Projects = () => {
                   <p className="text-black/60 text-xs mt-1">CURRENT</p>
                 </div>
               </div>
-            ) : thumbnailImage ? (
-              <img
-                src={thumbnailImage.url || '/api/placeholder-image.jpg'}
-                alt={project.name}
-                loading="lazy"
-                className="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
-                onError={(e) => {
-                  e.target.src = '/api/placeholder-image.jpg';
-                }}
-              />
-            ) : (
+                  ) : thumbnailImage ? (
+                    <img
+                      src={thumbnailImage.url || '/api/placeholder-image.jpg'}
+                      alt={project.name}
+                      loading="lazy"
+                      className="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
+                      onError={(e) => {
+                        console.log(`❌ Image failed to load for ${project.name}:`, thumbnailImage.url);
+                        e.target.src = '/api/placeholder-image.jpg';
+                      }}
+                      onLoad={() => {
+                        console.log(`✅ Image loaded for ${project.name}`);
+                      }}
+                    />
+                  ) : (
               <div className="w-full h-full bg-gray-200 flex items-center justify-center">
                 <div className="text-center">
                   <FolderOpen className="h-12 w-12 text-gray-400 mx-auto mb-2" />
