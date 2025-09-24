@@ -283,15 +283,21 @@ const Dashboard = () => {
   });
 
   // Projects functions
-  const loadCurrentProjects = () => {
+  const loadCurrentProjects = async () => {
     try {
-      const stored = localStorage.getItem('snaptag-current-projects');
-      if (stored) {
-        const projects = JSON.parse(stored);
-        setCurrentProjects(Array.isArray(projects) ? projects : []);
+      console.log('🔄 Dashboard: Loading current projects from API...');
+      const response = await fetch('/api/projects');
+      if (response.ok) {
+        const projects = await response.json();
+        const current = projects.filter(p => p.status === 'current');
+        setCurrentProjects(current);
+        console.log(`📊 Dashboard: Current projects: ${current.length}`);
+      } else {
+        console.error('❌ Dashboard: Failed to load current projects from API');
+        setCurrentProjects([]);
       }
     } catch (error) {
-      console.error('Error loading current projects:', error);
+      console.error('❌ Dashboard: Error loading current projects:', error);
       setCurrentProjects([]);
     }
   };

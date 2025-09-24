@@ -127,12 +127,11 @@ const Projects = () => {
           console.log(`🔧 Updating project name from "${project.name}" to "De Witt St"`);
           project.name = 'De Witt St';
           
-          // Update in currentProjects array and localStorage
+          // Update in currentProjects array
           const updatedProjects = currentProjects.map(p => 
             p.id === 'de-witt' ? { ...p, name: 'De Witt St' } : p
           );
           setCurrentProjects(updatedProjects);
-          localStorage.setItem('snaptag-current-projects', JSON.stringify(updatedProjects));
         }
         
         setActiveProject(project);
@@ -180,7 +179,6 @@ const Projects = () => {
           
           const updatedCurrentProjects = [...currentProjects, newProject];
           setCurrentProjects(updatedCurrentProjects);
-          localStorage.setItem('snaptag-current-projects', JSON.stringify(updatedCurrentProjects));
           
           setActiveProject(newProject);
           setViewMode('project');
@@ -262,49 +260,20 @@ const Projects = () => {
           setCompleteProjects(complete);
           console.log(`📊 Complete projects: ${complete.length}`);
           
-          // Also load current projects from API (override localStorage)
+          // Also load current projects from API
           setCurrentProjects(current);
           console.log(`📊 Current projects: ${current.length}`);
         } else {
           console.error('❌ Failed to load projects from API, using fallback');
           // Fallback to hardcoded list
           setCompleteProjects(defaultCompleteProjects);
-          
-          // Load current projects from localStorage as fallback
-          try {
-            const savedCurrentProjects = localStorage.getItem('snaptag-current-projects');
-            if (savedCurrentProjects) {
-              const parsed = JSON.parse(savedCurrentProjects);
-              if (Array.isArray(parsed) && parsed.every(p => p.id && p.name && p.type)) {
-                setCurrentProjects(parsed);
-                console.log(`✅ Loaded ${parsed.length} current projects from localStorage (fallback)`);
-              } else {
-                console.warn('⚠️ Invalid current projects data in localStorage, clearing...');
-                localStorage.removeItem('snaptag-current-projects');
-              }
-            }
-          } catch (error) {
-            console.error('❌ Error loading current projects from localStorage:', error);
-            localStorage.removeItem('snaptag-current-projects');
-          }
+          setCurrentProjects([]);
         }
       } catch (error) {
         console.error('❌ Error loading projects from API:', error);
-        // Fallback to hardcoded + localStorage
+        // Fallback to hardcoded only
         setCompleteProjects(defaultCompleteProjects);
-        
-        try {
-          const savedCurrentProjects = localStorage.getItem('snaptag-current-projects');
-          if (savedCurrentProjects) {
-            const parsed = JSON.parse(savedCurrentProjects);
-            if (Array.isArray(parsed) && parsed.every(p => p.id && p.name && p.type)) {
-              setCurrentProjects(parsed);
-              console.log(`✅ Loaded ${parsed.length} current projects from localStorage (fallback)`);
-            }
-          }
-        } catch (localError) {
-          console.error('❌ Error loading fallback projects:', localError);
-        }
+        setCurrentProjects([]);
       }
       
     } catch (error) {
@@ -558,11 +527,9 @@ const Projects = () => {
       created: new Date().toISOString()
     };
     
+    // TODO: Save to database via API instead of just local state
     const updatedCurrentProjects = [...currentProjects, newProject];
     setCurrentProjects(updatedCurrentProjects);
-    
-    // Save to localStorage
-    localStorage.setItem('snaptag-current-projects', JSON.stringify(updatedCurrentProjects));
     
     setNewProjectName('');
     setShowNewProjectForm(false);
