@@ -558,6 +558,8 @@ const Projects = () => {
           const projectNameTag = project.name.toLowerCase().replace(/\s+/g, ' ');
           const searchTags = ['archier', 'complete', projectNameTag];
           
+          console.log(`🔍 Searching thumbnail for "${project.name}" with tags:`, searchTags);
+          
           const response = await apiCall('/api/images/search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -566,11 +568,17 @@ const Projects = () => {
           
           if (response.ok) {
             const images = await response.json();
+            console.log(`📷 Found ${images.length} images for "${project.name}"`);
             if (images.length > 0) {
               // Use a random image instead of first image for complete projects
               const randomIndex = Math.floor(Math.random() * images.length);
               setThumbnailImage(images[randomIndex]);
+              console.log(`✅ Set thumbnail for "${project.name}": ${images[randomIndex].filename}`);
+            } else {
+              console.log(`❌ No images found for "${project.name}" with tags:`, searchTags);
             }
+          } else {
+            console.error(`❌ Search failed for "${project.name}":`, response.status);
           }
         }
       } catch (error) {
