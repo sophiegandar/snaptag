@@ -253,9 +253,9 @@ const Projects = () => {
           const projects = await response.json();
           console.log(`✅ Loaded ${projects.length} projects from API:`, projects);
           
-          // Filter projects by type
-          const complete = projects.filter(p => p.status === 'complete');
-          const current = projects.filter(p => p.status === 'current' || !p.status);
+          // Filter projects by type and add type field for compatibility
+          const complete = projects.filter(p => p.status === 'complete').map(p => ({...p, type: 'complete'}));
+          const current = projects.filter(p => p.status === 'current' || !p.status).map(p => ({...p, type: 'current'}));
           
           setCompleteProjects(complete);
           console.log(`📊 Complete projects: ${complete.length}`);
