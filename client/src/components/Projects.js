@@ -598,7 +598,9 @@ const Projects = () => {
           if (response.ok) {
             const images = await response.json();
             if (images.length > 0) {
-              setThumbnailImage(images[0]);
+              // Use a random image instead of first image for complete projects
+              const randomIndex = Math.floor(Math.random() * images.length);
+              setThumbnailImage(images[randomIndex]);
             }
           }
         }

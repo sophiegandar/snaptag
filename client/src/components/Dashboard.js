@@ -296,17 +296,44 @@ const Dashboard = () => {
     }
   };
 
-  const loadCompleteProjects = () => {
-    // Load hardcoded complete projects (matching Projects.js)
-    const defaultCompleteProjects = [
-      {
-        id: 'yandoit',
-        name: 'Yandoit',
-        tags: ['archier', 'yandoit', 'complete'],
-        type: 'complete'
+  const loadCompleteProjects = async () => {
+    try {
+      console.log('🔄 Dashboard: Loading complete projects from API...');
+      const response = await fetch('/api/projects');
+      if (response.ok) {
+        const projects = await response.json();
+        console.log(`✅ Dashboard: Loaded ${projects.length} projects from API`);
+        
+        // Filter for complete projects only
+        const complete = projects.filter(p => p.status === 'complete');
+        setCompleteProjects(complete);
+        console.log(`📊 Dashboard: Complete projects: ${complete.length}`);
+      } else {
+        console.error('❌ Dashboard: Failed to load projects from API, using fallback');
+        // Fallback to hardcoded list
+        const defaultCompleteProjects = [
+          {
+            id: 'yandoit',
+            name: 'Yandoit',
+            tags: ['archier', 'yandoit', 'complete'],
+            type: 'complete'
+          }
+        ];
+        setCompleteProjects(defaultCompleteProjects);
       }
-    ];
-    setCompleteProjects(defaultCompleteProjects);
+    } catch (error) {
+      console.error('❌ Dashboard: Error loading complete projects:', error);
+      // Fallback to hardcoded list
+      const defaultCompleteProjects = [
+        {
+          id: 'yandoit',
+          name: 'Yandoit',
+          tags: ['archier', 'yandoit', 'complete'],
+          type: 'complete'
+        }
+      ];
+      setCompleteProjects(defaultCompleteProjects);
+    }
   };
 
 

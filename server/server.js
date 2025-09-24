@@ -3805,6 +3805,32 @@ app.post('/api/admin/create-all-archier-projects', async (req, res) => {
   }
 });
 
+// Update project status
+app.put('/api/projects/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    if (!['current', 'complete'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status. Must be "current" or "complete"' });
+    }
+    
+    console.log(`🔄 Updating project ${id} status to: ${status}`);
+    
+    await databaseService.query(
+      'UPDATE projects SET status = $1, status_tag = $1 WHERE id = $2',
+      [status, id]
+    );
+    
+    console.log(`✅ Updated project ${id} status to ${status}`);
+    res.json({ success: true, message: `Project status updated to ${status}` });
+    
+  } catch (error) {
+    console.error('❌ Error updating project status:', error);
+    res.status(500).json({ error: 'Failed to update project status' });
+  }
+});
+
 // Get all stages
 app.get('/api/stages', async (req, res) => {
   try {
