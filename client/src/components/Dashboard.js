@@ -1931,7 +1931,7 @@ const Dashboard = () => {
                             Complete Project
                           </div>
                           <div className="text-xs text-gray-400 mt-1">
-                            Tags: {project.tags.join(', ')}
+                            Tags: {project.tags ? project.tags.join(', ') : `${project.team_tag || 'archier'}, ${project.status_tag || 'complete'}`}
                           </div>
                         </div>
                         <div className="text-center mt-2">
