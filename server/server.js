@@ -3831,6 +3831,23 @@ app.put('/api/projects/:id/status', async (req, res) => {
   }
 });
 
+// Delete project
+app.delete('/api/projects/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(`🗑️ Deleting project: ${id}`);
+    
+    await databaseService.query('DELETE FROM projects WHERE id = $1', [id]);
+    
+    console.log(`✅ Deleted project: ${id}`);
+    res.json({ success: true, message: `Project ${id} deleted successfully` });
+    
+  } catch (error) {
+    console.error('❌ Error deleting project:', error);
+    res.status(500).json({ error: 'Failed to delete project' });
+  }
+});
+
 // Get all stages
 app.get('/api/stages', async (req, res) => {
   try {
