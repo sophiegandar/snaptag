@@ -3831,6 +3831,32 @@ app.put('/api/projects/:id/status', async (req, res) => {
   }
 });
 
+// Update project name
+app.put('/api/projects/:id/name', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+    
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Name is required' });
+    }
+    
+    console.log(`🔄 Updating project ${id} name to: ${name}`);
+    
+    await databaseService.query(
+      'UPDATE projects SET name = $1 WHERE id = $2',
+      [name.trim(), id]
+    );
+    
+    console.log(`✅ Updated project ${id} name to ${name}`);
+    res.json({ success: true, message: `Project name updated to ${name}` });
+    
+  } catch (error) {
+    console.error('❌ Error updating project name:', error);
+    res.status(500).json({ error: 'Failed to update project name' });
+  }
+});
+
 // Create project
 app.post('/api/projects', async (req, res) => {
   try {
