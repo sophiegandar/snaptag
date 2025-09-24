@@ -554,7 +554,9 @@ const Projects = () => {
         
         // For complete projects, load actual images
         if (project.type === 'complete') {
-          const searchTags = project.tags;
+          // Search for images with archier + complete + project name tags
+          const projectNameTag = project.name.toLowerCase().replace(/\s+/g, ' ');
+          const searchTags = ['archier', 'complete', projectNameTag];
           
           const response = await apiCall('/api/images/search', {
             method: 'POST',
@@ -576,7 +578,7 @@ const Projects = () => {
       } finally {
         setLoading(false);
       }
-    }, [project.id, project.type, project.name, project.tags]);
+    }, [project.id, project.type, project.name]);
 
     useEffect(() => {
       loadThumbnail();

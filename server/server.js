@@ -3831,6 +3831,26 @@ app.put('/api/projects/:id/status', async (req, res) => {
   }
 });
 
+// Create project
+app.post('/api/projects', async (req, res) => {
+  try {
+    const { id, name, description, status, team_tag, status_tag } = req.body;
+    console.log(`🏗️ Creating project: ${name}`);
+    
+    await databaseService.query(`
+      INSERT INTO projects (id, name, description, status, team_tag, status_tag)
+      VALUES ($1, $2, $3, $4, $5, $6)
+    `, [id, name, description || 'Manually created project', status || 'current', team_tag || 'current', status_tag || 'current']);
+    
+    console.log(`✅ Created project: ${name}`);
+    res.json({ success: true, message: `Project ${name} created successfully` });
+    
+  } catch (error) {
+    console.error('❌ Error creating project:', error);
+    res.status(500).json({ error: 'Failed to create project' });
+  }
+});
+
 // Delete project
 app.delete('/api/projects/:id', async (req, res) => {
   try {
