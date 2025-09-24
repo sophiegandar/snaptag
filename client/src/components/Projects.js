@@ -613,21 +613,21 @@ const Projects = () => {
                   <p className="text-black/60 text-xs mt-1">CURRENT</p>
                 </div>
               </div>
-                  ) : thumbnailImage ? (
-                    <img
-                      src={thumbnailImage.url || '/api/placeholder-image.jpg'}
-                      alt={project.name}
-                      loading="lazy"
-                      className="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
-                      onError={(e) => {
-                        console.log(`❌ Image failed to load for ${project.name}:`, thumbnailImage.url);
-                        e.target.src = '/api/placeholder-image.jpg';
-                      }}
-                      onLoad={() => {
-                        console.log(`✅ Image loaded for ${project.name}`);
-                      }}
-                    />
-                  ) : (
+            ) : thumbnailImage ? (
+              <img
+                src={thumbnailImage.url || '/api/placeholder-image.jpg'}
+                alt={project.name}
+                loading="lazy"
+                className="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
+                onError={(e) => {
+                  console.log(`❌ Image failed to load for ${project.name}:`, thumbnailImage.url);
+                  e.target.src = '/api/placeholder-image.jpg';
+                }}
+                onLoad={() => {
+                  console.log(`✅ Image loaded for ${project.name}`);
+                }}
+              />
+            ) : (
               <div className="w-full h-full bg-gray-200 flex items-center justify-center">
                 <div className="text-center">
                   <FolderOpen className="h-12 w-12 text-gray-400 mx-auto mb-2" />
