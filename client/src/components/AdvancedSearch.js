@@ -32,10 +32,7 @@ const AdvancedSearch = ({ onSearch, initialFilters = {} }) => {
       return false;
     });
 
-    setSearchStats({
-      activeFilters: activeFilters.length,
-      hasAdvancedFilters: activeFilters.some(f => f !== 'searchTerm')
-    });
+    // Search stats calculation removed
 
     onSearch(searchParams);
   };

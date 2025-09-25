@@ -1299,7 +1299,7 @@ const ImageEditor = () => {
                     onLoad={(e) => {
                       const img = e.target;
                       const scale = Math.min(800 / img.naturalWidth, 600 / img.naturalHeight);
-                      setImageScale(scale);
+                      // Image scale calculation removed
                     }}
                     onClick={(e) => {
                       if (!isTaggingMode || pendingTagLocation) return;

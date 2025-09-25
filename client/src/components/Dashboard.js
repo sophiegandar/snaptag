@@ -1187,7 +1187,7 @@ const Dashboard = () => {
   // Settings functions (moved from Settings.js)
   const loadSettings = async () => {
     try {
-      setSettingsLoading(true);
+      // Loading state removed
       
       // Load settings from localStorage
       const saved = localStorage.getItem('snaptag-settings');
@@ -1211,7 +1211,7 @@ const Dashboard = () => {
       console.error('Error loading settings:', error);
       toast.error('Failed to load settings');
     } finally {
-      setSettingsLoading(false);
+      // Loading state removed
     }
   };
 
