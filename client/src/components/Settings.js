@@ -26,11 +26,6 @@ const Settings = () => {
   const [duplicateResults, setDuplicateResults] = useState(null);
   const [stats, setStats] = useState({});
 
-  useEffect(() => {
-    loadSettings();
-    loadStats();
-  }, [loadSettings]);
-
   const loadSettings = useCallback(async () => {
     try {
       setLoading(true);
@@ -75,6 +70,12 @@ const Settings = () => {
       console.error('Error loading stats:', error);
     }
   };
+
+  useEffect(() => {
+    loadSettings();
+    loadStats();
+  }, [loadSettings]);
+
 
   const saveSettings = async () => {
     try {

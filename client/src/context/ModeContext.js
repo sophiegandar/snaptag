@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const ModeContext = createContext();
 
@@ -18,8 +18,8 @@ export const ModeProvider = ({ children }) => {
   // Edit mode duration in milliseconds (30 minutes)
   const EDIT_MODE_DURATION = 30 * 60 * 1000; // 30 minutes
 
-  // Toggle between Edit and View mode
-  const toggleEditMode = () => {
+  // Toggle between Edit and View mode  
+  const toggleEditMode = useCallback(() => {
     if (isEditMode) {
       // Switch to View mode
       deactivateEditMode();
@@ -27,7 +27,7 @@ export const ModeProvider = ({ children }) => {
       // Switch to Edit mode
       activateEditMode();
     }
-  };
+  }, [isEditMode, deactivateEditMode, activateEditMode]);
 
   // Activate Edit mode with 30-minute timer
   const activateEditMode = () => {
@@ -50,7 +50,7 @@ export const ModeProvider = ({ children }) => {
   };
 
   // Deactivate Edit mode
-  const deactivateEditMode = () => {
+  const deactivateEditMode = useCallback(() => {
     console.log('🔒 Switching to View Mode');
     setIsEditMode(false);
     setTimeRemaining(0);
@@ -59,7 +59,7 @@ export const ModeProvider = ({ children }) => {
       clearTimeout(editModeTimer);
       setEditModeTimer(null);
     }
-  };
+  }, [editModeTimer]);
 
   // Update time remaining every minute
   useEffect(() => {
