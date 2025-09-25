@@ -1,9 +1,11 @@
 # SnapTag Dockerfile - Railway Production Build
 
-FROM node:18-alpine
+FROM alpine:3.18
 
-# Install system dependencies
+# Install Node.js and system dependencies
 RUN apk add --no-cache \
+    nodejs \
+    npm \
     exiftool \
     curl \
     vips-dev
