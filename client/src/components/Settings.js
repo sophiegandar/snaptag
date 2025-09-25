@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Save, TestTube, Check, AlertCircle, RefreshCw, Database, Droplets, Settings as SettingsIcon, Tag, Copy, Search } from 'lucide-react';
 import { toast } from 'react-toastify';
 
@@ -29,9 +29,9 @@ const Settings = () => {
   useEffect(() => {
     loadSettings();
     loadStats();
-  }, []);
+  }, [loadSettings]);
 
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -62,7 +62,7 @@ const Settings = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const loadStats = async () => {
     try {

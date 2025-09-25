@@ -77,7 +77,7 @@ export const ModeProvider = ({ children }) => {
     }, 60000); // Update every minute
 
     return () => clearInterval(interval);
-  }, [isEditMode, timeRemaining]);
+  }, [isEditMode, timeRemaining, deactivateEditMode]);
 
   // Keyboard shortcut listener (Escape + E sequence for mode toggle)
   useEffect(() => {
@@ -133,7 +133,7 @@ export const ModeProvider = ({ children }) => {
       document.removeEventListener('keydown', handleKeyDown, true);
       if (escapeTimeout) clearTimeout(escapeTimeout);
     };
-  }, [toggleEditMode]);
+  }, []);
 
   // Cleanup timer on unmount
   useEffect(() => {
