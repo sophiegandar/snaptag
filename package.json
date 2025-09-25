@@ -1,6 +1,6 @@
 {
   "name": "snaptag",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Image tagging and management system for Archier with Dropbox integration",
   "main": "server.js",
   "scripts": {
