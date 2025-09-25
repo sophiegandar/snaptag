@@ -28,8 +28,6 @@ const Projects = () => {
   const [loading, setLoading] = useState(true);
   const [completeProjects, setCompleteProjects] = useState([]);
   const [currentProjects, setCurrentProjects] = useState([]);
-  const [newProjectName, setNewProjectName] = useState('');
-  const [showNewProjectForm, setShowNewProjectForm] = useState(false);
   const [projectFilter, setProjectFilter] = useState('all'); // 'all', 'current', 'complete'
   const [photosFilter, setPhotosFilter] = useState('all'); // 'all', 'final', 'wip' for Photos tab
   const [stageFilter, setStageFilter] = useState('');
@@ -498,44 +496,6 @@ const Projects = () => {
     }
   };
 
-  const createNewProject = async () => {
-    if (!newProjectName.trim()) return;
-    
-    const projectName = newProjectName.trim();
-    const projectId = projectName.toLowerCase().replace(/\s+/g, '-');
-    
-    // Check for duplicates in current projects
-    const existsInCurrent = currentProjects.some(
-      project => project.id === projectId || project.name.toLowerCase() === projectName.toLowerCase()
-    );
-    
-    // Check for duplicates in complete projects
-    const existsInComplete = completeProjects.some(
-      project => project.id === projectId || project.name.toLowerCase() === projectName.toLowerCase()
-    );
-    
-    if (existsInCurrent || existsInComplete) {
-      toast.error(`Project "${projectName}" already exists`);
-      return;
-    }
-    
-    const newProject = {
-      id: projectId,
-      name: projectName,
-      tags: [projectName.toLowerCase()],
-      type: 'current',
-      created: new Date().toISOString()
-    };
-    
-    // TODO: Save to database via API instead of just local state
-    const updatedCurrentProjects = [...currentProjects, newProject];
-    setCurrentProjects(updatedCurrentProjects);
-    
-    setNewProjectName('');
-    setShowNewProjectForm(false);
-    
-    toast.success(`Project "${newProject.name}" created successfully`);
-  };
 
   // ProjectThumbnail component for gallery-style project cards
   const ProjectThumbnail = ({ project }) => {

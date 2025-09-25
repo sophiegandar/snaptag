@@ -740,7 +740,7 @@ const Settings = () => {
           <h4 className="font-medium text-gray-900 mb-2">Support</h4>
           <p className="text-sm text-gray-600">
             For support and documentation, visit the{' '}
-            <a href="#" className="text-blue-600 hover:underline">SnapTag GitHub repository</a>
+            <a href="https://github.com/sophiegandar/snaptag" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">SnapTag GitHub repository</a>
           </p>
         </div>
       </div>

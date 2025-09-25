@@ -48,7 +48,7 @@ export const ModeProvider = ({ children }) => {
     }, EDIT_MODE_DURATION);
 
     setEditModeTimer(timer);
-  }, [editModeTimer, deactivateEditMode]);
+  }, [editModeTimer, deactivateEditMode, EDIT_MODE_DURATION]);
 
   // Toggle between Edit and View mode  
   const toggleEditMode = useCallback(() => {
