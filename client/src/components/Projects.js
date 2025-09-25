@@ -800,7 +800,7 @@ const Projects = () => {
         )}
 
         {/* Project Images - Force re-render with key */}
-        <div key={`${activeProject.id}-${activeProjectTab}-${stageFilter}-${roomFilter}-${photosFilter}-${forceRefresh}`}>
+        <div key={`${activeProject.id}-${activeProjectTab}-${stageFilter}-${roomFilter}-${photosFilter}`}>
           {console.log(`🔍 RENDER CHECK: currentImages.length = ${currentImages.length}, showing images:`, currentImages.slice(0, 2))}
           {/* Loading State - Show while waiting for API response */}
           {projectImages[cacheKey] === null ? (
@@ -841,7 +841,7 @@ const Projects = () => {
 
               return (
                 <div 
-                  key={`${image.id}-${activeProjectTab}-${index}-${forceRefresh}`} 
+                  key={`${image.id}-${activeProjectTab}-${index}`} 
                   className="relative group cursor-pointer transition-all duration-200 w-full max-w-full"
                   onClick={() => navigate(`/image/${image.id}`, { state: { from: 'projects' } })}
                 >
