@@ -265,7 +265,6 @@ const Projects = () => {
     
     // Set loading state immediately
     setProjectImages(prev => ({ ...prev, [cacheKey]: null }));
-    setApiLoading(true);
     setError(null);
     
     try {
@@ -451,7 +450,6 @@ const Projects = () => {
       
       return [];
     } finally {
-      setApiLoading(false);
     }
   };
 
