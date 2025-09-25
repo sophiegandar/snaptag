@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FolderOpen, Image as ImageIcon, Plus, CheckCircle, Clock, ArrowLeft, AlertTriangle, X } from 'lucide-react';
+import { FolderOpen, Image as ImageIcon, Plus, Clock, ArrowLeft, AlertTriangle, X } from 'lucide-react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { toast } from 'react-toastify';
 import { apiCall } from '../utils/apiConfig';
 import { useMode } from '../context/ModeContext';
 
@@ -23,7 +22,6 @@ const Projects = () => {
   const [activeProject, setActiveProject] = useState(null);
   const [activeProjectTab, setActiveProjectTab] = useState('precedent'); // 'precedent', 'texture', 'final', 'wip'
   const [error, setError] = useState(null);
-  const [apiLoading, setApiLoading] = useState(false);
   const [projectImages, setProjectImages] = useState({});
   const [loading, setLoading] = useState(true);
   const [completeProjects, setCompleteProjects] = useState([]);
@@ -32,7 +30,6 @@ const Projects = () => {
   const [photosFilter, setPhotosFilter] = useState('all'); // 'all', 'final', 'wip' for Photos tab
   const [stageFilter, setStageFilter] = useState('');
   const [roomFilter, setRoomFilter] = useState('');
-  const [forceRefresh, setForceRefresh] = useState(0);
   const [isInitializing, setIsInitializing] = useState(false);
   
   // Dynamic stages and rooms data
@@ -151,46 +148,8 @@ const Projects = () => {
       } else {
         console.log(`🌐 Project ${projectId} not found in current projects`);
         
-        // Try to create the project if it doesn't exist (for URL sharing)
-        if (projectId === 'couvreur') {
-          console.log(`🌐 Creating missing Couvreur project`);
-          setIsInitializing(true); // Prevent re-render loop
-          
-          const newProject = {
-            id: 'couvreur',
-            name: 'Couvreur',
-            tags: ['couvreur'],
-            type: 'current',
-            created: new Date().toISOString()
-          };
-        } else if (projectId === 'de-witt') {
-          console.log(`🌐 Creating missing De Witt St project`);
-          setIsInitializing(true); // Prevent re-render loop
-          
-          const newProject = {
-            id: 'de-witt',
-            name: 'De Witt St',  // ✅ Fixed name to match tags
-            tags: ['de witt st'],
-            type: 'current',
-            created: new Date().toISOString()
-          };
-          
-          const updatedCurrentProjects = [...currentProjects, newProject];
-          setCurrentProjects(updatedCurrentProjects);
-          
-          setActiveProject(newProject);
-          setViewMode('project');
-          
-          // Redirect to proper URL with default tab
-          const defaultTab = getDefaultTab(newProject);
-          navigate(`/projects/current/${projectId}/${defaultTab}`, { replace: true });
-          
-          // Allow routing again after a brief delay
-          setTimeout(() => setIsInitializing(false), 100);
-        } else {
-          // If project not found, redirect to overview
-          navigate('/projects');
-        }
+        // If project not found, redirect to overview
+        navigate('/projects');
       }
     } else {
       console.log(`🌐 Setting view to overview`);
@@ -201,7 +160,7 @@ const Projects = () => {
   useEffect(() => {
     loadProjects();
     loadStagesAndRooms();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadStagesAndRooms = async () => {
     try {
@@ -237,7 +196,7 @@ const Projects = () => {
     if (!loading && !isInitializing) {
       handleUrlRouting();
     }
-  }, [location.pathname, params.projectId, params.tabId, loading, isInitializing, completeProjects, currentProjects]);
+  }, [location.pathname, params.projectId, params.tabId, loading, isInitializing, completeProjects, currentProjects]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadProjects = async () => {
     try {
@@ -542,7 +501,7 @@ const Projects = () => {
       } finally {
         setLoading(false);
       }
-    }, [project.id, project.type, project.name]);
+    }, [project.type, project.name]);
 
     useEffect(() => {
       loadThumbnail();
