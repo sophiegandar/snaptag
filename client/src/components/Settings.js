@@ -57,7 +57,7 @@ const Settings = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadStats = async () => {
     try {

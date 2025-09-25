@@ -18,19 +18,20 @@ export const ModeProvider = ({ children }) => {
   // Edit mode duration in milliseconds (30 minutes)
   const EDIT_MODE_DURATION = 30 * 60 * 1000; // 30 minutes
 
-  // Toggle between Edit and View mode  
-  const toggleEditMode = useCallback(() => {
-    if (isEditMode) {
-      // Switch to View mode
-      deactivateEditMode();
-    } else {
-      // Switch to Edit mode
-      activateEditMode();
+  // Deactivate Edit mode
+  const deactivateEditMode = useCallback(() => {
+    console.log('🔒 Switching to View Mode');
+    setIsEditMode(false);
+    setTimeRemaining(0);
+    
+    if (editModeTimer) {
+      clearTimeout(editModeTimer);
+      setEditModeTimer(null);
     }
-  }, [isEditMode, deactivateEditMode, activateEditMode]);
+  }, [editModeTimer]);
 
   // Activate Edit mode with 30-minute timer
-  const activateEditMode = () => {
+  const activateEditMode = useCallback(() => {
     console.log('🔓 Activating Edit Mode for 30 minutes...');
     setIsEditMode(true);
     setTimeRemaining(EDIT_MODE_DURATION);
@@ -47,19 +48,18 @@ export const ModeProvider = ({ children }) => {
     }, EDIT_MODE_DURATION);
 
     setEditModeTimer(timer);
-  };
+  }, [editModeTimer, deactivateEditMode]);
 
-  // Deactivate Edit mode
-  const deactivateEditMode = useCallback(() => {
-    console.log('🔒 Switching to View Mode');
-    setIsEditMode(false);
-    setTimeRemaining(0);
-    
-    if (editModeTimer) {
-      clearTimeout(editModeTimer);
-      setEditModeTimer(null);
+  // Toggle between Edit and View mode  
+  const toggleEditMode = useCallback(() => {
+    if (isEditMode) {
+      // Switch to View mode
+      deactivateEditMode();
+    } else {
+      // Switch to Edit mode
+      activateEditMode();
     }
-  }, [editModeTimer]);
+  }, [isEditMode, deactivateEditMode, activateEditMode]);
 
   // Update time remaining every minute
   useEffect(() => {
@@ -133,7 +133,7 @@ export const ModeProvider = ({ children }) => {
       document.removeEventListener('keydown', handleKeyDown, true);
       if (escapeTimeout) clearTimeout(escapeTimeout);
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cleanup timer on unmount
   useEffect(() => {
