@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FolderOpen, Image as ImageIcon, Plus, Clock, ArrowLeft, AlertTriangle, X } from 'lucide-react';
+import { FolderOpen, Image as ImageIcon, Clock, ArrowLeft, AlertTriangle, X } from 'lucide-react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { apiCall } from '../utils/apiConfig';
 import { useMode } from '../context/ModeContext';
@@ -30,7 +30,7 @@ const Projects = () => {
   const [photosFilter, setPhotosFilter] = useState('all'); // 'all', 'final', 'wip' for Photos tab
   const [stageFilter, setStageFilter] = useState('');
   const [roomFilter, setRoomFilter] = useState('');
-  const [isInitializing, setIsInitializing] = useState(false);
+  const [isInitializing] = useState(false);
   
   // Dynamic stages and rooms data
   const [stages, setStages] = useState([]);

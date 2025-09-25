@@ -92,24 +92,6 @@ const ProfessionalWorkflow = () => {
     }
   };
 
-  const generateProfessionalFilename = async (imageId, options) => {
-    try {
-      const response = await fetch(`/api/workflow/generate-filename/${imageId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(options)
-      });
-
-      if (!response.ok) throw new Error('Filename generation failed');
-
-      const result = await response.json();
-      toast.success(`Professional filename: ${result.professionalFilename}`);
-      return result;
-    } catch (error) {
-      console.error('Error generating filename:', error);
-      toast.error('Failed to generate professional filename');
-    }
-  };
 
   const toggleImageSelection = (imageId) => {
     setSelectedImages(prev => 

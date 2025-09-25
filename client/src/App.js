@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
-import { Search, Upload, Tag, Settings as SettingsIcon, FileText, FolderOpen, Eye, Edit3, Database } from 'lucide-react';
+import { Search, Upload, FolderOpen, Eye, Edit3, Database } from 'lucide-react';
 
 import { ModeProvider, useMode } from './context/ModeContext';
 
