@@ -6,11 +6,7 @@ import {
   AlertTriangle, 
   XCircle,
   RefreshCw,
-  Download,
-  Settings,
   Layers,
-  Palette,
-  Monitor,
   FileImage,
   Zap
 } from 'lucide-react';

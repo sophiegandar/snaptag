@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Database, Tags, Folder, Settings, Eye, Edit3, FileText, Layers, Save, TestTube, Check, AlertCircle, RefreshCw, Droplets, Copy, Search, Plus, Trash2, Calendar, X, BarChart3, Box } from 'lucide-react';
+import { Database, Folder, Eye, Edit3, Save, TestTube, Check, AlertCircle, RefreshCw, Droplets, Search, Plus, Trash2, X, Box } from 'lucide-react';
 import { useMode } from '../context/ModeContext';
 import { toast } from 'react-toastify';
 import { apiCall } from '../utils/apiConfig';
@@ -1179,7 +1179,6 @@ const Dashboard = () => {
     metadataFormat: 'both'
   });
 
-  const [settingsLoading, setSettingsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState(null);
@@ -1298,7 +1297,7 @@ const Dashboard = () => {
       loadStages();
       loadRooms();
     }
-  }, [activeSection, canEdit]);
+  }, [activeSection, canEdit, loadSettings, loadStats, loadCurrentProjects, loadCompleteProjects, loadTags, loadStages, loadRooms]);
 
   const sections = [
     { id: 'tags', label: 'Tags Database', description: '' },

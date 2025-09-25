@@ -34,7 +34,6 @@ const ImageEditor = () => {
   const [canvasReady, setCanvasReady] = useState(false);
   const [pendingTagLocation, setPendingTagLocation] = useState(null);
   const [useFallbackMode, setUseFallbackMode] = useState(false);
-  const [imageScale, setImageScale] = useState(1);
   const [editingTagIndex, setEditingTagIndex] = useState(null);
   const [resizing, setResizing] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -46,7 +45,6 @@ const ImageEditor = () => {
   const [originalProjectAssignments, setOriginalProjectAssignments] = useState([]);
   
   // Available projects, rooms, stages for dropdowns
-  const [availableProjects] = useState(['yandoit', 'couvreur', 'de witt st', 'archier']);
   const [availableRooms, setAvailableRooms] = useState([]);
   const [availableStages, setAvailableStages] = useState([]);
   
@@ -68,7 +66,7 @@ const ImageEditor = () => {
       loadNavigationContext();
       loadRoomsAndStages();
     }
-  }, [id]);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadRoomsAndStages = async () => {
     try {
@@ -208,7 +206,7 @@ const ImageEditor = () => {
       setEditingTagName(null);
       setEditingTagText('');
     };
-  }, [image]);
+  }, [image]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadImage = useCallback(async () => {
     try {
@@ -278,7 +276,7 @@ const ImageEditor = () => {
     }
   };
 
-  const initializeFabricCanvas = useCallback(() => {
+  const initializeFabricCanvas = useCallback(() => { // eslint-disable-line no-unused-vars
     if (!canvasRef.current || !image || fabricCanvasRef.current) return;
 
     try {
@@ -569,6 +567,8 @@ const ImageEditor = () => {
           newValues.width = newWidthNW;
           newValues.height = newHeightNW;
           break;
+        default:
+          break;
       }
       
       // Ensure the region doesn't go outside the image bounds
@@ -807,7 +807,7 @@ const ImageEditor = () => {
     return null;
   };
 
-  const getCategoryOptions = () => {
+  const getCategoryOptions = () => { // eslint-disable-line no-unused-vars
     const type = getImageType().toLowerCase();
     
     if (type === 'texture') {
@@ -845,23 +845,23 @@ const ImageEditor = () => {
     }
   };
 
-  const getProjectTag = () => {
+  const getProjectTag = () => { // eslint-disable-line no-unused-vars
     const projectTags = ['yandoit', 'couvreur'];
     return tags.find(tag => projectTags.includes(tag.toLowerCase())) || '';
   };
 
-  const getStageTag = () => {
+  const getStageTag = () => { // eslint-disable-line no-unused-vars
     const stageTags = ['feasibility', 'layout', 'finishes'];
     return tags.find(tag => stageTags.includes(tag.toLowerCase())) || '';
   };
 
-  const getRoomTag = () => {
+  const getRoomTag = () => { // eslint-disable-line no-unused-vars
     const roomTags = ['living', 'dining', 'kitchen', 'bathroom', 'bedroom'];
     return tags.find(tag => roomTags.includes(tag.toLowerCase())) || '';
   };
 
 
-  const getDesign = () => {
+  const getDesign = () => { // eslint-disable-line no-unused-vars
     // All project names (current projects)
     const projectTags = ['couvreur', 'yandoit', 'de witt st', 'de witt', 'dewitt'];
     const foundProjects = tags.filter(tag => projectTags.includes(tag.toLowerCase()));
@@ -964,7 +964,7 @@ const ImageEditor = () => {
     // Removed auto-save - user needs to click "Save Changes" button
   };
 
-  const updateImageType = async (newType) => {
+  const updateImageType = async (newType) => { // eslint-disable-line no-unused-vars
     if (!canEdit) return;
     const oldTypeTags = ['precedent', 'texture', 'photos'];
     let updatedTags = tags.filter(tag => !oldTypeTags.includes(tag.toLowerCase()));
@@ -972,7 +972,7 @@ const ImageEditor = () => {
     await updateTagsAndSave(updatedTags);
   };
 
-  const updateImageCategory = async (newCategory) => {
+  const updateImageCategory = async (newCategory) => { // eslint-disable-line no-unused-vars
     if (!canEdit) return;
     const allCategories = [
       'brick', 'carpet', 'concrete', 'fabric', 'metal', 'stone', 'tile', 'wood',
@@ -984,7 +984,7 @@ const ImageEditor = () => {
     await updateTagsAndSave(updatedTags);
   };
 
-  const updateProjectTag = async (newProject) => {
+  const updateProjectTag = async (newProject) => { // eslint-disable-line no-unused-vars
     if (!canEdit) return;
     const projectTags = ['yandoit', 'couvreur'];
     let updatedTags = tags.filter(tag => !projectTags.includes(tag.toLowerCase()));
@@ -992,7 +992,7 @@ const ImageEditor = () => {
     await updateTagsAndSave(updatedTags);
   };
 
-  const updateStageTag = async (newStage) => {
+  const updateStageTag = async (newStage) => { // eslint-disable-line no-unused-vars
     if (!canEdit) return;
     const stageTags = ['feasibility', 'layout', 'finishes'];
     let updatedTags = tags.filter(tag => !stageTags.includes(tag.toLowerCase()));
@@ -1000,7 +1000,7 @@ const ImageEditor = () => {
     await updateTagsAndSave(updatedTags);
   };
 
-  const updateRoomTag = async (newRoom) => {
+  const updateRoomTag = async (newRoom) => { // eslint-disable-line no-unused-vars
     if (!canEdit) return;
     const roomTags = ['living', 'dining', 'kitchen', 'bathroom', 'bedroom'];
     let updatedTags = tags.filter(tag => !roomTags.includes(tag.toLowerCase()));

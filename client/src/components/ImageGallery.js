@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Grid, List, Trash2, Edit, RefreshCw, AlertTriangle, Tag, Plus, CheckCircle, Download, Lightbulb, Check, X, ChevronDown, SortAsc, SortDesc, FolderPlus } from 'lucide-react';
+import { Search, Grid, List, Trash2, Edit, RefreshCw, AlertTriangle, Tag, Plus, Download, Lightbulb, Check, X, ChevronDown, SortAsc, SortDesc, FolderPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useMode } from '../context/ModeContext';
@@ -84,7 +84,7 @@ const ImageGallery = () => {
     }, 300000); // Increased to 5 minutes to reduce server load and prevent interruptions
     
     return () => clearInterval(pollInterval);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -222,10 +222,6 @@ const ImageGallery = () => {
     });
   };
 
-  const clearFilters = () => {
-    setCurrentFilters({});
-    loadImages({});
-  };
 
   const loadAvailableTags = async () => {
     try {

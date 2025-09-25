@@ -19,7 +19,7 @@ import './App.css';
 
 // Navigation component that uses mode context
 function Navigation() {
-  const { isEditMode, toggleEditMode, formatTimeRemaining, canUpload, canAccessProWorkflow, canAccessSettings } = useMode();
+  const { isEditMode, formatTimeRemaining, canUpload } = useMode();
 
   return (
     <nav className="bg-white shadow-lg border-b">

@@ -1,18 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Search, 
-  Filter, 
-  Calendar, 
-  Tag, 
-  Image as ImageIcon, 
-  SortAsc, 
-  SortDesc,
-  X,
-  ChevronDown,
-  ChevronUp,
-  Sliders
+  X
 } from 'lucide-react';
-import { apiCall } from '../utils/apiConfig';
 
 const AdvancedSearch = ({ onSearch, initialFilters = {} }) => {
   const [filters, setFilters] = useState({
@@ -22,7 +12,6 @@ const AdvancedSearch = ({ onSearch, initialFilters = {} }) => {
     ...initialFilters
   });
 
-  const [searchStats, setSearchStats] = useState(null);
 
   // Removed auto-search - searches now only happen on explicit user action
 
@@ -66,13 +55,6 @@ const AdvancedSearch = ({ onSearch, initialFilters = {} }) => {
   };
 
 
-  const clearAllFilters = () => {
-    setFilters({
-      searchTerm: '',
-      tags: [],
-      dateRange: { start: '', end: '' }
-    });
-  };
 
   return (
     <div className="bg-white rounded-lg shadow-md mb-6">
