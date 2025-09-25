@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Database, Folder, Eye, Edit3, Save, TestTube, Check, AlertCircle, RefreshCw, Droplets, Search, Plus, Trash2, X, Box } from 'lucide-react';
 import { useMode } from '../context/ModeContext';
 import { toast } from 'react-toastify';
@@ -283,7 +283,7 @@ const Dashboard = () => {
   });
 
   // Projects functions
-  const loadCurrentProjects = async () => {
+  const loadCurrentProjects = useCallback(async () => {
     try {
       console.log('🔄 Dashboard: Loading current projects from API...');
       const response = await fetch('/api/projects');
@@ -300,9 +300,9 @@ const Dashboard = () => {
       console.error('❌ Dashboard: Error loading current projects:', error);
       setCurrentProjects([]);
     }
-  };
+  }, []);
 
-  const loadCompleteProjects = async () => {
+  const loadCompleteProjects = useCallback(async () => {
     try {
       console.log('🔄 Dashboard: Loading complete projects from API...');
       const response = await fetch('/api/projects');
@@ -340,7 +340,7 @@ const Dashboard = () => {
       ];
       setCompleteProjects(defaultCompleteProjects);
     }
-  };
+  }, []);
 
 
 
@@ -553,7 +553,7 @@ const Dashboard = () => {
   };
 
   // Tags functions
-  const loadTags = async () => {
+  const loadTags = useCallback(async () => {
     try {
       setTagsLoading(true);
       const response = await apiCall('/api/tags');
@@ -569,10 +569,10 @@ const Dashboard = () => {
     } finally {
       setTagsLoading(false);
     }
-  };
+  }, []);
 
   // Stages functions
-  const loadStages = async () => {
+  const loadStages = useCallback(async () => {
     try {
       setStagesLoading(true);
       const response = await apiCall('/api/stages');
@@ -697,7 +697,7 @@ const Dashboard = () => {
   };
 
   // Rooms functions
-  const loadRooms = async () => {
+  const loadRooms = useCallback(async () => {
     try {
       setRoomsLoading(true);
       const response = await apiCall('/api/rooms');
@@ -1185,7 +1185,7 @@ const Dashboard = () => {
   const [stats, setStats] = useState({});
 
   // Settings functions (moved from Settings.js)
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     try {
       // Loading state removed
       
@@ -1273,7 +1273,7 @@ const Dashboard = () => {
     }
   };
 
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     try {
       const response = await fetch('/api/stats');
       if (response.ok) {
@@ -1297,7 +1297,7 @@ const Dashboard = () => {
       loadStages();
       loadRooms();
     }
-  }, [activeSection, canEdit, loadSettings, loadStats, loadCurrentProjects, loadCompleteProjects, loadTags, loadStages, loadRooms]);
+  }, [activeSection, canEdit]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const sections = [
     { id: 'tags', label: 'Tags Database', description: '' },

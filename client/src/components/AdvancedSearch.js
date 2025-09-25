@@ -21,17 +21,6 @@ const AdvancedSearch = ({ onSearch, initialFilters = {} }) => {
       tags: filters.tags.filter(Boolean)
     };
 
-    // Calculate search stats
-    const activeFilters = Object.keys(searchParams).filter(key => {
-      const value = searchParams[key];
-      if (Array.isArray(value)) return value.length > 0;
-      if (typeof value === 'string') return value.trim().length > 0;
-      if (typeof value === 'object' && value !== null) {
-        return Object.values(value).some(v => v !== '' && v !== 0);
-      }
-      return false;
-    });
-
     // Search stats calculation removed
 
     onSearch(searchParams);

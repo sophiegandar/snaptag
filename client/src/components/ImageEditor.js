@@ -45,8 +45,8 @@ const ImageEditor = () => {
   const [originalProjectAssignments, setOriginalProjectAssignments] = useState([]);
   
   // Available projects, rooms, stages for dropdowns
-  const [availableRooms, setAvailableRooms] = useState([]);
-  const [availableStages, setAvailableStages] = useState([]);
+  const [, setAvailableRooms] = useState([]);
+  const [, setAvailableStages] = useState([]);
   
   // Navigation state
   const [navigationContext, setNavigationContext] = useState(null);
@@ -1298,7 +1298,7 @@ const ImageEditor = () => {
                     }}
                     onLoad={(e) => {
                       const img = e.target;
-                      const scale = Math.min(800 / img.naturalWidth, 600 / img.naturalHeight);
+                      // Scale calculation removed
                       // Image scale calculation removed
                     }}
                     onClick={(e) => {
