@@ -458,6 +458,7 @@ const Projects = () => {
   const ProjectThumbnail = ({ project }) => {
     const [thumbnailImage, setThumbnailImage] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [retryCount, setRetryCount] = useState(0);
 
     const loadThumbnail = useCallback(async () => {
       try {
@@ -471,35 +472,88 @@ const Projects = () => {
         
         // For complete projects, load actual images
         if (project.type === 'complete') {
-          // Search for images with archier + complete + project name tags
+          // Try multiple search strategies for better thumbnail loading
           const projectNameTag = project.name.toLowerCase().replace(/\s+/g, ' ');
-          const searchTags = ['archier', 'complete', projectNameTag];
           
-          const response = await apiCall('/api/images/search', {
+          // Strategy 1: Exact match with all three tags
+          let searchTags = ['archier', 'complete', projectNameTag];
+          console.log(`🔍 Thumbnail search for "${project.name}" with tags:`, searchTags);
+          
+          let response = await apiCall('/api/images/search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ tags: searchTags })
           });
           
+          let images = [];
           if (response.ok) {
-            const images = await response.json();
-            if (images.length > 0) {
-              // Use a random image instead of first image for complete projects
-              const randomIndex = Math.floor(Math.random() * images.length);
-              setThumbnailImage(images[randomIndex]);
-            } else {
-              console.warn(`No images found for "${project.name}" with tags:`, searchTags);
+            images = await response.json();
+          }
+          
+          // Strategy 2: If no results, try without 'complete' tag (case-insensitive project name)
+          if (images.length === 0) {
+            searchTags = ['archier', projectNameTag];
+            console.log(`🔍 Fallback search for "${project.name}" with tags:`, searchTags);
+            
+            response = await apiCall('/api/images/search', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tags: searchTags })
+            });
+            
+            if (response.ok) {
+              images = await response.json();
             }
+          }
+          
+          // Strategy 3: If still no results, try just the project name variations
+          if (images.length === 0) {
+            const projectVariations = [
+              project.name.toLowerCase(),
+              project.name.toLowerCase().replace(/\s+/g, ''),
+              project.name.toLowerCase().replace(/\s+/g, '-'),
+              project.name
+            ];
+            
+            for (const variation of projectVariations) {
+              searchTags = ['archier', variation];
+              console.log(`🔍 Variation search for "${project.name}" with tags:`, searchTags);
+              
+              response = await apiCall('/api/images/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tags: searchTags })
+              });
+              
+              if (response.ok) {
+                const variationImages = await response.json();
+                if (variationImages.length > 0) {
+                  images = variationImages;
+                  break;
+                }
+              }
+            }
+          }
+          
+          if (images.length > 0) {
+            // Use a random image for variety
+            const randomIndex = Math.floor(Math.random() * images.length);
+            const selectedImage = images[randomIndex];
+            console.log(`✅ Found thumbnail for "${project.name}":`, selectedImage.filename);
+            setThumbnailImage(selectedImage);
           } else {
-            console.error(`Search failed for "${project.name}":`, response.status);
+            console.warn(`❌ No images found for "${project.name}" after all search strategies`);
+            // Set a placeholder state to show the folder icon instead of white box
+            setThumbnailImage(null);
           }
         }
       } catch (error) {
-        console.error(`Error loading thumbnail for ${project.name}:`, error);
+        console.error(`❌ Error loading thumbnail for ${project.name}:`, error);
+        setThumbnailImage(null);
       } finally {
         setLoading(false);
       }
-    }, [project.type, project.name]);
+    }, [project.type, project.name, retryCount]);
 
     useEffect(() => {
       loadThumbnail();
@@ -538,7 +592,18 @@ const Projects = () => {
                 className="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
                 onError={(e) => {
                   console.log(`❌ Image failed to load for ${project.name}:`, thumbnailImage.url);
-                  e.target.src = '/api/placeholder-image.jpg';
+                  
+                  // Try to reload the thumbnail if it's the first failure
+                  if (retryCount < 1) {
+                    console.log(`🔄 Retrying thumbnail load for ${project.name}...`);
+                    setRetryCount(prev => prev + 1);
+                    setTimeout(() => {
+                      loadThumbnail();
+                    }, 1000);
+                  } else {
+                    // After retry, fall back to placeholder
+                    e.target.src = '/api/placeholder-image.jpg';
+                  }
                 }}
                 onLoad={() => {
                   console.log(`✅ Image loaded for ${project.name}`);
