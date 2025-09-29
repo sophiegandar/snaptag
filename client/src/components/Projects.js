@@ -553,7 +553,7 @@ const Projects = () => {
       } finally {
         setLoading(false);
       }
-    }, [project.type, project.name, retryCount]);
+    }, [project.type, project.name]);
 
     useEffect(() => {
       loadThumbnail();
