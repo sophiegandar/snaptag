@@ -455,13 +455,18 @@ const Projects = () => {
 
 
   // ProjectThumbnail component for gallery-style project cards
-  const ProjectThumbnail = ({ project }) => {
+  const ProjectThumbnail = ({ project, delay = 0 }) => {
     const [thumbnailImage, setThumbnailImage] = useState(null);
     const [loading, setLoading] = useState(true);
 
     const loadThumbnail = useCallback(async () => {
       try {
         setLoading(true);
+        
+        // Add delay to prevent API stampede
+        if (delay > 0) {
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
         
         // For current projects, skip API call and use solid color
         if (project.type === 'current') {
@@ -510,7 +515,7 @@ const Projects = () => {
       } finally {
         setLoading(false);
       }
-    }, [project.type, project.name]);
+    }, [project.type, project.name, delay]);
 
     useEffect(() => {
       loadThumbnail();
@@ -614,8 +619,12 @@ const Projects = () => {
 
       {/* Single Project Grid - 6 projects per row on full browser */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-        {getFilteredProjects().map(project => (
-          <ProjectThumbnail key={project.id} project={project} />
+        {getFilteredProjects().map((project, index) => (
+          <ProjectThumbnail 
+            key={project.id} 
+            project={project} 
+            delay={index * 200} // Stagger loads by 200ms each
+          />
         ))}
         
         {getFilteredProjects().length === 0 && (
