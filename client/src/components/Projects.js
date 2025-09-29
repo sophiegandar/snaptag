@@ -505,10 +505,12 @@ const Projects = () => {
                 // Just use the first image from this project
                 const firstImage = images[0];
                 console.log(`✅ Found thumbnail for "${project.name}":`, firstImage.filename);
+                const thumbnailUrl = firstImage.url || `/api/images/${firstImage.id}/url`;
+                console.log(`🔗 Setting thumbnail URL for "${project.name}":`, thumbnailUrl);
                 setThumbnailImage({
                   id: firstImage.id,
                   filename: firstImage.filename,
-                  url: firstImage.url || `/api/images/${firstImage.id}/url`
+                  url: thumbnailUrl
                 });
               } else {
                 console.warn(`❌ No images in search results for "${project.name}"`);
