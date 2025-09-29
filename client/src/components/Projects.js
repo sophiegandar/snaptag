@@ -512,6 +512,7 @@ const Projects = () => {
               project.name.toLowerCase(),
               project.name.toLowerCase().replace(/\s+/g, ''),
               project.name.toLowerCase().replace(/\s+/g, '-'),
+              project.name.toLowerCase().replace(/\s+/g, ''),
               project.name
             ];
             
@@ -531,6 +532,39 @@ const Projects = () => {
                   images = variationImages;
                   break;
                 }
+              }
+            }
+          }
+          
+          // Strategy 4: If STILL no results, try just 'archier' and see what we get
+          if (images.length === 0) {
+            console.log(`🔍 Desperate search for "${project.name}" - trying just 'archier' tag`);
+            
+            response = await apiCall('/api/images/search', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tags: ['archier'] })
+            });
+            
+            if (response.ok) {
+              const allArchierImages = await response.json();
+              console.log(`🔍 Found ${allArchierImages.length} total archier images`);
+              
+              // Try to find images that contain the project name in filename or tags
+              const projectKeywords = project.name.toLowerCase().split(/\s+/);
+              const matchingImages = allArchierImages.filter(img => {
+                const filename = (img.filename || '').toLowerCase();
+                const allTags = (img.tags || []).map(t => t.toLowerCase()).join(' ');
+                
+                // Check if any project keyword appears in filename or tags
+                return projectKeywords.some(keyword => 
+                  filename.includes(keyword) || allTags.includes(keyword)
+                );
+              });
+              
+              if (matchingImages.length > 0) {
+                console.log(`🎯 Found ${matchingImages.length} matching images for "${project.name}" by keyword search`);
+                images = matchingImages;
               }
             }
           }
