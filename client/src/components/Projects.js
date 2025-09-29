@@ -547,21 +547,11 @@ const Projects = () => {
                 alt={project.name}
                 loading="lazy"
                 className="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
-                onError={(e) => {
-                  console.log(`❌ Image failed to load for ${project.name}:`, thumbnailImage.url);
-                  
-                  // Try to reload the thumbnail if it's the first failure
-                  if (retryCount < 1) {
-                    console.log(`🔄 Retrying thumbnail load for ${project.name}...`);
-                    setRetryCount(prev => prev + 1);
-                    setTimeout(() => {
-                      loadThumbnail();
-                    }, 1000);
-                  } else {
-                    // After retry, fall back to placeholder
-                    e.target.src = '/api/placeholder-image.jpg';
-                  }
-                }}
+                      onError={(e) => {
+                        console.log(`❌ Image failed to load for ${project.name}:`, thumbnailImage.url);
+                        // Fall back to placeholder
+                        e.target.src = '/api/placeholder-image.jpg';
+                      }}
                 onLoad={() => {
                   console.log(`✅ Image loaded for ${project.name}`);
                 }}
