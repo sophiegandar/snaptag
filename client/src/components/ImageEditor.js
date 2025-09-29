@@ -1296,9 +1296,7 @@ const ImageEditor = () => {
                       maxWidth: '800px',
                       cursor: isTaggingMode && !pendingTagLocation ? 'crosshair' : 'default'
                     }}
-                    onLoad={(e) => {
-                      const img = e.target;
-                      // Scale calculation removed
+                    onLoad={() => {
                       // Image scale calculation removed
                     }}
                     onClick={(e) => {

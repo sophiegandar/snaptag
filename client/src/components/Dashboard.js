@@ -1213,7 +1213,7 @@ const Dashboard = () => {
     } finally {
       // Loading state removed
     }
-  }, []);
+  }, [settings.serverUrl]);
 
   const saveSettings = async () => {
     try {
