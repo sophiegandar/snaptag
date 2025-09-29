@@ -470,114 +470,49 @@ const Projects = () => {
           return;
         }
         
-        // For complete projects, load actual images
+        // For complete projects, load actual images  
         if (project.type === 'complete') {
-          // Try multiple search strategies for better thumbnail loading
-          const projectNameTag = project.name.toLowerCase().replace(/\s+/g, ' ');
+          console.log(`🔍 DEBUG: Looking for thumbnail for "${project.name}"`);
           
-          // Strategy 1: Exact match with all three tags
-          let searchTags = ['archier', 'complete', projectNameTag];
-          console.log(`🔍 Thumbnail search for "${project.name}" with tags:`, searchTags);
-          
-          let response = await apiCall('/api/images/search', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tags: searchTags })
-          });
-          
-          let images = [];
-          if (response.ok) {
-            images = await response.json();
-          }
-          
-          // Strategy 2: If no results, try without 'complete' tag (case-insensitive project name)
-          if (images.length === 0) {
-            searchTags = ['archier', projectNameTag];
-            console.log(`🔍 Fallback search for "${project.name}" with tags:`, searchTags);
+          // First, let's see what Archier images actually exist
+          const debugResponse = await apiCall('/api/debug/archier-tags');
+          if (debugResponse.ok) {
+            const debugData = await debugResponse.json();
+            console.log(`🔍 DEBUG: Found ${debugData.totalImages} total Archier images`);
             
-            response = await apiCall('/api/images/search', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tags: searchTags })
+            // Log the first few to see tag structure
+            debugData.sampleImages?.forEach(img => {
+              console.log(`🔍 Sample Archier image:`, img.filename, 'tags:', img.tags);
             });
             
-            if (response.ok) {
-              images = await response.json();
-            }
-          }
-          
-          // Strategy 3: If still no results, try just the project name variations
-          if (images.length === 0) {
-            const projectVariations = [
-              project.name.toLowerCase(),
-              project.name.toLowerCase().replace(/\s+/g, ''),
-              project.name.toLowerCase().replace(/\s+/g, '-'),
-              project.name.toLowerCase().replace(/\s+/g, ''),
-              project.name
-            ];
-            
-            for (const variation of projectVariations) {
-              searchTags = ['archier', variation];
-              console.log(`🔍 Variation search for "${project.name}" with tags:`, searchTags);
+            // Now try to find images for this specific project
+            const projectNameLower = project.name.toLowerCase();
+            const matchingImages = debugData.allImages?.filter(img => {
+              const imgTags = (img.tags || []).map(t => t.toLowerCase());
+              const filename = (img.filename || '').toLowerCase();
               
-              response = await apiCall('/api/images/search', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tags: searchTags })
-              });
-              
-              if (response.ok) {
-                const variationImages = await response.json();
-                if (variationImages.length > 0) {
-                  images = variationImages;
-                  break;
-                }
-              }
-            }
-          }
-          
-          // Strategy 4: If STILL no results, try just 'archier' and see what we get
-          if (images.length === 0) {
-            console.log(`🔍 Desperate search for "${project.name}" - trying just 'archier' tag`);
-            
-            response = await apiCall('/api/images/search', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tags: ['archier'] })
+              // Check if project name appears in tags or filename
+              return imgTags.some(tag => tag.includes(projectNameLower.replace(/\s+/g, ''))) ||
+                     filename.includes(projectNameLower.replace(/\s+/g, ''));
             });
             
-            if (response.ok) {
-              const allArchierImages = await response.json();
-              console.log(`🔍 Found ${allArchierImages.length} total archier images`);
+            console.log(`🔍 DEBUG: Found ${matchingImages?.length || 0} potential matches for "${project.name}"`);
+            
+            if (matchingImages && matchingImages.length > 0) {
+              console.log(`🔍 DEBUG: First match for "${project.name}":`, matchingImages[0]);
               
-              // Try to find images that contain the project name in filename or tags
-              const projectKeywords = project.name.toLowerCase().split(/\s+/);
-              const matchingImages = allArchierImages.filter(img => {
-                const filename = (img.filename || '').toLowerCase();
-                const allTags = (img.tags || []).map(t => t.toLowerCase()).join(' ');
-                
-                // Check if any project keyword appears in filename or tags
-                return projectKeywords.some(keyword => 
-                  filename.includes(keyword) || allTags.includes(keyword)
-                );
+              // Use the first matching image
+              setThumbnailImage({
+                id: matchingImages[0].id,
+                filename: matchingImages[0].filename,
+                url: `/api/images/${matchingImages[0].id}/url` // This will get generated
               });
-              
-              if (matchingImages.length > 0) {
-                console.log(`🎯 Found ${matchingImages.length} matching images for "${project.name}" by keyword search`);
-                images = matchingImages;
-              }
+            } else {
+              console.warn(`❌ DEBUG: No matches found for "${project.name}"`);
+              setThumbnailImage(null);
             }
-          }
-          
-          if (images.length > 0) {
-            // Use a random image for variety
-            const randomIndex = Math.floor(Math.random() * images.length);
-            const selectedImage = images[randomIndex];
-            console.log(`✅ Found thumbnail for "${project.name}":`, selectedImage.filename);
-            setThumbnailImage(selectedImage);
           } else {
-            console.warn(`❌ No images found for "${project.name}" after all search strategies`);
-            // Set a placeholder state to show the folder icon instead of white box
+            console.error(`❌ DEBUG: Failed to get Archier debug data`);
             setThumbnailImage(null);
           }
         }
