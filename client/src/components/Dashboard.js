@@ -586,7 +586,7 @@ const Dashboard = () => {
     } finally {
       setStagesLoading(false);
     }
-  };
+  }, []);
 
   const addStage = async () => {
     if (!newStageName.trim()) {
@@ -711,7 +711,7 @@ const Dashboard = () => {
     } finally {
       setRoomsLoading(false);
     }
-  };
+  }, []);
 
   const addRoom = async () => {
     if (!newRoomName.trim()) {
@@ -1213,7 +1213,7 @@ const Dashboard = () => {
     } finally {
       // Loading state removed
     }
-  };
+  }, []);
 
   const saveSettings = async () => {
     try {
@@ -1283,7 +1283,7 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Error loading stats:', error);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (activeSection === 'settings' && canEdit) {
