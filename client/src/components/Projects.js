@@ -454,8 +454,34 @@ const Projects = () => {
   };
 
 
+  // Global cache for Archier data to prevent rate limiting
+  const [globalArchierData, setGlobalArchierData] = useState(null);
+  const [loadingGlobalData, setLoadingGlobalData] = useState(false);
+
+  const loadGlobalArchierData = useCallback(async () => {
+    if (globalArchierData) return globalArchierData;
+    if (loadingGlobalData) return null;
+    
+    setLoadingGlobalData(true);
+    try {
+      console.log('🔍 Loading global Archier data once...');
+      const debugResponse = await apiCall('/api/debug/archier-tags');
+      if (debugResponse.ok) {
+        const data = await debugResponse.json();
+        console.log(`✅ Loaded ${data.totalImages} total Archier images globally`);
+        setGlobalArchierData(data);
+        return data;
+      }
+    } catch (error) {
+      console.error('❌ Failed to load global Archier data:', error);
+    } finally {
+      setLoadingGlobalData(false);
+    }
+    return null;
+  }, [globalArchierData, loadingGlobalData]);
+
   // ProjectThumbnail component for gallery-style project cards
-  const ProjectThumbnail = ({ project }) => {
+  const ProjectThumbnail = ({ project, delay = 0 }) => {
     const [thumbnailImage, setThumbnailImage] = useState(null);
     const [loading, setLoading] = useState(true);
     const [retryCount, setRetryCount] = useState(0);
@@ -463,6 +489,11 @@ const Projects = () => {
     const loadThumbnail = useCallback(async () => {
       try {
         setLoading(true);
+        
+        // Add delay to prevent rate limiting
+        if (delay > 0) {
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
         
         // For current projects, skip API call and use solid color
         if (project.type === 'current') {
@@ -472,22 +503,14 @@ const Projects = () => {
         
         // For complete projects, load actual images  
         if (project.type === 'complete') {
-          console.log(`🔍 DEBUG: Looking for thumbnail for "${project.name}"`);
+          console.log(`🔍 Looking for thumbnail: "${project.name}"`);
           
-          // First, let's see what Archier images actually exist
-          const debugResponse = await apiCall('/api/debug/archier-tags');
-          if (debugResponse.ok) {
-            const debugData = await debugResponse.json();
-            console.log(`🔍 DEBUG: Found ${debugData.totalImages} total Archier images`);
-            
-            // Log the first few to see tag structure
-            debugData.sampleImages?.forEach(img => {
-              console.log(`🔍 Sample Archier image:`, img.filename, 'tags:', img.tags);
-            });
-            
-            // Now try to find images for this specific project
+          // Use cached global data
+          const debugData = await loadGlobalArchierData();
+          if (debugData && debugData.allImages) {
+            // Find images for this specific project
             const projectNameLower = project.name.toLowerCase();
-            const matchingImages = debugData.allImages?.filter(img => {
+            const matchingImages = debugData.allImages.filter(img => {
               const imgTags = (img.tags || []).map(t => t.toLowerCase());
               const filename = (img.filename || '').toLowerCase();
               
@@ -496,23 +519,20 @@ const Projects = () => {
                      filename.includes(projectNameLower.replace(/\s+/g, ''));
             });
             
-            console.log(`🔍 DEBUG: Found ${matchingImages?.length || 0} potential matches for "${project.name}"`);
-            
             if (matchingImages && matchingImages.length > 0) {
-              console.log(`🔍 DEBUG: First match for "${project.name}":`, matchingImages[0]);
-              
               // Use the first matching image
               setThumbnailImage({
                 id: matchingImages[0].id,
                 filename: matchingImages[0].filename,
-                url: `/api/images/${matchingImages[0].id}/url` // This will get generated
+                url: `/api/images/${matchingImages[0].id}/url`
               });
+              console.log(`✅ Found thumbnail for "${project.name}": ${matchingImages[0].filename}`);
             } else {
-              console.warn(`❌ DEBUG: No matches found for "${project.name}"`);
+              console.warn(`❌ No matches found for "${project.name}"`);
               setThumbnailImage(null);
             }
           } else {
-            console.error(`❌ DEBUG: Failed to get Archier debug data`);
+            console.error(`❌ Failed to get cached Archier data`);
             setThumbnailImage(null);
           }
         }
@@ -522,7 +542,7 @@ const Projects = () => {
       } finally {
         setLoading(false);
       }
-    }, [project.type, project.name]);
+    }, [project.type, project.name, delay, loadGlobalArchierData]);
 
     useEffect(() => {
       loadThumbnail();
@@ -636,8 +656,12 @@ const Projects = () => {
 
       {/* Single Project Grid - 6 projects per row on full browser */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-        {getFilteredProjects().map(project => (
-          <ProjectThumbnail key={project.id} project={project} />
+        {getFilteredProjects().map((project, index) => (
+          <ProjectThumbnail 
+            key={project.id} 
+            project={project} 
+            delay={index * 100} // Stagger loads by 100ms each
+          />
         ))}
         
         {getFilteredProjects().length === 0 && (
