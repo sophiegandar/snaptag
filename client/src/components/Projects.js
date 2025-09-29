@@ -477,35 +477,46 @@ const Projects = () => {
         // For complete projects, just search for ANY image with the project tags
         if (project.type === 'complete') {
           try {
+            console.log(`🔍 Searching for thumbnail: "${project.name}"`);
+            const searchTags = ['archier', 'complete', project.name.toLowerCase()];
+            console.log(`🔍 Search tags:`, searchTags);
+            
             // Simple search for images with archier + complete + project name tags
             const searchResponse = await apiCall('/api/images/search', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                tags: ['archier', 'complete', project.name.toLowerCase()],
+                tags: searchTags,
                 sortBy: 'upload_date',
                 sortOrder: 'desc'
               })
             });
 
+            console.log(`🔍 Search response for "${project.name}":`, searchResponse.status);
+            
             if (searchResponse.ok) {
               const searchData = await searchResponse.json();
+              console.log(`🔍 Search data for "${project.name}":`, searchData);
+              
               if (searchData.images && searchData.images.length > 0) {
                 // Just use the first image from this project
                 const firstImage = searchData.images[0];
+                console.log(`✅ Found thumbnail for "${project.name}":`, firstImage.filename);
                 setThumbnailImage({
                   id: firstImage.id,
                   filename: firstImage.filename,
                   url: firstImage.url || `/api/images/${firstImage.id}/url`
                 });
               } else {
+                console.warn(`❌ No images in search results for "${project.name}"`);
                 setThumbnailImage(null);
               }
             } else {
+              console.error(`❌ Search failed for "${project.name}":`, searchResponse.status);
               setThumbnailImage(null);
             }
           } catch (searchError) {
-            console.warn(`No images found for project: ${project.name}`);
+            console.error(`❌ Search error for "${project.name}":`, searchError);
             setThumbnailImage(null);
           }
         }
