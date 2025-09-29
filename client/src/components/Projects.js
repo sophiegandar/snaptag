@@ -498,9 +498,12 @@ const Projects = () => {
               const searchData = await searchResponse.json();
               console.log(`🔍 Search data for "${project.name}":`, searchData);
               
-              if (searchData.images && searchData.images.length > 0) {
+              // Handle both {images: [...]} and direct array responses
+              const images = searchData.images || searchData;
+              
+              if (images && images.length > 0) {
                 // Just use the first image from this project
-                const firstImage = searchData.images[0];
+                const firstImage = images[0];
                 console.log(`✅ Found thumbnail for "${project.name}":`, firstImage.filename);
                 setThumbnailImage({
                   id: firstImage.id,
