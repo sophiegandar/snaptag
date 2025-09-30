@@ -1313,10 +1313,10 @@ app.get('/api/images/:id/url', async (req, res) => {
     try {
       // Use cached URL generation for better performance
       const url = await getCachedDropboxUrl(image.dropbox_path, req);
-      console.log(`✅ Successfully generated URL for image ${id}`);
+      console.log(`✅ Successfully generated URL for image ${id}: ${url.substring(0, 100)}...`);
       
-      // Return just the URL as a redirect
-      res.redirect(url);
+      // Return the URL as JSON so frontend can use it directly
+      res.json({ url: url });
     } catch (urlError) {
       console.error(`❌ Failed to generate URL for image ${id}:`, urlError.message);
       console.error(`❌ Dropbox path: ${image.dropbox_path}`);

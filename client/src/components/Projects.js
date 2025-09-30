@@ -507,14 +507,24 @@ const Projects = () => {
                 console.log(`✅ Found thumbnail for "${project.name}":`, firstImage.filename);
                 // Always generate fresh URL with cache busting to avoid 304 responses  
                 // Add additional delay before setting URL to prevent rate limiting
-                setTimeout(() => {
-                  const thumbnailUrl = `/api/images/${firstImage.id}/url?t=${Date.now()}`;
-                  console.log(`🔗 Setting thumbnail URL for "${project.name}":`, thumbnailUrl);
-                  setThumbnailImage({
-                    id: firstImage.id,
-                    filename: firstImage.filename,
-                    url: thumbnailUrl
-                  });
+                setTimeout(async () => {
+                  try {
+                    console.log(`🔗 Fetching thumbnail URL for "${project.name}"`);
+                    const urlResponse = await apiCall(`/api/images/${firstImage.id}/url?t=${Date.now()}`);
+                    if (urlResponse.ok) {
+                      const urlData = await urlResponse.json();
+                      console.log(`✅ Got thumbnail URL for "${project.name}":`, urlData.url.substring(0, 100) + '...');
+                      setThumbnailImage({
+                        id: firstImage.id,
+                        filename: firstImage.filename,
+                        url: urlData.url
+                      });
+                    } else {
+                      console.error(`❌ Failed to get URL for "${project.name}":`, urlResponse.status);
+                    }
+                  } catch (error) {
+                    console.error(`❌ Error fetching URL for "${project.name}":`, error);
+                  }
                 }, Math.random() * 2000); // Random delay 0-2 seconds
                 
                 // Don't set placeholder immediately - just wait for real URL to load with delay
