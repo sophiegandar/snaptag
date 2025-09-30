@@ -1296,6 +1296,48 @@ app.get('/api/images/stats', async (req, res) => {
   }
 });
 
+// Get just the URL for a specific image by ID (for thumbnails)
+app.get('/api/images/:id/url', async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(`🔗 Getting URL for image ID: ${id}`);
+    
+    const image = await databaseService.getImageById(id);
+    if (!image) {
+      console.log(`❌ Image ${id} not found in database`);
+      return res.status(404).json({ error: 'Image not found' });
+    }
+
+    console.log(`📂 Found image ${id}: ${image.filename}, path: ${image.dropbox_path}`);
+
+    try {
+      // Use cached URL generation for better performance
+      const url = await getCachedDropboxUrl(image.dropbox_path, req);
+      console.log(`✅ Successfully generated URL for image ${id}`);
+      
+      // Return just the URL as a redirect
+      res.redirect(url);
+    } catch (urlError) {
+      console.error(`❌ Failed to generate URL for image ${id}:`, urlError.message);
+      console.error(`❌ Dropbox path: ${image.dropbox_path}`);
+      
+      // Return a 404 or placeholder response
+      res.status(404).json({
+        error: `Failed to load image: ${urlError.message}`,
+        imageId: id,
+        dropbox_path: image.dropbox_path
+      });
+    }
+  } catch (error) {
+    console.error(`❌ Error getting URL for image ${req.params.id}:`, error);
+    res.status(500).json({ 
+      error: 'Failed to get image URL',
+      details: error.message,
+      imageId: req.params.id
+    });
+  }
+});
+
 // Get specific image by ID with detailed error logging
 app.get('/api/images/:id', async (req, res) => {
   try {
