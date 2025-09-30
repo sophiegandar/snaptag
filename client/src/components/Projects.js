@@ -517,13 +517,7 @@ const Projects = () => {
                   });
                 }, Math.random() * 2000); // Random delay 0-2 seconds
                 
-                // Set placeholder immediately
-                console.log(`🔗 Setting placeholder for "${project.name}" while URL loads`);
-                setThumbnailImage({
-                  id: firstImage.id,
-                  filename: firstImage.filename,
-                  url: '/api/placeholder-image.jpg' // Placeholder while real URL loads
-                });
+                // Don't set placeholder immediately - just wait for real URL to load with delay
               } else {
                 console.warn(`❌ No images in search results for "${project.name}"`);
                 setThumbnailImage(null);
