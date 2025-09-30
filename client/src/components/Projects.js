@@ -505,13 +505,24 @@ const Projects = () => {
                 // Just use the first image from this project
                 const firstImage = images[0];
                 console.log(`✅ Found thumbnail for "${project.name}":`, firstImage.filename);
-                // Always generate fresh URL with cache busting to avoid 304 responses
-                const thumbnailUrl = `/api/images/${firstImage.id}/url?t=${Date.now()}`;
-                console.log(`🔗 Setting thumbnail URL for "${project.name}":`, thumbnailUrl);
+                // Always generate fresh URL with cache busting to avoid 304 responses  
+                // Add additional delay before setting URL to prevent rate limiting
+                setTimeout(() => {
+                  const thumbnailUrl = `/api/images/${firstImage.id}/url?t=${Date.now()}`;
+                  console.log(`🔗 Setting thumbnail URL for "${project.name}":`, thumbnailUrl);
+                  setThumbnailImage({
+                    id: firstImage.id,
+                    filename: firstImage.filename,
+                    url: thumbnailUrl
+                  });
+                }, Math.random() * 2000); // Random delay 0-2 seconds
+                
+                // Set placeholder immediately
+                console.log(`🔗 Setting placeholder for "${project.name}" while URL loads`);
                 setThumbnailImage({
                   id: firstImage.id,
                   filename: firstImage.filename,
-                  url: thumbnailUrl
+                  url: '/api/placeholder-image.jpg' // Placeholder while real URL loads
                 });
               } else {
                 console.warn(`❌ No images in search results for "${project.name}"`);
