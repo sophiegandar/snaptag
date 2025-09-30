@@ -505,8 +505,8 @@ const Projects = () => {
                 // Just use the first image from this project
                 const firstImage = images[0];
                 console.log(`✅ Found thumbnail for "${project.name}":`, firstImage.filename);
-                // Always generate fresh URL instead of using potentially stale cached URL
-                const thumbnailUrl = `/api/images/${firstImage.id}/url`;
+                // Always generate fresh URL with cache busting to avoid 304 responses
+                const thumbnailUrl = `/api/images/${firstImage.id}/url?t=${Date.now()}`;
                 console.log(`🔗 Setting thumbnail URL for "${project.name}":`, thumbnailUrl);
                 setThumbnailImage({
                   id: firstImage.id,
