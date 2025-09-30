@@ -472,7 +472,7 @@ const Projects = () => {
       // For complete projects, add delay BEFORE search to prevent API stampede
       if (project.type === 'complete') {
         // Add staggered delay to prevent search API rate limiting
-        const searchDelay = Math.random() * 3000; // 0-3 seconds delay for search
+        const searchDelay = Math.random() * 8000; // 0-8 seconds delay for search
         console.log(`⏱️ Adding ${Math.round(searchDelay)}ms delay before searching "${project.name}"`);
         await new Promise(resolve => setTimeout(resolve, searchDelay));
         
@@ -525,7 +525,7 @@ const Projects = () => {
                   } catch (error) {
                     console.error(`❌ Error fetching URL for "${project.name}":`, error);
                   }
-                }, Math.random() * 2000); // Random delay 0-2 seconds
+                }, Math.random() * 10000); // Random delay 0-10 seconds
                 
                 // Don't set placeholder immediately - just wait for real URL to load with delay
               } else {
