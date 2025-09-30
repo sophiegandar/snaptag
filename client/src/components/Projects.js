@@ -537,7 +537,7 @@ const Projects = () => {
       } finally {
         setLoading(false);
       }
-    }, [project.type, project.name, delay]);
+    }, [project.type, project.name]);
 
     useEffect(() => {
       loadThumbnail();
