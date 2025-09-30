@@ -459,38 +459,38 @@ const Projects = () => {
     const [thumbnailImage, setThumbnailImage] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    const loadThumbnail = useCallback(async () => {
-      try {
-        setLoading(true);
+  const loadThumbnail = useCallback(async () => {
+    try {
+      setLoading(true);
+      
+      // For current projects, skip API call and use solid color
+      if (project.type === 'current') {
+        setLoading(false);
+        return;
+      }
+      
+      // For complete projects, add delay BEFORE search to prevent API stampede
+      if (project.type === 'complete') {
+        // Add staggered delay to prevent search API rate limiting
+        const searchDelay = Math.random() * 3000; // 0-3 seconds delay for search
+        console.log(`⏱️ Adding ${Math.round(searchDelay)}ms delay before searching "${project.name}"`);
+        await new Promise(resolve => setTimeout(resolve, searchDelay));
         
-        // Add delay to prevent API stampede
-        if (delay > 0) {
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
-        
-        // For current projects, skip API call and use solid color
-        if (project.type === 'current') {
-          setLoading(false);
-          return;
-        }
-        
-        // For complete projects, just search for ANY image with the project tags
-        if (project.type === 'complete') {
-          try {
-            console.log(`🔍 Searching for thumbnail: "${project.name}"`);
-            const searchTags = ['archier', 'complete', project.name.toLowerCase()];
-            console.log(`🔍 Search tags:`, searchTags);
-            
-            // Simple search for images with archier + complete + project name tags
-            const searchResponse = await apiCall('/api/images/search', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                tags: searchTags,
-                sortBy: 'upload_date',
-                sortOrder: 'desc'
-              })
-            });
+        try {
+          console.log(`🔍 Searching for thumbnail: "${project.name}"`);
+          const searchTags = ['archier', 'complete', project.name.toLowerCase()];
+          console.log(`🔍 Search tags:`, searchTags);
+          
+          // Simple search for images with archier + complete + project name tags
+          const searchResponse = await apiCall('/api/images/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tags: searchTags,
+              sortBy: 'upload_date',
+              sortOrder: 'desc'
+            })
+          });
 
             console.log(`🔍 Search response for "${project.name}":`, searchResponse.status);
             
