@@ -471,10 +471,11 @@ const Projects = () => {
       
       // For complete projects, add delay BEFORE search to prevent API stampede
       if (project.type === 'complete') {
-        // Add staggered delay to prevent search API rate limiting
-        const searchDelay = Math.random() * 8000; // 0-8 seconds delay for search
-        console.log(`⏱️ Adding ${Math.round(searchDelay)}ms delay before searching "${project.name}"`);
-        await new Promise(resolve => setTimeout(resolve, searchDelay));
+        // Use passed delay for sequential loading (no random delays)
+        if (delay > 0) {
+          console.log(`⏱️ Adding ${Math.round(delay)}ms delay before searching "${project.name}"`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
         
         try {
           console.log(`🔍 Searching for thumbnail: "${project.name}"`);
@@ -525,7 +526,7 @@ const Projects = () => {
                   } catch (error) {
                     console.error(`❌ Error fetching URL for "${project.name}":`, error);
                   }
-                }, Math.random() * 10000); // Random delay 0-10 seconds
+                }, 1000); // Fixed 1 second delay for URL fetch
                 
                 // Don't set placeholder immediately - just wait for real URL to load with delay
               } else {
@@ -655,7 +656,7 @@ const Projects = () => {
           <ProjectThumbnail 
             key={project.id} 
             project={project} 
-            delay={index * 200} // Stagger loads by 200ms each
+            delay={index * 2000} // Stagger loads by 2 seconds each
           />
         ))}
         
