@@ -834,6 +834,19 @@ const Projects = () => {
           </div>
         )}
 
+        {/* Thumbnail Selection Info - Only for complete projects in edit mode */}
+        {canEdit && activeProject?.type === 'complete' && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center space-x-2 text-blue-800">
+              <Camera className="h-4 w-4" />
+              <span className="text-sm font-medium">Thumbnail Selection Mode</span>
+            </div>
+            <p className="text-xs text-blue-600 mt-1">
+              Hover over any image below and click "Set Thumbnail" to choose the project thumbnail
+            </p>
+          </div>
+        )}
+
         {/* Project Images - Force re-render with key */}
         <div key={`${activeProject.id}-${activeProjectTab}-${stageFilter}-${roomFilter}-${photosFilter}`}>
           {console.log(`🔍 RENDER CHECK: currentImages.length = ${currentImages.length}, showing images:`, currentImages.slice(0, 2))}
@@ -901,11 +914,11 @@ const Projects = () => {
                               e.stopPropagation(); // Prevent navigation to image detail
                               setProjectThumbnail(activeProject.id, image.id, image.filename);
                             }}
-                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-2 py-1 rounded-md flex items-center space-x-1 transition-colors"
+                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-2 rounded-lg flex items-center space-x-1 transition-colors shadow-lg border-2 border-white"
                             title="Set as project thumbnail"
                           >
-                            <Camera className="h-3 w-3" />
-                            <span>Set Thumbnail</span>
+                            <Camera className="h-4 w-4" />
+                            <span className="font-medium">Set Thumbnail</span>
                           </button>
                         </div>
                       )}
