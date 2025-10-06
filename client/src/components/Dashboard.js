@@ -1287,15 +1287,18 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (activeSection === 'settings' && canEdit) {
+      // Stagger API calls to prevent 429 rate limiting
       loadSettings();
-      loadStats();
+      setTimeout(() => loadStats(), 500);
     } else if (activeSection === 'projects') {
+      // Stagger API calls to prevent 429 rate limiting
       loadCurrentProjects();
-      loadCompleteProjects();
+      setTimeout(() => loadCompleteProjects(), 500);
     } else if (activeSection === 'tags') {
+      // Stagger API calls to prevent 429 rate limiting
       loadTags();
-      loadStages();
-      loadRooms();
+      setTimeout(() => loadStages(), 500);
+      setTimeout(() => loadRooms(), 1000);
     }
   }, [activeSection, canEdit]); // eslint-disable-line react-hooks/exhaustive-deps
 
