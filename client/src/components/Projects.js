@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FolderOpen, Image as ImageIcon, Clock, ArrowLeft, AlertTriangle, X } from 'lucide-react';
+import { FolderOpen, Image as ImageIcon, Clock, ArrowLeft, AlertTriangle, X, Camera } from 'lucide-react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { apiCall } from '../utils/apiConfig';
 import { useMode } from '../context/ModeContext';
+import { toast } from 'react-toastify';
 
 // Utility function to capitalize text for display
 const capitalizeForDisplay = (text) => {
@@ -18,6 +19,29 @@ const Projects = () => {
   const navigate = useNavigate();
   const params = useParams();
   const location = useLocation();
+
+  // Thumbnail setting function
+  const setProjectThumbnail = async (projectId, imageId, imageName) => {
+    try {
+      console.log(`🖼️ Setting thumbnail for project ${projectId} to image ${imageId}`);
+      
+      const response = await apiCall(`/api/projects/${projectId}/thumbnail`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageId })
+      });
+      
+      if (response.ok) {
+        toast.success(`Set "${imageName}" as thumbnail for ${activeProject?.name}`);
+        console.log(`✅ Successfully set thumbnail for project ${projectId}`);
+      } else {
+        throw new Error('Failed to set thumbnail');
+      }
+    } catch (error) {
+      console.error('❌ Error setting thumbnail:', error);
+      toast.error('Failed to set thumbnail');
+    }
+  };
   const [viewMode, setViewMode] = useState('overview'); // 'overview', 'complete', 'current', 'project'
   const [activeProject, setActiveProject] = useState(null);
   const [activeProjectTab, setActiveProjectTab] = useState('precedent'); // 'precedent', 'texture', 'final', 'wip'
@@ -868,7 +892,24 @@ const Projects = () => {
                     />
                     
                     {/* Hover Overlay with Properties */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between">
+                      {/* Set Thumbnail Button - Only for complete projects in edit mode */}
+                      {canEdit && activeProject?.type === 'complete' && (
+                        <div className="p-2 flex justify-end">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent navigation to image detail
+                              setProjectThumbnail(activeProject.id, image.id, image.filename);
+                            }}
+                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-2 py-1 rounded-md flex items-center space-x-1 transition-colors"
+                            title="Set as project thumbnail"
+                          >
+                            <Camera className="h-3 w-3" />
+                            <span>Set Thumbnail</span>
+                          </button>
+                        </div>
+                      )}
+                      
                       <div className="p-4 text-white">
                         <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{color: '#C9D468'}}>
                           {getImageType()}
