@@ -1897,6 +1897,13 @@ app.post('/api/tags', async (req, res) => {
       return res.status(400).json({ error: 'Tag name is required' });
     }
     
+    // Prevent comma-separated tags
+    if (name.includes(',')) {
+      return res.status(400).json({ 
+        error: 'Tag names cannot contain commas. Please create separate tags instead.' 
+      });
+    }
+    
     const trimmedName = name.trim().toLowerCase();
     console.log(`🏷️ Creating new tag: "${trimmedName}"`);
     

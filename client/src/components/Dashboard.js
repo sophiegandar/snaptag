@@ -7,7 +7,10 @@ import { apiCall } from '../utils/apiConfig';
 // Utility function to capitalize text for display
 const capitalizeForDisplay = (text) => {
   if (!text) return text;
-  return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+  // Split by spaces and capitalize each word
+  return text.split(' ').map(word => 
+    word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+  ).join(' ');
 };
 
 // Inline editing components
@@ -1662,7 +1665,7 @@ const Dashboard = () => {
                             <div className="flex items-center justify-between">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2">
-                                  <span className="font-medium text-black">{stage.name}</span>
+                                  <span className="font-medium text-black">{capitalizeForDisplay(stage.name)}</span>
                                   <span className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded">
                                     {stage.usage_count || 0} uses
                                   </span>
@@ -1773,7 +1776,7 @@ const Dashboard = () => {
                             <div className="flex items-center justify-between">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2">
-                                  <span className="font-medium text-black">{room.name}</span>
+                                  <span className="font-medium text-black">{capitalizeForDisplay(room.name)}</span>
                                   <span className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded">
                                     {room.usage_count || 0} uses
                                   </span>
