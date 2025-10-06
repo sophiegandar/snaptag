@@ -455,7 +455,7 @@ const Projects = () => {
 
 
   // ProjectThumbnail component for gallery-style project cards
-  const ProjectThumbnail = ({ project, delay = 0 }) => {
+  const ProjectThumbnail = ({ project }) => {
     const [thumbnailImage, setThumbnailImage] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -469,90 +469,48 @@ const Projects = () => {
         return;
       }
       
-      // For complete projects, add delay BEFORE search to prevent API stampede
+      // For complete projects, check if they have a set thumbnail
       if (project.type === 'complete') {
-        // Use passed delay for sequential loading (no random delays)
-        if (delay > 0) {
-          console.log(`⏱️ Adding ${Math.round(delay)}ms delay before searching "${project.name}"`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
-        
         try {
-          console.log(`🔍 Searching for thumbnail: "${project.name}"`);
-          const searchTags = ['archier', 'complete', project.name.toLowerCase()];
-          console.log(`🔍 Search tags:`, searchTags);
+          console.log(`🖼️ Loading thumbnail for "${project.name}"`);
           
-          // Simple search for images with archier + complete + project name tags
-          const searchResponse = await apiCall('/api/images/search', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              tags: searchTags,
-              sortBy: 'upload_date',
-              sortOrder: 'desc'
-            })
-          });
-
-            console.log(`🔍 Search response for "${project.name}":`, searchResponse.status);
+          const thumbnailResponse = await apiCall(`/api/projects/${project.id}/thumbnail`);
+          
+          if (thumbnailResponse.ok) {
+            const projectData = await thumbnailResponse.json();
             
-            if (searchResponse.ok) {
-              const searchData = await searchResponse.json();
-              console.log(`🔍 Search data for "${project.name}":`, searchData);
-              
-              // Handle both {images: [...]} and direct array responses
-              const images = searchData.images || searchData;
-              
-              if (images && images.length > 0) {
-                // Just use the first image from this project
-                const firstImage = images[0];
-                console.log(`✅ Found thumbnail for "${project.name}":`, firstImage.filename);
-                // Always generate fresh URL with cache busting to avoid 304 responses  
-                // Add additional delay before setting URL to prevent rate limiting
-                setTimeout(async () => {
-                  try {
-                    console.log(`🔗 Fetching thumbnail URL for "${project.name}"`);
-                    const urlResponse = await apiCall(`/api/images/${firstImage.id}/url?t=${Date.now()}`);
-                    if (urlResponse.ok) {
-                      const urlData = await urlResponse.json();
-                      console.log(`✅ Got thumbnail URL for "${project.name}":`, urlData.url.substring(0, 100) + '...');
-                      setThumbnailImage({
-                        id: firstImage.id,
-                        filename: firstImage.filename,
-                        url: urlData.url
-                      });
-                    } else {
-                      console.error(`❌ Failed to get URL for "${project.name}":`, urlResponse.status);
-                    }
-                  } catch (error) {
-                    console.error(`❌ Error fetching URL for "${project.name}":`, error);
-                  }
-                }, 1000); // Fixed 1 second delay for URL fetch
-                
-                // Don't set placeholder immediately - just wait for real URL to load with delay
-              } else {
-                console.warn(`❌ No images in search results for "${project.name}"`);
-                setThumbnailImage(null);
-              }
+            if (projectData.thumbnail_url) {
+              console.log(`✅ Found set thumbnail for "${project.name}"`);
+              setThumbnailImage({
+                id: projectData.thumbnail_id,
+                filename: projectData.filename,
+                url: projectData.thumbnail_url
+              });
             } else {
-              console.error(`❌ Search failed for "${project.name}":`, searchResponse.status);
+              console.log(`📝 No thumbnail set for "${project.name}" - showing placeholder`);
               setThumbnailImage(null);
             }
-          } catch (searchError) {
-            console.error(`❌ Search error for "${project.name}":`, searchError);
+          } else {
+            console.error(`❌ Failed to load thumbnail for "${project.name}":`, thumbnailResponse.status);
             setThumbnailImage(null);
           }
+        } catch (error) {
+          console.error(`❌ Thumbnail error for "${project.name}":`, error);
+          setThumbnailImage(null);
         }
-      } catch (error) {
-        console.error(`Error loading thumbnail for ${project.name}:`, error);
-        setThumbnailImage(null);
-      } finally {
-        setLoading(false);
       }
-    }, [project.type, project.name, delay]);
+      
+    } catch (error) {
+      console.error(`Error loading thumbnail for ${project.name}:`, error);
+      setThumbnailImage(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [project.type, project.name, project.id]);
 
-    useEffect(() => {
-      loadThumbnail();
-    }, [loadThumbnail]); // Depend on memoized function
+  useEffect(() => {
+    loadThumbnail();
+  }, [loadThumbnail]); // Depend on memoized function
 
     return (
       <div
@@ -656,7 +614,6 @@ const Projects = () => {
           <ProjectThumbnail 
             key={project.id} 
             project={project} 
-            delay={index * 2000} // Stagger loads by 2 seconds each
           />
         ))}
         

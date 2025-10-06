@@ -24,6 +24,9 @@ class PostgresService {
       // Create tables
       await this.createTables();
       
+      // Add thumbnail column if needed
+      await this.addThumbnailColumn();
+      
       this.isInitialized = true;
       console.log('✅ PostgreSQL database initialized');
     } catch (error) {
@@ -739,11 +742,30 @@ class PostgresService {
     return result.rows[0];
   }
 
-  // Projects methods
+      // Projects methods
   async getAllProjects() {
     const query = 'SELECT * FROM projects ORDER BY created_at DESC';
     const result = await this.query(query);
     return result.rows || result; // Return just the rows array
+  }
+
+  // Add thumbnail_image_id column if it doesn't exist
+  async addThumbnailColumn() {
+    try {
+      await this.query(`
+        ALTER TABLE projects 
+        ADD COLUMN IF NOT EXISTS thumbnail_image_id INTEGER REFERENCES images(id)
+      `);
+      console.log('✅ Added thumbnail_image_id column to projects table');
+    } catch (error) {
+      console.error('❌ Error adding thumbnail column:', error);
+    }
+  }
+
+  // Set project thumbnail
+  async setProjectThumbnail(projectId, imageId) {
+    const query = 'UPDATE projects SET thumbnail_image_id = $1 WHERE id = $2';
+    return await this.query(query, [imageId, projectId]);
   }
 
   // Project assignments search method

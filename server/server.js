@@ -3936,6 +3936,62 @@ app.delete('/api/projects/:id', async (req, res) => {
   }
 });
 
+// Set project thumbnail
+app.put('/api/projects/:id/thumbnail', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { imageId } = req.body;
+    
+    console.log(`🖼️ Setting thumbnail for project ${id} to image ${imageId}`);
+    
+    await databaseService.setProjectThumbnail(id, imageId);
+    
+    console.log(`✅ Set thumbnail for project ${id}`);
+    res.json({ success: true, message: 'Thumbnail set successfully' });
+    
+  } catch (error) {
+    console.error('❌ Error setting project thumbnail:', error);
+    res.status(500).json({ error: 'Failed to set thumbnail' });
+  }
+});
+
+// Get project with thumbnail
+app.get('/api/projects/:id/thumbnail', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await databaseService.query(`
+      SELECT p.*, i.filename, i.dropbox_path, i.id as thumbnail_id
+      FROM projects p
+      LEFT JOIN images i ON p.thumbnail_image_id = i.id
+      WHERE p.id = $1
+    `, [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+    
+    const project = result.rows[0];
+    
+    // If project has a thumbnail, get the Dropbox URL
+    if (project.thumbnail_id) {
+      try {
+        const thumbnailUrl = await getCachedDropboxUrl(project.dropbox_path, req);
+        project.thumbnail_url = thumbnailUrl;
+      } catch (error) {
+        console.error(`❌ Error getting thumbnail URL for project ${id}:`, error);
+        project.thumbnail_url = null;
+      }
+    }
+    
+    res.json(project);
+    
+  } catch (error) {
+    console.error('❌ Error fetching project thumbnail:', error);
+    res.status(500).json({ error: 'Failed to fetch project thumbnail' });
+  }
+});
+
 // Get all stages
 app.get('/api/stages', async (req, res) => {
   try {
