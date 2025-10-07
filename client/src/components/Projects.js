@@ -665,13 +665,16 @@ const Projects = () => {
     if (!activeProject) return null;
     
     // Force reload of images when switching tabs to prevent cache issues
-    const cacheKey = `${activeProject.id}-${activeProjectTab}-${stageFilter}-${roomFilter}-${photosFilter}`;
+    // CRITICAL FIX: Ensure photosFilter defaults to 'all' if empty
+    const effectivePhotosFilter = photosFilter || 'all';
+    const cacheKey = `${activeProject.id}-${activeProjectTab}-${stageFilter}-${roomFilter}-${effectivePhotosFilter}`;
     const currentImages = projectImages[cacheKey] || [];
     
     console.log(`🖼️ DISPLAY: Showing images for ${cacheKey}`);
     console.log(`🖼️ DISPLAY: Found ${currentImages.length} images in cache`);
     console.log(`🖼️ DISPLAY: Available cache keys:`, Object.keys(projectImages));
     console.log(`🖼️ DISPLAY: Current tab state - activeProjectTab: ${activeProjectTab}, stageFilter: ${stageFilter}, roomFilter: ${roomFilter}`);
+    console.log(`🔧 FILTER DEBUG: photosFilter="${photosFilter}", effectivePhotosFilter="${effectivePhotosFilter}"`);
     
     return (
       <div>
@@ -851,7 +854,7 @@ const Projects = () => {
         )}
 
         {/* Project Images - Force re-render with key */}
-        <div key={`${activeProject.id}-${activeProjectTab}-${stageFilter}-${roomFilter}-${photosFilter}`}>
+        <div key={`${activeProject.id}-${activeProjectTab}-${stageFilter}-${roomFilter}-${effectivePhotosFilter}`}>
           {console.log(`🔍 RENDER CHECK: currentImages.length = ${currentImages.length}, showing images:`, currentImages.slice(0, 2))}
           {/* Loading State - Show while waiting for API response */}
           {projectImages[cacheKey] === null ? (
