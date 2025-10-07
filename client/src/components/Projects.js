@@ -298,7 +298,7 @@ const Projects = () => {
       
       if (project.type === 'complete') {
         // Complete projects use their predefined tags + Final/WIP
-        searchTags = [...project.tags]; // Use spread to avoid mutations
+        searchTags = [...(Array.isArray(project.tags) ? project.tags : [])]; // Use spread to avoid mutations
         
         if (tab === 'final') {
           searchTags.push('final', 'complete'); // Images in Final folder
@@ -419,16 +419,19 @@ const Projects = () => {
           
           // Check if any images are incorrectly included
           images.slice(0, 5).forEach((img, idx) => {
-            const hasProjectTag = img.tags?.some(tag => 
+            // Ensure tags is always an array
+            const tags = Array.isArray(img.tags) ? img.tags : [];
+            
+            const hasProjectTag = tags.some(tag => 
               tag.toLowerCase() === 'de witt st' || 
               tag.toLowerCase().includes('de witt') || 
               tag.toLowerCase().includes('dewitt') || 
               tag.toLowerCase() === 'de-witt'
             );
-            const hasTypeTag = img.tags?.some(tag => 
+            const hasTypeTag = tags.some(tag => 
               ['precedent', 'texture'].includes(tag.toLowerCase())
             );
-            console.log(`🔍 IMG ${idx + 1}: ${img.filename} | Project tag: ${hasProjectTag} | Type tags: ${hasTypeTag} | All tags: [${img.tags?.join(', ') || 'none'}]`);
+            console.log(`🔍 IMG ${idx + 1}: ${img.filename} | Project tag: ${hasProjectTag} | Type tags: ${hasTypeTag} | All tags: [${tags.join(', ') || 'none'}]`);
           });
         }
         
