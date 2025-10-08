@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Grid, RefreshCw } from 'lucide-react';
+import { Search, RefreshCw } from 'lucide-react';
 import { apiCall } from '../utils/apiConfig';
 
 const SimpleImageGallery = () => {
