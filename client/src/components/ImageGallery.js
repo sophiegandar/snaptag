@@ -161,12 +161,28 @@ const ImageGallery = () => {
       const untaggedCount = data.filter(img => !img.tags || img.tags.length === 0).length;
       console.log(`📊 Gallery: ${data.length} loaded, ${urlCount} with URLs, ${taggedCount} tagged, ${untaggedCount} untagged`);
       
+      // CRITICAL FIX: Ensure all images have URLs
+      const imagesWithUrls = await Promise.all(data.map(async (img) => {
+        if (!img.url || img.url.includes('placeholder')) {
+          try {
+            const urlResponse = await apiCall(`/api/images/${img.id}/url`);
+            if (urlResponse.ok) {
+              const urlData = await urlResponse.json();
+              return { ...img, url: urlData.url || `/api/images/${img.id}/url` };
+            }
+          } catch (error) {
+            console.error(`Failed to get URL for image ${img.id}:`, error);
+          }
+        }
+        return img;
+      }));
+      
       if (loadMore) {
         // Append new images to existing ones
-        setImages(prev => [...prev, ...data]);
+        setImages(prev => [...prev, ...imagesWithUrls]);
       } else {
         // Replace images for new search/filter
-        setImages(data);
+        setImages(imagesWithUrls);
       }
       
       // Update pagination state if available

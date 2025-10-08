@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Camera, Check } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Camera } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { apiCall } from '../utils/apiConfig';
@@ -11,11 +11,7 @@ const SimpleThumbnailSetter = () => {
   const [settingThumbnail, setSettingThumbnail] = useState(null);
   const [project, setProject] = useState(null);
 
-  useEffect(() => {
-    loadProject();
-  }, [projectId]);
-
-  const loadProject = async () => {
+  const loadProject = useCallback(async () => {
     try {
       const response = await apiCall(`/api/projects/${projectId}`);
       if (response.ok) {
@@ -27,7 +23,11 @@ const SimpleThumbnailSetter = () => {
       console.error('Error loading project:', error);
       toast.error('Failed to load project');
     }
-  };
+  }, [projectId]);
+
+  useEffect(() => {
+    loadProject();
+  }, [loadProject]);
 
   const loadImages = async (projectName) => {
     try {

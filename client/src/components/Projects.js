@@ -668,7 +668,25 @@ const Projects = () => {
     // CRITICAL FIX: Ensure photosFilter defaults to 'all' if empty
     const effectivePhotosFilter = photosFilter || 'all';
     const cacheKey = `${activeProject.id}-${activeProjectTab}-${stageFilter}-${roomFilter}-${effectivePhotosFilter}`;
-    const currentImages = projectImages[cacheKey] || [];
+    let currentImages = projectImages[cacheKey] || [];
+    
+    // EMERGENCY FIX: If no images found with exact cache key, try alternative keys
+    if (currentImages.length === 0) {
+      const alternativeKeys = [
+        `${activeProject.id}-${activeProjectTab}---all`,
+        `${activeProject.id}-${activeProjectTab}--all-all`,
+        `${activeProject.id}-${activeProjectTab}---`,
+        `${activeProject.id}-photos---all`
+      ];
+      
+      for (const altKey of alternativeKeys) {
+        if (projectImages[altKey] && projectImages[altKey].length > 0) {
+          console.log(`🔧 FALLBACK: Using alternative cache key: ${altKey}`);
+          currentImages = projectImages[altKey];
+          break;
+        }
+      }
+    }
     
     console.log(`🖼️ DISPLAY: Showing images for ${cacheKey}`);
     console.log(`🖼️ DISPLAY: Found ${currentImages.length} images in cache`);
