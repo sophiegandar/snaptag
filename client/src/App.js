@@ -15,6 +15,7 @@ import Projects from './components/Projects';
 import Dashboard from './components/Dashboard';
 import SimpleThumbnailSetter from './components/SimpleThumbnailSetter';
 import SimpleImageGallery from './components/SimpleImageGallery';
+import TestImage from './components/TestImage';
 
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
@@ -123,6 +124,7 @@ function AppContent() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/set-thumbnail/:projectId" element={<SimpleThumbnailSetter />} />
           <Route path="/simple-gallery" element={<SimpleImageGallery />} />
+          <Route path="/test-image" element={<TestImage />} />
           {canAccessSettings && <Route path="/settings" element={<Settings />} />}
         </Routes>
       </main>

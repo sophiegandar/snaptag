@@ -98,12 +98,17 @@ const SimpleImageGallery = () => {
           <div key={image.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
             <div className="aspect-square bg-gray-100">
               <img
-                src={image.url || `/api/images/${image.id}/url`}
+                src={`https://snaptag.up.railway.app/api/images/${image.id}/direct`}
                 alt={image.filename}
                 className="w-full h-full object-cover"
                 onError={(e) => {
-                  console.log(`❌ Image failed to load: ${image.filename}`, image.url);
-                  e.target.src = '/api/placeholder-image.jpg';
+                  console.log(`❌ Image failed to load: ${image.filename}`);
+                  // Try alternative URL formats
+                  if (e.target.src.includes('/direct')) {
+                    e.target.src = `https://snaptag.up.railway.app/api/images/${image.id}`;
+                  } else if (!e.target.src.includes('placeholder')) {
+                    e.target.src = '/api/placeholder-image.jpg';
+                  }
                 }}
                 onLoad={() => {
                   console.log(`✅ Image loaded: ${image.filename}`);
