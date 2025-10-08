@@ -5841,28 +5841,7 @@ app.get('/api/tags', async (req, res) => {
 });
 
 
-// Get single image by ID
-app.get('/api/images/:id', async (req, res) => {
-  try {
-    const image = await databaseService.getImageById(req.params.id);
-    if (!image) {
-      return res.status(404).json({ error: 'Image not found' });
-    }
-    
-    // Generate Dropbox URL
-    try {
-      image.url = await getCachedDropboxUrl(image.dropbox_path, req);
-    } catch (error) {
-      console.error('Error generating URL for image:', error);
-      image.url = `${req.protocol}://${req.get('host')}/api/placeholder-image.jpg`;
-    }
-    
-    res.json(image);
-  } catch (error) {
-    console.error('Error fetching image:', error);
-    res.status(500).json({ error: 'Failed to fetch image' });
-  }
-});
+// REMOVED DUPLICATE ENDPOINT - Using the one at line 1342 instead
 
 // Update image tags
 app.put('/api/images/:id/tags', async (req, res) => {
