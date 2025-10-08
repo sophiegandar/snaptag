@@ -1163,24 +1163,18 @@ app.get('/api/images', async (req, res) => {
     
     console.log(`📊 CACHED FINAL: ${successCount}/${images.length} images have URLs (${cacheHits} cache hits, ${urlCache.size} total cached)`);
     
-    // Return appropriate response format based on request
-    // For extension requests (with limit parameter), return simple array
-    if (limit && !isNaN(parseInt(limit))) {
-      res.json(images);
-    } else {
-      // For app requests, return paginated response with metadata
-      res.json({
-        images,
-        pagination: {
-          page: currentPage,
-          limit: requestedLimit,
-          total: totalImages,
-          pages: Math.ceil(totalImages / requestedLimit),
-          hasNext: endIndex < totalImages,
-          hasPrev: currentPage > 1
-        }
-      });
-    }
+    // Always return paginated response format for consistency
+    res.json({
+      images,
+      pagination: {
+        page: currentPage,
+        limit: requestedLimit,
+        total: totalImages,
+        pages: Math.ceil(totalImages / requestedLimit),
+        hasNext: endIndex < totalImages,
+        hasPrev: currentPage > 1
+      }
+    });
   } catch (error) {
     console.error('Error fetching images:', error);
     res.status(500).json({ error: 'Failed to fetch images' });

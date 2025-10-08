@@ -136,7 +136,7 @@ const ImageGallery = () => {
       });
       } else {
         console.log('📡 Using regular endpoint (no filters or sorting)');
-        response = await apiCall(`/api/images?page=${loadMore ? pagination.page + 1 : 1}`); // Smart pagination without limit to get paginated format
+        response = await apiCall(`/api/images?limit=${pagination.limit}&page=${loadMore ? pagination.page + 1 : 1}`); // Smart pagination with limit to prevent rate limiting
       }
       
       if (!response.ok) {

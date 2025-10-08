@@ -2,12 +2,6 @@
 
 /**
  * CRITICAL CLEANUP SCRIPT: Remove comma-separated tag strings
- * 
- * This script will:
- * 1. Find all tags containing commas (like "Archier, complete, corner house")
- * 2. Split them into individual tags
- * 3. Reassign images to the individual tags
- * 4. Delete the comma-separated tag strings
  */
 
 const PostgresService = require('./services/postgresService');
@@ -17,6 +11,10 @@ async function cleanupCommaTags() {
   
   try {
     console.log('🧹 Starting comma-separated tag cleanup...');
+    
+    // Initialize the database service
+    await databaseService.init();
+    console.log('✅ Database connection established');
     
     // 1. Find all tags containing commas
     const commaTagsResult = await databaseService.query(`
