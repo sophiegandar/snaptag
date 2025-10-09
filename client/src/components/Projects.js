@@ -544,15 +544,31 @@ const Projects = () => {
     loadThumbnail();
   }, [loadThumbnail]); // Depend on memoized function
 
+    const handleProjectClick = (e) => {
+      console.log(`🖱️ Project clicked: ${project.name}, metaKey: ${e.metaKey}, ctrlKey: ${e.ctrlKey}`);
+      
+      // Handle Command+Click (Mac) or Ctrl+Click (Windows) for new tab
+      if (e.metaKey || e.ctrlKey) {
+        e.preventDefault();
+        const url = project.type === 'complete' 
+          ? `/projects/complete/${project.id}` 
+          : `/projects/current/${project.id}`;
+        console.log(`🆕 Opening in new tab: ${url}`);
+        window.open(url, '_blank');
+        return;
+      }
+      
+      // Normal click - navigate in same tab
+      const url = project.type === 'complete' 
+        ? `/projects/complete/${project.id}` 
+        : `/projects/current/${project.id}`;
+      console.log(`🔗 NAVIGATE: Going to ${url}`);
+      navigate(url);
+    };
+
     return (
       <div
-        onClick={() => {
-          const url = project.type === 'complete' 
-            ? `/projects/complete/${project.id}` 
-            : `/projects/current/${project.id}`;
-          console.log(`🔗 NAVIGATE: Going to ${url}`);
-          navigate(url);
-        }}
+        onClick={handleProjectClick}
         className="relative group cursor-pointer"
       >
         <div className="bg-white overflow-hidden shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 aspect-square w-48 h-48">
