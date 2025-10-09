@@ -303,18 +303,17 @@ const Projects = () => {
       let searchTags = [];
       
       if (project.type === 'complete') {
-        // Complete projects use their predefined tags + Final/WIP
-        searchTags = [...(Array.isArray(project.tags) ? project.tags : [])]; // Use spread to avoid mutations
+        // Complete projects MUST include the specific project name to filter correctly
+        searchTags = ['archier', 'complete', project.name.toLowerCase()];
         
         if (tab === 'final') {
-          searchTags.push('final', 'complete'); // Images in Final folder
+          searchTags.push('final'); // Images in Final folder
           console.log(`📊 Complete project FINAL tags: [${searchTags.join(', ')}]`);
         } else if (tab === 'wip') {
-          searchTags.push('wip'); // Images in WIP folder (remove complete tag)
-          searchTags = searchTags.filter(tag => tag !== 'complete'); 
+          searchTags = ['archier', 'wip', project.name.toLowerCase()]; // WIP without complete
           console.log(`📊 Complete project WIP tags: [${searchTags.join(', ')}]`);
         } else {
-          // Legacy support for photos tab
+          // Default complete tab - show all complete images for this project
           console.log(`📊 Complete project ALL tags: [${searchTags.join(', ')}]`);
         }
       } else {
