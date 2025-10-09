@@ -310,7 +310,76 @@ class PostgresService {
     }
   }
 
-  async searchImages(searchTerm, tagFilter, sortBy = 'upload_date', sortOrder = 'desc') {
+  // Get total count for pagination (optimized count query)
+  async getImageCount(searchTerm, tagFilter) {
+    try {
+      let query = `
+        SELECT COUNT(DISTINCT i.id) as total
+        FROM images i
+        LEFT JOIN image_tags it ON i.id = it.image_id
+        LEFT JOIN tags t ON it.tag_id = t.id
+        LEFT JOIN focused_tags ft ON i.id = ft.image_id
+      `;
+
+      const params = [];
+      const conditions = [];
+      let paramCount = 0;
+
+      // Apply same filtering logic as searchImages but only count
+      if (searchTerm && searchTerm.trim()) {
+        const searchWords = searchTerm.trim().split(/\s+/);
+        const contentConditions = [];
+        
+        // Search for exact phrase in content (case-insensitive)
+        contentConditions.push(`LOWER(i.title) LIKE LOWER($${++paramCount})`);
+        contentConditions.push(`LOWER(i.description) LIKE LOWER($${++paramCount})`);
+        contentConditions.push(`LOWER(i.filename) LIKE LOWER($${++paramCount})`);
+        contentConditions.push(`LOWER(i.original_name) LIKE LOWER($${++paramCount})`);
+        const exactPattern = `%${searchTerm.trim()}%`;
+        params.push(exactPattern, exactPattern, exactPattern, exactPattern);
+        
+        // Search in tags
+        contentConditions.push(`LOWER(t.name) LIKE LOWER($${++paramCount})`);
+        contentConditions.push(`LOWER(ft.tag_name) LIKE LOWER($${++paramCount})`);
+        params.push(exactPattern, exactPattern);
+        
+        conditions.push(`(${contentConditions.join(' OR ')})`);
+      }
+
+      // Tag filtering
+      if (tagFilter && Array.isArray(tagFilter) && tagFilter.length > 0) {
+        tagFilter.forEach(tag => {
+          const trimmedTag = tag.trim();
+          if (trimmedTag) {
+            const existsCondition = `
+              EXISTS (
+                SELECT 1 FROM image_tags it2 
+                JOIN tags t2 ON it2.tag_id = t2.id 
+                WHERE it2.image_id = i.id AND LOWER(t2.name) = LOWER($${++paramCount})
+              ) OR EXISTS (
+                SELECT 1 FROM focused_tags ft2 
+                WHERE ft2.image_id = i.id AND LOWER(ft2.tag_name) = LOWER($${++paramCount})
+              )
+            `;
+            conditions.push(`(${existsCondition})`);
+            params.push(trimmedTag, trimmedTag);
+          }
+        });
+      }
+
+      if (conditions.length > 0) {
+        query += ' WHERE ' + conditions.join(' AND ');
+      }
+
+      const result = await this.query(query, params);
+      return parseInt(result.rows[0]?.total || 0);
+    } catch (error) {
+      console.error('❌ Error counting images:', error);
+      return 0;
+    }
+  }
+
+  async searchImages(searchTerm, tagFilter, sortBy = 'upload_date', sortOrder = 'desc', limit = null, offset = 0) {
     try {
       // Removed debug overhead for performance
       
@@ -417,6 +486,17 @@ class PostgresService {
         GROUP BY i.id, i.filename, i.upload_date, i.file_size, i.created_at, i.original_name, i.dropbox_path, i.dropbox_id, i.title, i.description, i.source_url, i.width, i.height, i.mime_type, i.file_hash, i.project_assignments, i.updated_at
         ORDER BY i.${sortColumn} ${sortDirection}
       `;
+      
+      // Add LIMIT and OFFSET for database-level pagination
+      if (limit !== null) {
+        query += ` LIMIT $${++paramCount}`;
+        params.push(limit);
+        
+        if (offset > 0) {
+          query += ` OFFSET $${++paramCount}`;
+          params.push(offset);
+        }
+      }
 
       const result = await this.query(query, params);
       const images = result.rows || [];

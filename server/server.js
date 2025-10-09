@@ -1118,15 +1118,12 @@ app.get('/api/images', async (req, res) => {
     
     console.log(`📊 PAGINATION: Requesting page ${currentPage}, limit ${requestedLimit}`);
     
-    let images = await databaseService.searchImages(search, tags, sortBy, sortOrder);
+    // PERFORMANCE: Get total count first for pagination info
+    const totalImages = await databaseService.getImageCount(search, tags);
     
-    // Calculate pagination
-    const totalImages = images.length;
-    const startIndex = (currentPage - 1) * requestedLimit;
-    const endIndex = startIndex + requestedLimit;
-    
-    // Apply pagination
-    images = images.slice(startIndex, endIndex);
+    // PERFORMANCE: Use database-level pagination instead of loading all then slicing
+    const offset = (currentPage - 1) * requestedLimit;
+    const images = await databaseService.searchImages(search, tags, sortBy, sortOrder, requestedLimit, offset);
     console.log(`📊 PAGINATION: Showing ${images.length} of ${totalImages} total images (page ${currentPage})`);
     
     // EFFICIENT: Generate URLs with caching to prevent 429 errors
