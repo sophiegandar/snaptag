@@ -56,10 +56,21 @@ app.use(cors({
   credentials: true
 }));
 
-// Rate limiting - increased for Projects page functionality
+// Rate limiting - designed for bulk operations and power users
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300 // increased limit to handle Projects page image loading
+  max: 2500, // supports bulk operations: ~3 requests/second sustained
+  message: {
+    error: 'Rate limit exceeded. Please wait a moment before continuing bulk operations.',
+    retryAfter: '15 minutes',
+    tip: 'For large bulk operations, consider breaking them into smaller batches.'
+  },
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  skip: (req) => {
+    // Skip rate limiting for health checks and static assets
+    return req.path === '/api/health' || req.path.startsWith('/static/');
+  }
 });
 app.use(limiter);
 

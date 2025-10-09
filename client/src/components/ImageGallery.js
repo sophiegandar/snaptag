@@ -327,7 +327,7 @@ const ImageGallery = () => {
         return [...newImages, ...prev]; // Add to beginning for visibility
       });
       
-      toast.success(`${taggedImages.length} tagged image${taggedImages.length !== 1 ? 's' : ''} moved to main gallery`);
+      // Success: Images moved to main gallery (no notification needed)
     }
     
     setSelectedUntagged([]);
@@ -427,11 +427,11 @@ const ImageGallery = () => {
         // setSelectedUntagged([]);  // Don't clear selection
         setQuickTags('');
       } else {
-        toast.error(result.error);
+        toast.error(`Failed to apply tags: ${result.error || 'Unknown error occurred. Please check your network connection and try again.'}`);
       }
     } catch (error) {
       console.error('Error applying quick tags:', error);
-      toast.error('Failed to apply tags');
+      toast.error('Failed to apply tags: Network error or server unavailable. Please check your connection and try again.');
     } finally {
       setUpdatingTags(false);
     }
@@ -550,11 +550,11 @@ const ImageGallery = () => {
         // setSelectedGalleryImages([]);  // Don't clear selection
         setGalleryQuickTags('');
       } else {
-        toast.error(result.error);
+        toast.error(`Failed to apply gallery tags: ${result.error || 'Unknown error occurred. Please verify the images still exist and try again.'}`);
       }
     } catch (error) {
       console.error('Error applying gallery quick tags:', error);
-      toast.error('Failed to apply tags');
+      toast.error('Failed to apply gallery tags: Network error or server unavailable. Please check your connection and try again.');
     } finally {
       setUpdatingTags(false);
     }
@@ -598,7 +598,7 @@ const ImageGallery = () => {
       
       await Promise.all(promises);
       
-      toast.success(`Applied project assignment to ${selectedGalleryImages.length} image(s)`);
+      // Success: Project assignment applied (no notification needed)
       
       // Reset form but keep selection
       setBulkProjectAssignment({ project: '', room: '', stage: '' });
@@ -609,7 +609,7 @@ const ImageGallery = () => {
       
     } catch (error) {
       console.error('Error applying bulk project assignment:', error);
-      toast.error('Failed to apply project assignment');
+      toast.error(`Failed to apply project assignment: ${error.message || 'Network error or server unavailable. Please verify the project settings and try again.'}`);
     } finally {
       setUpdatingTags(false);
     }
@@ -652,14 +652,14 @@ const ImageGallery = () => {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
         
-        toast.success(`Downloaded ${selectedGalleryImages.length} images as ZIP file`);
+        // Success: Images downloaded (no notification needed)
       } else {
         const error = await response.json();
-        toast.error(error.error || 'Failed to download images');
+        toast.error(`Failed to download images: ${error.error || 'Unable to create ZIP file. This may be due to large file sizes or network issues. Please try downloading fewer images at once.'}`);
       }
     } catch (error) {
       console.error('Error downloading images:', error);
-      toast.error('Failed to download images');
+      toast.error('Failed to download images: Network error or server unavailable. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -688,7 +688,7 @@ const ImageGallery = () => {
       const result = await response.json();
       if (result.success) {
         setImageSuggestions(result.suggestions);
-        toast.success(`Generated suggestions for ${Object.keys(result.suggestions).length} images`);
+        // Success: Suggestions generated (no notification needed)
       } else {
         toast.error('Failed to generate suggestions');
       }
@@ -728,7 +728,7 @@ const ImageGallery = () => {
         // console.log(`📋 Selected images:`, selectedGalleryImages);
         // console.log(`🤖 Suggestion image IDs:`, Object.keys(result.suggestions));
         
-        toast.success(`Generated suggestions for ${suggestionCount} of ${selectedGalleryImages.length} selected image${selectedGalleryImages.length !== 1 ? 's' : ''}`);
+        // Success: Selection suggestions generated (no notification needed)
       } else {
         toast.error('Failed to generate suggestions');
       }
@@ -819,7 +819,7 @@ const ImageGallery = () => {
     toast.info('Refreshing images...');
     await loadImages(currentFilters);
     await loadUntaggedImages();
-    toast.success('Images refreshed');
+    // Success: Images refreshed (no notification needed)
   };
 
   const deleteImage = async (imageId, imageName) => {

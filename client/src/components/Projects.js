@@ -32,14 +32,14 @@ const Projects = () => {
       });
       
       if (response.ok) {
-        toast.success(`Set "${imageName}" as thumbnail for ${activeProject?.name}`);
+        // Success: Thumbnail set (no notification needed)
         console.log(`✅ Successfully set thumbnail for project ${projectId}`);
       } else {
         throw new Error('Failed to set thumbnail');
       }
     } catch (error) {
       console.error('❌ Error setting thumbnail:', error);
-      toast.error('Failed to set thumbnail');
+      toast.error(`Failed to set thumbnail: ${error.message || 'Unable to update project thumbnail. Please verify the project exists and try again.'}`);
     }
   };
   const [viewMode, setViewMode] = useState('overview'); // 'overview', 'complete', 'current', 'project'
