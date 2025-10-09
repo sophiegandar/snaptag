@@ -56,10 +56,10 @@ app.use(cors({
   credentials: true
 }));
 
-// Rate limiting
+// Rate limiting - increased for Projects page functionality
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  max: 300 // increased limit to handle Projects page image loading
 });
 app.use(limiter);
 
