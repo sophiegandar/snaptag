@@ -65,15 +65,21 @@ const Projects = () => {
   // Helper function to get valid tabs for a project type
   const getValidTabs = (project) => {
     if (!project) return [];
-    // All projects have the same 3 tabs: Precedent, Texture, Photos
-    // Photos shows images tagged with "complete" + project name + optional final/wip
-    return ['precedent', 'texture', 'photos'];
+    
+    if (project.type === 'complete') {
+      // Complete projects should only show Complete tab
+      return ['complete'];
+    } else {
+      // Current projects show Precedent and Texture tabs (with room/stage filtering)
+      return ['precedent', 'texture'];
+    }
   };
 
   // Helper function to get default tab for a project type
   const getDefaultTab = (project) => {
     if (!project) return 'precedent';
-    return 'precedent'; // All projects start with precedent tab
+    if (project.type === 'complete') return 'complete';
+    return 'precedent'; // Current projects start with precedent tab
   };
 
   // Helper function to validate and fix tab state
@@ -889,6 +895,7 @@ const Projects = () => {
               // Helper functions for image metadata display
               const getImageType = () => {
                 const tags = image.tags || [];
+                if (tags.some(tag => tag.toLowerCase() === 'archier')) return 'Archier';
                 if (tags.some(tag => tag.toLowerCase() === 'precedent')) return 'Precedent';
                 if (tags.some(tag => tag.toLowerCase() === 'texture')) return 'Texture';
                 if (tags.some(tag => tag.toLowerCase() === 'photos')) return 'Photos';
@@ -897,12 +904,17 @@ const Projects = () => {
 
               const getImageCategory = () => {
                 const tags = image.tags || [];
+                const type = getImageType();
+                
+                if (type === 'Archier') {
+                  const archierCategories = ['complete', 'wip'];
+                  const categoryTag = tags.find(tag => archierCategories.includes(tag.toLowerCase()));
+                  return categoryTag ? categoryTag.charAt(0).toUpperCase() + categoryTag.slice(1) : 'Complete';
+                }
+                
                 const categoryTags = ['brick', 'carpet', 'concrete', 'fabric', 'metal', 'stone', 'tile', 'wood', 'general', 'art', 'bathrooms', 'details', 'doors', 'exteriors', 'furniture', 'interiors', 'joinery', 'kitchens', 'landscape', 'lighting', 'spatial', 'stairs', 'structure'];
                 const foundCategory = tags.find(tag => categoryTags.includes(tag.toLowerCase()));
                 const result = foundCategory ? foundCategory.charAt(0).toUpperCase() + foundCategory.slice(1).toLowerCase() : 'General';
-                
-                // Debug log for category detection
-                console.log(`🏷️ CATEGORY DEBUG for ${image.filename}: tags=[${tags.join(', ')}], found=${foundCategory}, result=${result}`);
                 
                 return result;
               };

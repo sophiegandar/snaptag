@@ -1813,7 +1813,8 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
   // Helper functions to extract metadata
   const getImageType = () => {
     const tags = image.tags || [];
-    if (tags.includes('archier')) return 'Archier';
+    // Fix case-insensitive check for archier
+    if (tags.some(tag => tag.toLowerCase() === 'archier')) return 'Archier';
     
     // Only classify as Texture if there's an explicit 'texture' or 'materials' tag
     const hasTextureContext = tags.some(tag => ['materials', 'texture'].includes(tag.toLowerCase()));
@@ -1829,7 +1830,8 @@ const ImageCard = ({ image, viewMode, onTagClick, onDelete, onEdit, isSelected, 
 
   const getProject = () => {
     const tags = image.tags || [];
-    if (!tags.includes('archier')) return null;
+    // Fix case-insensitive check for archier
+    if (!tags.some(tag => tag.toLowerCase() === 'archier')) return null;
     
     const projects = ['yandoit', 'ballarat', 'melbourne', 'geelong', 'bendigo'];
     const projectTag = tags.find(tag => projects.includes(tag.toLowerCase()));
