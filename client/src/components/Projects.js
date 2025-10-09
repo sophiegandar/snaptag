@@ -922,11 +922,24 @@ const Projects = () => {
                 return image.tags || [];
               };
 
+              const handleImageClick = (e) => {
+                // Handle Command+Click (Mac) or Ctrl+Click (Windows) for new tab
+                if (e.metaKey || e.ctrlKey) {
+                  e.preventDefault();
+                  const imageUrl = `/image/${image.id}`;
+                  window.open(imageUrl, '_blank');
+                  return;
+                }
+                
+                // Normal click - navigate in same tab
+                navigate(`/image/${image.id}`, { state: { from: 'projects' } });
+              };
+
               return (
                 <div 
                   key={`${image.id}-${activeProjectTab}-${index}`} 
                   className="relative group cursor-pointer transition-all duration-200 w-full max-w-full"
-                  onClick={() => navigate(`/image/${image.id}`, { state: { from: 'projects' } })}
+                  onClick={handleImageClick}
                 >
                   <div className="relative aspect-square bg-gray-100 overflow-hidden w-full max-w-full">
                     <img

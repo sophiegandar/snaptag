@@ -1050,6 +1050,14 @@ const ImageGallery = () => {
                     const isSelected = selectedUntagged.includes(image.id);
                     
                     const handleImageClick = (e) => {
+                      // Handle Command+Click (Mac) or Ctrl+Click (Windows) for new tab
+                      if (e.metaKey || e.ctrlKey) {
+                        e.preventDefault();
+                        const imageUrl = `/image/${image.id}`;
+                        window.open(imageUrl, '_blank');
+                        return;
+                      }
+                      
                       const hasSelections = selectedUntagged.length > 0;
                       
                       if (hasSelections || isSelected) {
