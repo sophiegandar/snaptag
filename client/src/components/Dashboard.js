@@ -1784,9 +1784,6 @@ const Dashboard = () => {
                                 {room.description && (
                                   <p className="text-xs text-gray-500 mt-1">{room.description}</p>
                                 )}
-                                {room.category && (
-                                  <p className="text-xs text-gray-500 mt-1">Category: {room.category}</p>
-                                )}
                                 {room.created_at && (
                                   <p className="text-xs text-gray-400 mt-1">
                                     Created: {new Date(room.created_at).toLocaleDateString()}
