@@ -722,7 +722,8 @@ const ImageGallery = () => {
       if (result.success) {
         // console.log('🤖 AI Suggestions received:', result.suggestions);
         setImageSuggestions(prev => ({ ...prev, ...result.suggestions }));
-        const suggestionCount = Object.keys(result.suggestions).length;
+        // Count suggestions for logging (if needed in future)
+        // const suggestionCount = Object.keys(result.suggestions).length;
         
         // Debug: Log selected images vs suggestion images (disabled to reduce console noise)
         // console.log(`📋 Selected images:`, selectedGalleryImages);
