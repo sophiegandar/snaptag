@@ -770,10 +770,24 @@ class PostgresService {
 
   // Stages and Rooms Management
   async getAllStages() {
+    // PERFORMANCE: Calculate actual usage from project assignments instead of static usage_count
     const result = await this.query(`
-      SELECT id, name, description, order_index, created_at, COALESCE(usage_count, 0) as usage_count
-      FROM stages 
-      ORDER BY order_index ASC, name ASC
+      SELECT 
+        s.id, 
+        s.name, 
+        s.description, 
+        s.order_index, 
+        s.created_at,
+        COUNT(CASE 
+          WHEN i.project_assignments IS NOT NULL 
+          AND i.project_assignments != '' 
+          AND i.project_assignments ILIKE '%"stage":"' || s.name || '"%' 
+          THEN 1 
+        END) as usage_count
+      FROM stages s
+      LEFT JOIN images i ON i.project_assignments ILIKE '%"stage":"' || s.name || '"%'
+      GROUP BY s.id, s.name, s.description, s.order_index, s.created_at
+      ORDER BY s.order_index ASC, s.name ASC
     `);
     return result.rows;
   }
@@ -803,10 +817,25 @@ class PostgresService {
   }
 
   async getAllRooms() {
+    // PERFORMANCE: Calculate actual usage from project assignments instead of static usage_count
     const result = await this.query(`
-      SELECT id, name, description, category, order_index, created_at, COALESCE(usage_count, 0) as usage_count
-      FROM rooms 
-      ORDER BY order_index ASC, name ASC
+      SELECT 
+        r.id, 
+        r.name, 
+        r.description, 
+        r.category, 
+        r.order_index, 
+        r.created_at,
+        COUNT(CASE 
+          WHEN i.project_assignments IS NOT NULL 
+          AND i.project_assignments != '' 
+          AND i.project_assignments ILIKE '%"room":"' || r.name || '"%' 
+          THEN 1 
+        END) as usage_count
+      FROM rooms r
+      LEFT JOIN images i ON i.project_assignments ILIKE '%"room":"' || r.name || '"%'
+      GROUP BY r.id, r.name, r.description, r.category, r.order_index, r.created_at
+      ORDER BY r.order_index ASC, r.name ASC
     `);
     return result.rows;
   }
