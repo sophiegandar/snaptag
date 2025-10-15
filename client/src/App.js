@@ -16,6 +16,7 @@ import Dashboard from './components/Dashboard';
 import SimpleThumbnailSetter from './components/SimpleThumbnailSetter';
 import SimpleImageGallery from './components/SimpleImageGallery';
 import TestImage from './components/TestImage';
+import ErrorBoundary from './components/ErrorBoundary';
 
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
@@ -106,26 +107,26 @@ function AppContent() {
     <div className="min-h-screen bg-gray-100">
       <Navigation />
 
-      {/* Main Content */}
+      {/* Main Content with Error Boundaries */}
       <main className="max-w-7xl mx-auto py-6 px-4">
         <Routes>
-          <Route path="/" element={<ImageGallery />} />
-          {canUpload && <Route path="/upload" element={<ImageUpload />} />}
-          <Route path="/image/:id" element={<ImageEditor />} />
-          <Route path="/tags" element={<TagManager />} />
-          {canAccessProWorkflow && <Route path="/workflow" element={<ProfessionalWorkflow />} />}
-          <Route path="/projects" element={<Projects />} />
-          <Route path="/projects/complete" element={<Projects />} />
-          <Route path="/projects/current" element={<Projects />} />
-          <Route path="/projects/complete/:projectId" element={<Projects />} />
-          <Route path="/projects/complete/:projectId/:tabId" element={<Projects />} />
-          <Route path="/projects/current/:projectId" element={<Projects />} />
-          <Route path="/projects/current/:projectId/:tabId" element={<Projects />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/set-thumbnail/:projectId" element={<SimpleThumbnailSetter />} />
-          <Route path="/simple-gallery" element={<SimpleImageGallery />} />
-          <Route path="/test-image" element={<TestImage />} />
-          {canAccessSettings && <Route path="/settings" element={<Settings />} />}
+          <Route path="/" element={<ErrorBoundary><ImageGallery /></ErrorBoundary>} />
+          {canUpload && <Route path="/upload" element={<ErrorBoundary><ImageUpload /></ErrorBoundary>} />}
+          <Route path="/image/:id" element={<ErrorBoundary><ImageEditor /></ErrorBoundary>} />
+          <Route path="/tags" element={<ErrorBoundary><TagManager /></ErrorBoundary>} />
+          {canAccessProWorkflow && <Route path="/workflow" element={<ErrorBoundary><ProfessionalWorkflow /></ErrorBoundary>} />}
+          <Route path="/projects" element={<ErrorBoundary><Projects /></ErrorBoundary>} />
+          <Route path="/projects/complete" element={<ErrorBoundary><Projects /></ErrorBoundary>} />
+          <Route path="/projects/current" element={<ErrorBoundary><Projects /></ErrorBoundary>} />
+          <Route path="/projects/complete/:projectId" element={<ErrorBoundary><Projects /></ErrorBoundary>} />
+          <Route path="/projects/complete/:projectId/:tabId" element={<ErrorBoundary><Projects /></ErrorBoundary>} />
+          <Route path="/projects/current/:projectId" element={<ErrorBoundary><Projects /></ErrorBoundary>} />
+          <Route path="/projects/current/:projectId/:tabId" element={<ErrorBoundary><Projects /></ErrorBoundary>} />
+          <Route path="/dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
+          <Route path="/set-thumbnail/:projectId" element={<ErrorBoundary><SimpleThumbnailSetter /></ErrorBoundary>} />
+          <Route path="/simple-gallery" element={<ErrorBoundary><SimpleImageGallery /></ErrorBoundary>} />
+          <Route path="/test-image" element={<ErrorBoundary><TestImage /></ErrorBoundary>} />
+          {canAccessSettings && <Route path="/settings" element={<ErrorBoundary><Settings /></ErrorBoundary>} />}
         </Routes>
       </main>
 

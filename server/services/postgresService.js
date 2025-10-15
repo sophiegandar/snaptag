@@ -141,13 +141,26 @@ class PostgresService {
         )
       `);
 
-      // Create indexes
+      // Create performance indexes for common queries
       await client.query('CREATE INDEX IF NOT EXISTS idx_images_dropbox_path ON images(dropbox_path)');
       await client.query('CREATE INDEX IF NOT EXISTS idx_images_file_hash ON images(file_hash)');
       await client.query('CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name)');
       await client.query('CREATE INDEX IF NOT EXISTS idx_image_tags_image ON image_tags(image_id)');
       await client.query('CREATE INDEX IF NOT EXISTS idx_image_tags_tag ON image_tags(tag_id)');
       await client.query('CREATE INDEX IF NOT EXISTS idx_focused_tags_image ON focused_tags(image_id)');
+      
+      // PERFORMANCE: Critical indexes for search and pagination
+      await client.query('CREATE INDEX IF NOT EXISTS idx_images_upload_date ON images(upload_date DESC)');
+      await client.query('CREATE INDEX IF NOT EXISTS idx_images_created_at ON images(created_at DESC)');
+      await client.query('CREATE INDEX IF NOT EXISTS idx_images_filename ON images(filename)');
+      await client.query('CREATE INDEX IF NOT EXISTS idx_images_title ON images(title)');
+      await client.query('CREATE INDEX IF NOT EXISTS idx_images_source_url ON images(source_url)');
+      
+      // PERFORMANCE: Composite indexes for common search patterns
+      await client.query('CREATE INDEX IF NOT EXISTS idx_images_upload_filename ON images(upload_date DESC, filename)');
+      await client.query('CREATE INDEX IF NOT EXISTS idx_focused_tags_name ON focused_tags(tag_name)');
+      await client.query('CREATE INDEX IF NOT EXISTS idx_tags_name_lower ON tags(LOWER(name))');
+      await client.query('CREATE INDEX IF NOT EXISTS idx_focused_tags_name_lower ON focused_tags(LOWER(tag_name))');
 
       console.log('✅ PostgreSQL tables created successfully');
     } finally {
