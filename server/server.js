@@ -2308,7 +2308,7 @@ app.post('/api/images/search', async (req, res) => {
     
     // If project assignment filter is provided, filter results client-side
     if (projectAssignment && images) {
-      console.log('🔍 [TEMP FIX] Filtering results for project assignment:', projectAssignment);
+      console.log('🔍 [PROJECT FILTER] Filtering results for project assignment:', projectAssignment);
       const { projectId, room, stage } = projectAssignment;
       
       const filteredImages = images.filter(image => {
@@ -2318,9 +2318,28 @@ app.post('/api/images/search', async (req, res) => {
           const assignments = JSON.parse(image.project_assignments);
           return assignments.some(assignment => {
             const matchesProject = assignment.projectId === projectId;
-            const matchesRoom = !room || assignment.room === room;
-            const matchesStage = !stage || assignment.stage === stage;
-            return matchesProject && matchesRoom && matchesStage;
+            
+            // FIXED: Only match if room/stage are exactly what's requested (or no filter specified)
+            let matchesRoom = true;
+            let matchesStage = true;
+            
+            // If room filter is specified, assignment must have that exact room
+            if (room) {
+              matchesRoom = assignment.room === room;
+            }
+            
+            // If stage filter is specified, assignment must have that exact stage  
+            if (stage) {
+              matchesStage = assignment.stage === stage;
+            }
+            
+            const matches = matchesProject && matchesRoom && matchesStage;
+            
+            if (matches) {
+              console.log(`✅ MATCH: Image ${image.id} - Project: ${assignment.projectId}, Room: ${assignment.room}, Stage: ${assignment.stage}`);
+            }
+            
+            return matches;
           });
         } catch (e) {
           console.warn('Failed to parse project_assignments for image:', image.id);
@@ -2328,7 +2347,7 @@ app.post('/api/images/search', async (req, res) => {
         }
       });
       
-      console.log(`🔍 [TEMP FIX] Filtered ${images.length} → ${filteredImages.length} images`);
+      console.log(`🔍 [PROJECT FILTER] Filtered ${images.length} → ${filteredImages.length} images for project=${projectId}, room=${room}, stage=${stage}`);
       images = filteredImages;
     }
     console.log('📊 Raw search results:', images.length, 'images found');
