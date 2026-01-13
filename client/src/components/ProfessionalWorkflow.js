@@ -28,7 +28,9 @@ const ProfessionalWorkflow = () => {
     try {
       const response = await fetch('/api/images');
       const data = await response.json();
-      setImages(data);
+      // Handle both array format (legacy) and object format (new paginated response)
+      const images = Array.isArray(data) ? data : (data.images || []);
+      setImages(images);
     } catch (error) {
       console.error('Error loading images:', error);
       toast.error('Failed to load images');

@@ -242,7 +242,8 @@ class FolderPathService {
         'willisdene house',
         'julius street',
         'yagiz',
-        'creative spaces'
+        'creative spaces',
+        'surf parade'
       ];
       
       let categoryFound = false;
@@ -451,7 +452,8 @@ class FolderPathService {
       'Davison Street', 'Yandoit House', 'Oakover Preston', 'Corner House',
       'Parks Victoria', 'Caroma', 'Off Grid House', 'Farm House',
       'View House', 'Court House', 'Casa Acton', 'Harry House',
-      'Willisdene House', 'Julius Street', 'Yagiz', 'Creative Spaces'
+      'Willisdene House', 'Julius Street', 'Yagiz', 'Creative Spaces',
+      'Surf Parade'
     ];
     
     for (const project of projectNames) {

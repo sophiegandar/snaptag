@@ -793,7 +793,7 @@ const ImageEditor = () => {
     
     // Check for project names
     const projectNames = ['taroona house', 'corner house', 'oakover preston', 'the boulevard',
-                         'de witt st', 'couvreur', 'yandoit', 'archier'];
+                         'de witt st', 'couvreur', 'yandoit', 'surf parade', 'archier'];
     
     for (const project of projectNames) {
       if (lowercaseTags.includes(project)) {

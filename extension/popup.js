@@ -456,7 +456,9 @@ document.addEventListener('DOMContentLoaded', function() {
         throw new Error(`Failed to load recent images: ${response.status} ${response.statusText}`);
       }
       
-      const images = await response.json();
+      const data = await response.json();
+      // Handle both array format (legacy) and object format (new paginated response)
+      const images = Array.isArray(data) ? data : (data.images || []);
       console.log('📊 Received images:', images.length);
       
       recentImagesDiv.innerHTML = '';

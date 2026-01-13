@@ -265,7 +265,10 @@ async function handleImageSave(imageUrl, tab, metadata = {}) {
       throw new Error(errorMessage);
     }
 
-    const result = await response.json();
+    const responseData = await response.json();
+    
+    // Extract the actual result from the response structure
+    const result = responseData.result || responseData;
     
     if (result.duplicate) {
       console.log('♻️ Duplicate image found:', result.filename);
@@ -276,7 +279,7 @@ async function handleImageSave(imageUrl, tab, metadata = {}) {
         type: 'basic',
         iconUrl: 'icons/icon48.png',
         title: 'SnapTag - Duplicate Image',
-        message: `This image was already saved as "${result.original_name}" on ${new Date(result.created_at).toLocaleDateString()}`
+        message: `This image was already saved as "${result.original_name || result.filename}" on ${result.created_at ? new Date(result.created_at).toLocaleDateString() : 'previously'}`
       });
       
       return result;

@@ -1172,6 +1172,7 @@ app.get('/api/images', async (req, res) => {
     console.log(`📊 CACHED FINAL: ${successCount}/${images.length} images have URLs (${cacheHits} cache hits, ${urlCache.size} total cached)`);
     
     // Always return paginated response format for consistency
+    const endIndex = offset + images.length;
     res.json({
       images,
       pagination: {
@@ -1500,6 +1501,7 @@ async function autoCreateArchierProjects(tags) {
     'julius street',
     'yagiz',
     'creative spaces',
+    'surf parade',
     'de witt st', 'couvreur',
     'camberwell house', 'brighton house',
     'malvern house', 'toorak house', 'south yarra house', 'prahran house',
@@ -1561,6 +1563,11 @@ async function autoCreateArchierProjects(tags) {
     console.log(`🎉 AUTO-CREATED Archier project: "${displayName}" (ID: ${projectId})`);
     
   } catch (error) {
+    // Handle race condition: if project was created by another concurrent request, that's fine
+    if (error.code === '23505' || error.message?.includes('duplicate key') || error.message?.includes('already exists')) {
+      console.log(`✅ Project "${displayName}" was already created (likely by concurrent request)`);
+      return; // Not an error - another request created it first
+    }
     console.error(`❌ Failed to auto-create project "${displayName}":`, error.message);
     throw error;
   }
@@ -3784,7 +3791,7 @@ app.post('/api/admin/cleanup-tags', async (req, res) => {
     }
     
     // 4. Trigger project auto-creation for existing tags
-    const archierProjects = ['taroona house', 'corner house', 'court house', 'davison street', 'farm house', 'the boulevard'];
+    const archierProjects = ['taroona house', 'corner house', 'court house', 'davison street', 'farm house', 'the boulevard', 'surf parade'];
     
     for (const projectName of archierProjects) {
       // Check if there are images with archier + complete + project name
