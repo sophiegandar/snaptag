@@ -51,10 +51,36 @@ class FolderPathService {
   generateFolderPath(tags = [], baseFolder = '/SnapTag') {
     console.log('📁 Generating folder path for tags:', tags);
     console.log('📁 Base folder:', baseFolder);
+    console.log('📁 Tags type:', typeof tags, 'isArray:', Array.isArray(tags));
+    
+    // CRITICAL: Ensure tags is an array and handle edge cases
+    if (!Array.isArray(tags)) {
+      if (typeof tags === 'string') {
+        tags = tags.split(',').map(t => t.trim()).filter(Boolean);
+      } else {
+        console.error('❌ Invalid tags format:', tags);
+        tags = [];
+      }
+    }
     
     // Normalize tags to lowercase for comparison
-    const normalizedTags = tags.map(tag => tag.toLowerCase().trim());
+    const normalizedTags = tags.map(tag => {
+      if (typeof tag !== 'string') {
+        console.warn('⚠️ Non-string tag found:', tag, typeof tag);
+        return String(tag).toLowerCase().trim();
+      }
+      return tag.toLowerCase().trim();
+    }).filter(Boolean);
+    
     console.log('📁 Normalized tags:', normalizedTags);
+    console.log('📁 Has "archier" tag?', normalizedTags.includes('archier'));
+    console.log('📁 Full tag analysis:', {
+      tagCount: normalizedTags.length,
+      tags: normalizedTags,
+      hasArchier: normalizedTags.includes('archier'),
+      hasComplete: normalizedTags.includes('complete'),
+      hasSurfParade: normalizedTags.includes('surf parade')
+    });
     
     // Step 1: Check for Archier project structure
     if (normalizedTags.includes('archier')) {
