@@ -5947,17 +5947,18 @@ app.put('/api/images/:id/tags', async (req, res) => {
       
       const newFilename = folderPathService.generateTagBasedFilename(tags, ext, sequenceNumber);
       const newDropboxPath = path.posix.join(newFolderPath, newFilename);
+      const isInStaging = image.dropbox_path && image.dropbox_path.includes('/_staging/');
       
       console.log(`🔍 DEBUG: Generated filename: ${newFilename}`);
       console.log(`🔍 DEBUG: New Dropbox path: ${newDropboxPath}`);
-      console.log(`🔍 DEBUG: Current path: ${image.dropbox_path}`);
+      console.log(`🔍 DEBUG: Current path: ${image.dropbox_path} ${isInStaging ? '(staging area)' : ''}`);
       
-      // Move file in Dropbox if path or filename has changed
-      if (image.dropbox_path !== newDropboxPath) {
+      // Move file in Dropbox if path or filename has changed, or if moving from staging
+      if (isInStaging || image.dropbox_path !== newDropboxPath) {
         console.log(`📁 FILENAME UPDATE REQUIRED for image ${imageId}:`);
-        console.log(`   From: ${image.dropbox_path}`);
+        console.log(`   From: ${image.dropbox_path} ${isInStaging ? '(staging area)' : ''}`);
         console.log(`   To: ${newDropboxPath}`);
-        console.log(`   Reason: Tags updated, triggering filename regeneration`);
+        console.log(`   Reason: ${isInStaging ? 'Moving from staging - image now has tags' : 'Tags updated, triggering filename regeneration'}`);
         
         try {
           // Use Dropbox move API to rename/reorganize file
