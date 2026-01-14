@@ -2176,13 +2176,14 @@ app.post('/api/batch/apply-tags', async (req, res) => {
         }
         
         const newDropboxPath = path.posix.join(newFolderPath, newFilename);
+        const isInStaging = image.dropbox_path && image.dropbox_path.includes('/_staging/');
         
-        // Move file in Dropbox if path or filename has changed
-        if (image.dropbox_path !== newDropboxPath) {
+        // Move file in Dropbox if path or filename has changed, or if moving from staging
+        if (isInStaging || image.dropbox_path !== newDropboxPath) {
           console.log(`📁 FILE MOVE REQUIRED for image ${imageId}:`);
-          console.log(`   From: ${image.dropbox_path}`);
+          console.log(`   From: ${image.dropbox_path} ${isInStaging ? '(staging area)' : ''}`);
           console.log(`   To: ${newDropboxPath}`);
-          console.log(`   Reason: Tags ${uniqueNewTags.join(', ')} added, triggering folder reorganization`);
+          console.log(`   Reason: ${isInStaging ? 'Moving from staging - image now has tags' : `Tags ${uniqueNewTags.join(', ')} added, triggering folder reorganization`}`);
           
           try {
             // ENHANCED LOGGING: Record move operation start
@@ -3342,6 +3343,9 @@ app.post('/api/images/:id/apply-suggestions', async (req, res) => {
 async function processAndUploadImage({ filePath, originalName, tags, name, focusedTags }) {
   // CRITICAL: Create a deep copy of tags to prevent corruption during processing
   const originalTags = Array.isArray(tags) ? [...tags] : [];
+  const hasTags = originalTags && originalTags.length > 0;
+  
+  console.log(`📋 Processing image: hasTags=${hasTags}, tags=`, originalTags);
   
   // Add metadata to image using original tags
   const processedImagePath = await metadataService.addMetadataToImage(filePath, {
@@ -3358,29 +3362,49 @@ async function processAndUploadImage({ filePath, originalName, tags, name, focus
   // Generate file hash for duplicate detection
   const fileHash = await generateFileHash(processedImagePath);
 
-  // Generate folder path using protected original tags
+  let filename = null;
+  let dropboxPath = null;
+  let uploadResult = null;
+  let dropboxId = null;
+
+  // Only upload to Dropbox and generate filename if tags are present
+  if (hasTags) {
+    // Generate folder path using protected original tags
     const baseDropboxFolder = serverSettings.dropboxFolder || process.env.DROPBOX_FOLDER || '/ARCHIER Team Folder/Support/Production/SnapTag';
     const normalizedBaseFolder = baseDropboxFolder.startsWith('/') ? baseDropboxFolder : `/${baseDropboxFolder}`;
-  const folderPath = folderPathService.generateFolderPath(originalTags, normalizedBaseFolder);
-  
-  // Generate filename from tags with proper sequence number
-  let ext = path.extname(originalName);
-  
-  // Fallback to .jpg if no extension found
-  if (!ext || ext === '.' || ext === '') {
-    ext = '.jpg';
-    console.log(`⚠️ Using fallback extension .jpg for uploaded file: "${originalName}"`);
-  }
-  
-  // Get next sequence number for proper AXXXX format
-  const sequenceNumber = await folderPathService.getNextSequenceNumber(databaseService);
-  const filename = folderPathService.generateTagBasedFilename(originalTags, ext, sequenceNumber);
-  
-  // Combine folder path and filename
-  const dropboxPath = path.posix.join(folderPath, filename);
+    const folderPath = folderPathService.generateFolderPath(originalTags, normalizedBaseFolder);
+    
+    // Generate filename from tags with proper sequence number
+    let ext = path.extname(originalName);
+    
+    // Fallback to .jpg if no extension found
+    if (!ext || ext === '.' || ext === '') {
+      ext = '.jpg';
+      console.log(`⚠️ Using fallback extension .jpg for uploaded file: "${originalName}"`);
+    }
+    
+    // Get next sequence number for proper AXXXX format
+    const sequenceNumber = await folderPathService.getNextSequenceNumber(databaseService);
+    filename = folderPathService.generateTagBasedFilename(originalTags, ext, sequenceNumber);
+    
+    // Combine folder path and filename
+    dropboxPath = path.posix.join(folderPath, filename);
 
-  // Upload to Dropbox
-  const uploadResult = await dropboxService.uploadFile(processedImagePath, dropboxPath);
+    // Upload to Dropbox
+    console.log(`📤 Uploading tagged image to Dropbox: ${dropboxPath}`);
+    uploadResult = await dropboxService.uploadFile(processedImagePath, dropboxPath);
+    dropboxId = uploadResult.id;
+  } else {
+    // No tags - save file to staging area temporarily until tagged
+    // Store in a staging folder so we can access it later when tags are added
+    const stagingPath = path.posix.join('/SnapTag', '_staging', `${fileHash}${path.extname(originalName) || '.jpg'}`);
+    console.log(`📋 Untagged image - saving to staging area: ${stagingPath}`);
+    uploadResult = await dropboxService.uploadFile(processedImagePath, stagingPath);
+    dropboxPath = stagingPath;
+    dropboxId = uploadResult.id;
+    filename = path.basename(originalName) || 'untagged-image.jpg';
+    console.log(`✅ Untagged image saved to staging. Will be moved when tagged.`);
+  }
 
   let imageId;
   try {
