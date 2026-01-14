@@ -88,7 +88,8 @@ class FolderPathService {
         'willisdene house',
         'julius street',
         'yagiz',
-        'creative spaces'
+        'creative spaces',
+        'surf parade'
       ];
       
       let projectName = null;
